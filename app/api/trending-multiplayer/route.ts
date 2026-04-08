@@ -14,7 +14,9 @@ type SteamMostPlayedResponse = {
     ranks?: Array<{
       rank: number
       appid: number
-      concurrent_in_game: number
+      concurrent_in_game?: number | string
+      player_count?: number | string
+      peak_in_game?: number | string
     }>
   }
 }
@@ -52,6 +54,21 @@ function formatPlayers(value: number): string {
     notation: "compact",
     maximumFractionDigits: 2,
   }).format(value)
+}
+
+function getConcurrentPlayers(candidate: {
+  concurrent_in_game?: number | string
+  player_count?: number | string
+  peak_in_game?: number | string
+}): number | null {
+  const rawValue = candidate.concurrent_in_game ?? candidate.player_count ?? candidate.peak_in_game
+  const normalized = typeof rawValue === "string" ? Number(rawValue) : rawValue
+
+  if (typeof normalized !== "number" || Number.isNaN(normalized) || !Number.isFinite(normalized)) {
+    return null
+  }
+
+  return normalized
 }
 
 function isMultiplayer(categories: Array<{ id?: number; description?: string }> = []): boolean {
@@ -157,10 +174,12 @@ export async function GET() {
 
         const primaryGenre = gameDetails.genres?.[0]?.description ?? "Multiplayer"
 
+        const concurrentPlayers = getConcurrentPlayers(candidate)
+
         const game: TrendingGame = {
           name: gameDetails.name || "Unknown game",
           category: primaryGenre,
-          playersNow: formatPlayers(candidate.concurrent_in_game),
+          playersNow: concurrentPlayers === null ? "N/A" : formatPlayers(concurrentPlayers),
           trendLabel: `Top #${candidate.rank}`,
           stores: EPIC_AVAILABLE_APP_IDS.has(candidate.appid) ? ["Steam", "Epic"] : ["Steam"],
           imageUrl: `https://cdn.cloudflare.steamstatic.com/steam/apps/${candidate.appid}/header.jpg`,

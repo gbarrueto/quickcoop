@@ -185,6 +185,15 @@ export function LandingCyber() {
           return null
         }
 
+        const hasInvalidPlayers = parsed.games.some((game) => {
+          const value = String(game.playersNow || "")
+          return value.toLowerCase().includes("nan")
+        })
+
+        if (hasInvalidPlayers) {
+          return null
+        }
+
         const age = Date.now() - parsed.savedAt
         if (age > TRENDING_CACHE_TTL_MS) {
           return null
