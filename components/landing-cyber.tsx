@@ -1,8 +1,15 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import {
   Gamepad2,
   Users,
@@ -47,6 +54,79 @@ const games = [
 
 export function LandingCyber() {
   const [importMode, setImportMode] = useState<"link" | "import">("link")
+  const [steamModalOpen, setSteamModalOpen] = useState(false)
+  const [steamId, setSteamId] = useState<string | null>(null)
+  const [steamResponseText, setSteamResponseText] = useState<string>("")
+  const [steamError, setSteamError] = useState<string | null>(null)
+  const [isFetchingSteamData, setIsFetchingSteamData] = useState(false)
+  const [isWaitingSteamAuth, setIsWaitingSteamAuth] = useState(false)
+
+  const fetchSteamOwnedGames = async (resolvedSteamId: string) => {
+    setIsFetchingSteamData(true)
+    setSteamError(null)
+    setSteamResponseText("")
+
+    try {
+      const response = await fetch(`/api/steam/owned-games?steamId=${resolvedSteamId}`)
+      const body = await response.json()
+
+      if (!response.ok) {
+        throw new Error(body?.error || "Failed to fetch Steam owned games")
+      }
+
+      setSteamResponseText(JSON.stringify(body, null, 2))
+    } catch (error) {
+      setSteamError(error instanceof Error ? error.message : "Unknown error while loading Steam data")
+    } finally {
+      setIsFetchingSteamData(false)
+    }
+  }
+
+  const startSteamOpenId = () => {
+    setSteamError(null)
+    setIsWaitingSteamAuth(true)
+
+    const popup = window.open(
+      "/api/steam/login",
+      "steam-openid-login",
+      "width=700,height=760,menubar=no,toolbar=no,location=no,status=no",
+    )
+
+    if (!popup) {
+      setIsWaitingSteamAuth(false)
+      setSteamError("Popup blocked. Please allow popups and try again.")
+    }
+  }
+
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin || !event.data) {
+        return
+      }
+
+      if (event.data.type === "steam-auth-success") {
+        const resolvedSteamId = String(event.data.steamId || "")
+
+        if (!resolvedSteamId) {
+          setIsWaitingSteamAuth(false)
+          setSteamError("Steam authentication finished but no steamId was returned.")
+          return
+        }
+
+        setSteamId(resolvedSteamId)
+        setIsWaitingSteamAuth(false)
+        fetchSteamOwnedGames(resolvedSteamId)
+      }
+
+      if (event.data.type === "steam-auth-error") {
+        setIsWaitingSteamAuth(false)
+        setSteamError(event.data.error || "Steam authentication failed")
+      }
+    }
+
+    window.addEventListener("message", handleMessage)
+    return () => window.removeEventListener("message", handleMessage)
+  }, [])
 
   return (
     <div className="min-h-screen bg-background overflow-hidden">
@@ -140,7 +220,11 @@ export function LandingCyber() {
 
                 {importMode === "link" ? (
                   <div className="space-y-3" role="group" aria-label="Link game accounts">
-                    <Button className="w-full bg-[#171a21] hover:bg-[#2a475e] text-white justify-start gap-3">
+                    <Button
+                      type="button"
+                      onClick={() => setSteamModalOpen(true)}
+                      className="w-full bg-[#171a21] hover:bg-[#2a475e] text-white justify-start gap-3"
+                    >
                       <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
                         <path d="M11.979 0C5.678 0 .511 4.86.022 11.037l6.432 2.658c.545-.371 1.203-.59 1.912-.59.063 0 .125.004.188.006l2.861-4.142V8.91c0-2.495 2.028-4.524 4.524-4.524 2.494 0 4.524 2.031 4.524 4.527s-2.03 4.525-4.524 4.525h-.105l-4.076 2.911c0 .052.004.105.004.159 0 1.875-1.515 3.396-3.39 3.396-1.635 0-3.016-1.173-3.331-2.727L.436 15.27C1.862 20.307 6.486 24 11.979 24c6.627 0 11.999-5.373 11.999-12S18.605 0 11.979 0z" />
                       </svg>
@@ -293,6 +377,69 @@ export function LandingCyber() {
         </div>
       </section>
       </main>
+
+      <Dialog open={steamModalOpen} onOpenChange={setSteamModalOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Connect Steam</DialogTitle>
+            <DialogDescription>
+              Sign in with OpenID to validate your Steam identity and test the owned-games endpoint.
+            </DialogDescription>
+          </DialogHeader>
+
+          <section className="space-y-4" aria-labelledby="steam-privacy-title">
+            <h3 id="steam-privacy-title" className="font-semibold">Privacy information</h3>
+            <p className="text-sm text-muted-foreground">
+              By continuing, QCoop will request read access to the following Steam account data:
+            </p>
+            <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
+              <li>Owned game library</li>
+              <li>Friends list</li>
+            </ul>
+          </section>
+
+          <section className="space-y-3" aria-labelledby="steam-auth-title">
+            <h3 id="steam-auth-title" className="font-semibold">OpenID Sign-In</h3>
+            <button
+              type="button"
+              onClick={startSteamOpenId}
+              className="inline-block rounded-md overflow-hidden border border-border hover:opacity-90 transition-opacity"
+            >
+              <img
+                src="/sits_02.png"
+                alt="Sign in through Steam"
+                width={180}
+                height={42}
+              />
+            </button>
+            {isWaitingSteamAuth && (
+              <p className="text-sm text-primary">Waiting for Steam authentication...</p>
+            )}
+          </section>
+
+          <section className="space-y-2" aria-live="polite" aria-label="Steam test result">
+            {steamId && (
+              <p className="text-sm">
+                <span className="font-semibold">steamId:</span> {steamId}
+              </p>
+            )}
+
+            {isFetchingSteamData && (
+              <p className="text-sm text-primary">Loading owned games from Steam API...</p>
+            )}
+
+            {steamError && (
+              <p className="text-sm text-destructive">{steamError}</p>
+            )}
+
+            {steamResponseText && (
+              <pre className="max-h-80 overflow-auto rounded-md border border-border bg-secondary/30 p-3 text-xs whitespace-pre-wrap">
+                {steamResponseText}
+              </pre>
+            )}
+          </section>
+        </DialogContent>
+      </Dialog>
 
       {/* Footer */}
       <footer className="relative z-10 px-6 py-12 lg:px-12 border-t border-border">
