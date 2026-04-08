@@ -15,13 +15,22 @@ import {
   Users,
   Zap,
   Star,
+  TrendingUp,
   ArrowRight,
   Upload,
   Link2,
-  ChevronRight,
   Shield,
   CheckCircle2,
 } from "lucide-react"
+
+type TrendingGame = {
+  name: string
+  category: string
+  playersNow: string
+  trendLabel: string
+  stores: string[]
+  imageUrl?: string
+}
 
 const features = [
   {
@@ -46,16 +55,46 @@ const features = [
   },
 ]
 
-const games = [
-  { name: "Cyber Protocol", players: "1-4", rating: 4.8 },
-  { name: "Neon Racer", players: "2-8", rating: 4.5 },
-  { name: "Pixel Legends", players: "1-6", rating: 4.9 },
-  { name: "Quantum Strike", players: "2-10", rating: 4.7 },
+const fallbackTrendingMultiplayerGames: TrendingGame[] = [
+  {
+    name: "Counter-Strike 2",
+    category: "Tactical FPS",
+    playersNow: "1.08M",
+    trendLabel: "Top #1",
+    stores: ["Steam"],
+    imageUrl: "https://cdn.cloudflare.steamstatic.com/steam/apps/730/header.jpg",
+  },
+  {
+    name: "Helldivers 2",
+    category: "Co-op Shooter",
+    playersNow: "312K",
+    trendLabel: "Top #2",
+    stores: ["Steam", "Epic"],
+    imageUrl: "https://cdn.cloudflare.steamstatic.com/steam/apps/553850/header.jpg",
+  },
+  {
+    name: "Rocket League",
+    category: "Sports / Arcade",
+    playersNow: "497K",
+    trendLabel: "Top #3",
+    stores: ["Steam", "Epic"],
+    imageUrl: "https://cdn.cloudflare.steamstatic.com/steam/apps/252950/header.jpg",
+  },
+  {
+    name: "Apex Legends",
+    category: "Battle Royale",
+    playersNow: "441K",
+    trendLabel: "Top #4",
+    stores: ["Steam", "Epic"],
+    imageUrl: "https://cdn.cloudflare.steamstatic.com/steam/apps/1172470/header.jpg",
+  },
 ]
 
 const STEAM_SESSION_KEY = "qcoop-steam-id"
 const EPIC_CONNECTED_SESSION_KEY = "qcoop-epic-connected"
 const XBOX_CONNECTED_SESSION_KEY = "qcoop-xbox-connected"
+const TRENDING_CACHE_KEY = "qcoop-trending-multiplayer-cache"
+const TRENDING_CACHE_TTL_MS = 1000 * 60 * 60 * 24
 
 export function LandingCyber() {
   const [importMode, setImportMode] = useState<"link" | "import">("link")
@@ -67,6 +106,9 @@ export function LandingCyber() {
   const [isXboxConnected, setIsXboxConnected] = useState(false)
   const [steamError, setSteamError] = useState<string | null>(null)
   const [isWaitingSteamAuth, setIsWaitingSteamAuth] = useState(false)
+  const [trendingGames, setTrendingGames] = useState<TrendingGame[]>(fallbackTrendingMultiplayerGames)
+  const [isTrendingLoading, setIsTrendingLoading] = useState(true)
+  const [trendingLoadError, setTrendingLoadError] = useState<string | null>(null)
 
   useEffect(() => {
     const storedSteamId = window.sessionStorage.getItem(STEAM_SESSION_KEY)
@@ -142,6 +184,98 @@ export function LandingCyber() {
 
     window.addEventListener("message", handleMessage)
     return () => window.removeEventListener("message", handleMessage)
+  }, [])
+
+  useEffect(() => {
+    let isCancelled = false
+
+    const readCachedTrendingGames = () => {
+      try {
+        const rawCache = window.localStorage.getItem(TRENDING_CACHE_KEY)
+        if (!rawCache) {
+          return null
+        }
+
+        const parsed = JSON.parse(rawCache) as {
+          savedAt?: number
+          games?: TrendingGame[]
+        }
+
+        if (!parsed.savedAt || !parsed.games?.length) {
+          return null
+        }
+
+        const age = Date.now() - parsed.savedAt
+        if (age > TRENDING_CACHE_TTL_MS) {
+          return null
+        }
+
+        return parsed.games
+      } catch {
+        return null
+      }
+    }
+
+    const saveCachedTrendingGames = (games: TrendingGame[]) => {
+      try {
+        window.localStorage.setItem(
+          TRENDING_CACHE_KEY,
+          JSON.stringify({
+            savedAt: Date.now(),
+            games,
+          }),
+        )
+      } catch {
+        // Ignore storage issues and keep UI functional.
+      }
+    }
+
+    const loadTrendingGames = async () => {
+      const cachedGames = readCachedTrendingGames()
+      if (cachedGames) {
+        setTrendingGames(cachedGames)
+        setTrendingLoadError(null)
+        setIsTrendingLoading(false)
+        return
+      }
+
+      setIsTrendingLoading(true)
+
+      try {
+        const response = await fetch("/api/trending-multiplayer")
+
+        if (!response.ok) {
+          throw new Error(`Trending API failed with status ${response.status}`)
+        }
+
+        const payload = (await response.json()) as { games?: TrendingGame[] }
+
+        if (!payload.games?.length) {
+          throw new Error("Trending API returned no games")
+        }
+
+        if (!isCancelled) {
+          setTrendingGames(payload.games)
+          setTrendingLoadError(null)
+          saveCachedTrendingGames(payload.games)
+        }
+      } catch {
+        if (!isCancelled) {
+          setTrendingGames(fallbackTrendingMultiplayerGames)
+          setTrendingLoadError("Live trend data unavailable. Showing fallback list.")
+        }
+      } finally {
+        if (!isCancelled) {
+          setIsTrendingLoading(false)
+        }
+      }
+    }
+
+    void loadTrendingGames()
+
+    return () => {
+      isCancelled = true
+    }
   }, [])
 
   return (
@@ -327,44 +461,68 @@ export function LandingCyber() {
               <div className="absolute -inset-4 bg-primary/20 blur-3xl rounded-full" />
               <div className="relative bg-card border border-border rounded-2xl p-6 shadow-2xl">
                 <div className="flex items-center justify-between mb-6">
-                  <h2 id="matched-games-title" className="font-semibold">Matched Games (4)</h2>
+                  <h2 id="matched-games-title" className="font-semibold">Trending Multiplayer Games</h2>
                   <span className="text-xs text-primary bg-primary/10 px-3 py-1 rounded-full">
-                    3 Friends Online
+                    {isTrendingLoading ? "Refreshing..." : "Live now"}
                   </span>
                 </div>
+                {trendingLoadError && (
+                  <p className="mb-4 rounded-md border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-xs text-amber-300">
+                    {trendingLoadError}
+                  </p>
+                )}
                 <ul className="space-y-3">
-                  {games.map((game, i) => (
+                  {trendingGames.map((game, i) => (
                     <li
                       key={i}
                       className="flex items-center justify-between p-4 bg-secondary/50 rounded-xl hover:bg-secondary transition-colors cursor-pointer group"
                     >
                       <article className="flex items-center justify-between gap-4 w-full">
                       <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-primary/20 rounded-lg flex items-center justify-center">
-                          <Gamepad2 className="w-6 h-6 text-primary" />
+                        <div className="h-12 w-20 overflow-hidden rounded-md border border-border bg-background/60">
+                          {game.imageUrl ? (
+                            <img
+                              src={game.imageUrl}
+                              alt={`${game.name} cover`}
+                              className="h-full w-full object-cover"
+                              loading="lazy"
+                            />
+                          ) : (
+                            <div className="flex h-full w-full items-center justify-center text-primary/70">
+                              <Gamepad2 className="h-5 w-5" />
+                            </div>
+                          )}
                         </div>
                         <div>
                           <p className="font-medium">{game.name}</p>
                           <p className="text-sm text-muted-foreground">
-                            {game.players} players
+                            {game.category}
                           </p>
+                          <div className="mt-1 flex items-center gap-2">
+                            {game.stores.map((store) => (
+                              <span
+                                key={store}
+                                className="text-[10px] uppercase tracking-wide text-muted-foreground bg-background/80 border border-border px-2 py-0.5 rounded"
+                              >
+                                {store}
+                              </span>
+                            ))}
+                          </div>
                         </div>
                       </div>
                       <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-1 text-sm">
-                          <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
-                          {game.rating}
+                        <div className="text-right">
+                          <p className="text-sm font-medium">{game.playersNow} now</p>
+                          <div className="inline-flex items-center gap-1 text-xs text-emerald-500">
+                            <Star className="w-3 h-3" />
+                            {game.trendLabel}
+                          </div>
                         </div>
-                        <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
                       </div>
                       </article>
                     </li>
                   ))}
                 </ul>
-                <Button className="w-full mt-6" variant="outline">
-                  View All Matches
-                  <ArrowRight className="w-4 h-4 ml-2" />
-                </Button>
               </div>
             </aside>
           </div>
