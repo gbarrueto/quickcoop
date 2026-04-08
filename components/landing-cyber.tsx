@@ -71,7 +71,7 @@ export function LandingCyber() {
           <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center">
             <Gamepad2 className="w-6 h-6 text-primary-foreground" />
           </div>
-          <span className="text-xl font-bold tracking-tight">PlayMate</span>
+          <span className="text-xl font-bold tracking-tight">QCoop</span>
         </div>
         <div className="hidden md:flex items-center gap-8 text-sm">
           <a href="#features" className="text-muted-foreground hover:text-foreground transition-colors">
@@ -293,7 +293,7 @@ export function LandingCyber() {
             <div className="w-8 h-8 rounded bg-primary flex items-center justify-center">
               <Gamepad2 className="w-4 h-4 text-primary-foreground" />
             </div>
-            <span className="font-semibold">PlayMate</span>
+            <span className="font-semibold">QCoop</span>
           </div>
           <p className="text-sm text-muted-foreground">
             Built for UI/UX Course • 2026

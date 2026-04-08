@@ -7,7 +7,7 @@ const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: 'PlayMate - Find Games to Play with Friends',
+  title: 'QCoop - Find Games to Play with Friends',
   description: 'Sync your Steam and Epic libraries, match games with friends, and find the perfect multiplayer experience.',
   generator: 'v0.app',
   icons: {
