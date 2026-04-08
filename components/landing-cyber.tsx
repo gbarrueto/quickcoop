@@ -20,6 +20,7 @@ import {
   Link2,
   ChevronRight,
   Shield,
+  CheckCircle2,
 } from "lucide-react"
 
 const features = [
@@ -52,35 +53,38 @@ const games = [
   { name: "Quantum Strike", players: "2-10", rating: 4.7 },
 ]
 
+const STEAM_SESSION_KEY = "qcoop-steam-id"
+const EPIC_CONNECTED_SESSION_KEY = "qcoop-epic-connected"
+const XBOX_CONNECTED_SESSION_KEY = "qcoop-xbox-connected"
+
 export function LandingCyber() {
   const [importMode, setImportMode] = useState<"link" | "import">("link")
   const [steamModalOpen, setSteamModalOpen] = useState(false)
+  const [epicModalOpen, setEpicModalOpen] = useState(false)
+  const [xboxModalOpen, setXboxModalOpen] = useState(false)
   const [steamId, setSteamId] = useState<string | null>(null)
-  const [steamResponseText, setSteamResponseText] = useState<string>("")
+  const [isEpicConnected, setIsEpicConnected] = useState(false)
+  const [isXboxConnected, setIsXboxConnected] = useState(false)
   const [steamError, setSteamError] = useState<string | null>(null)
-  const [isFetchingSteamData, setIsFetchingSteamData] = useState(false)
   const [isWaitingSteamAuth, setIsWaitingSteamAuth] = useState(false)
 
-  const fetchSteamOwnedGames = async (resolvedSteamId: string) => {
-    setIsFetchingSteamData(true)
-    setSteamError(null)
-    setSteamResponseText("")
+  useEffect(() => {
+    const storedSteamId = window.sessionStorage.getItem(STEAM_SESSION_KEY)
+    const storedEpicConnected = window.sessionStorage.getItem(EPIC_CONNECTED_SESSION_KEY)
+    const storedXboxConnected = window.sessionStorage.getItem(XBOX_CONNECTED_SESSION_KEY)
 
-    try {
-      const response = await fetch(`/api/steam/owned-games?steamId=${resolvedSteamId}`)
-      const body = await response.json()
-
-      if (!response.ok) {
-        throw new Error(body?.error || "Failed to fetch Steam owned games")
-      }
-
-      setSteamResponseText(JSON.stringify(body, null, 2))
-    } catch (error) {
-      setSteamError(error instanceof Error ? error.message : "Unknown error while loading Steam data")
-    } finally {
-      setIsFetchingSteamData(false)
+    if (storedSteamId) {
+      setSteamId(storedSteamId)
     }
-  }
+
+    if (storedEpicConnected === "true") {
+      setIsEpicConnected(true)
+    }
+
+    if (storedXboxConnected === "true") {
+      setIsXboxConnected(true)
+    }
+  }, [])
 
   const startSteamOpenId = () => {
     setSteamError(null)
@@ -96,6 +100,18 @@ export function LandingCyber() {
       setIsWaitingSteamAuth(false)
       setSteamError("Popup blocked. Please allow popups and try again.")
     }
+  }
+
+  const connectEpicAccount = () => {
+    setIsEpicConnected(true)
+    window.sessionStorage.setItem(EPIC_CONNECTED_SESSION_KEY, "true")
+    setEpicModalOpen(false)
+  }
+
+  const connectXboxAccount = () => {
+    setIsXboxConnected(true)
+    window.sessionStorage.setItem(XBOX_CONNECTED_SESSION_KEY, "true")
+    setXboxModalOpen(false)
   }
 
   useEffect(() => {
@@ -114,8 +130,8 @@ export function LandingCyber() {
         }
 
         setSteamId(resolvedSteamId)
+        window.sessionStorage.setItem(STEAM_SESSION_KEY, resolvedSteamId)
         setIsWaitingSteamAuth(false)
-        fetchSteamOwnedGames(resolvedSteamId)
       }
 
       if (event.data.type === "steam-auth-error") {
@@ -223,18 +239,65 @@ export function LandingCyber() {
                     <Button
                       type="button"
                       onClick={() => setSteamModalOpen(true)}
-                      className="w-full bg-[#171a21] hover:bg-[#2a475e] text-white justify-start gap-3"
+                      className={`w-full justify-start gap-3 text-white ${
+                        steamId
+                          ? "bg-emerald-600 hover:bg-emerald-500"
+                          : "bg-[#171a21] hover:bg-[#2a475e]"
+                      }`}
                     >
                       <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
                         <path d="M11.979 0C5.678 0 .511 4.86.022 11.037l6.432 2.658c.545-.371 1.203-.59 1.912-.59.063 0 .125.004.188.006l2.861-4.142V8.91c0-2.495 2.028-4.524 4.524-4.524 2.494 0 4.524 2.031 4.524 4.527s-2.03 4.525-4.524 4.525h-.105l-4.076 2.911c0 .052.004.105.004.159 0 1.875-1.515 3.396-3.39 3.396-1.635 0-3.016-1.173-3.331-2.727L.436 15.27C1.862 20.307 6.486 24 11.979 24c6.627 0 11.999-5.373 11.999-12S18.605 0 11.979 0z" />
                       </svg>
                       Connect Steam
+                      {steamId && (
+                        <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-white/15 px-2 py-1 text-xs">
+                          <CheckCircle2 className="h-4 w-4" />
+                          Connected
+                        </span>
+                      )}
                     </Button>
-                    <Button className="w-full bg-[#313131] hover:bg-[#444444] text-white justify-start gap-3">
+                    <Button
+                      type="button"
+                      onClick={() => setEpicModalOpen(true)}
+                      className={`w-full justify-start gap-3 text-white ${
+                        isEpicConnected
+                          ? "bg-emerald-600 hover:bg-emerald-500"
+                          : "bg-[#313131] hover:bg-[#444444]"
+                      }`}
+                    >
                       <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
                         <path d="M3.537 0C2.165 0 1.66.506 1.66 1.879V18.44a4.262 4.262 0 00.136 1.049c.238.97.848 1.877 1.877 2.635l6.26 4.588c.57.418.879.418 1.449 0l6.261-4.588c1.029-.758 1.639-1.665 1.877-2.635a4.262 4.262 0 00.136-1.049V1.879C19.656.506 19.151 0 17.779 0zm7.12 2.963l5.912 11.26h-3.188l-1.073-2.208H8.63l-1.072 2.208H4.37zm0 3.947l1.767 3.631H8.89z" />
                       </svg>
                       Connect Epic Games
+                      {isEpicConnected && (
+                        <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-white/15 px-2 py-1 text-xs">
+                          <CheckCircle2 className="h-4 w-4" />
+                          Connected
+                        </span>
+                      )}
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={() => setXboxModalOpen(true)}
+                      className={`w-full justify-start gap-3 text-white ${
+                        isXboxConnected
+                          ? "bg-emerald-600 hover:bg-emerald-500"
+                          : "bg-[#107c10] hover:bg-[#0f6f0f]"
+                      }`}
+                    >
+                      <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-white/35 text-xs font-semibold">
+                        X
+                      </span>
+                      Connect Xbox account
+                      {isXboxConnected && (
+                        <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-white/15 px-2 py-1 text-xs">
+                          <CheckCircle2 className="h-4 w-4" />
+                          Connected
+                        </span>
+                      )}
+                    </Button>
+                    <Button type="button" className="w-full mt-2">
+                      Begin matching
                     </Button>
                   </div>
                 ) : (
@@ -379,65 +442,147 @@ export function LandingCyber() {
       </main>
 
       <Dialog open={steamModalOpen} onOpenChange={setSteamModalOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Connect Steam</DialogTitle>
-            <DialogDescription>
-              Sign in with OpenID to validate your Steam identity and test the owned-games endpoint.
-            </DialogDescription>
-          </DialogHeader>
+        <DialogContent className="max-w-xl overflow-hidden border-border bg-card/95 p-0 shadow-2xl backdrop-blur-xl">
+          <div className="bg-gradient-to-br from-primary/15 via-transparent to-accent/10 px-6 pt-8 pb-6 text-center">
+            <DialogHeader className="items-center text-center">
+              <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#171a21] shadow-lg shadow-primary/15">
+                  <svg className="w-10 h-10" viewBox="0 0 24 24" fill="currentColor"><path d="M11.979 0C5.678 0 .511 4.86.022 11.037l6.432 2.658c.545-.371 1.203-.59 1.912-.59.063 0 .125.004.188.006l2.861-4.142V8.91c0-2.495 2.028-4.524 4.524-4.524 2.494 0 4.524 2.031 4.524 4.527s-2.03 4.525-4.524 4.525h-.105l-4.076 2.911c0 .052.004.105.004.159 0 1.875-1.515 3.396-3.39 3.396-1.635 0-3.016-1.173-3.331-2.727L.436 15.27C1.862 20.307 6.486 24 11.979 24c6.627 0 11.999-5.373 11.999-12S18.605 0 11.979 0z"></path></svg>
+              </div>
+              <DialogTitle>Connect Steam</DialogTitle>
+              <DialogDescription className="max-w-sm text-sm">
+                Sign in with OpenID to validate your Steam identity. This is a quick test flow, not a full account setup.
+              </DialogDescription>
+            </DialogHeader>
+          </div>
 
-          <section className="space-y-4" aria-labelledby="steam-privacy-title">
-            <h3 id="steam-privacy-title" className="font-semibold">Privacy information</h3>
-            <p className="text-sm text-muted-foreground">
-              By continuing, QCoop will request read access to the following Steam account data:
-            </p>
-            <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
-              <li>Owned game library</li>
-              <li>Friends list</li>
-            </ul>
-          </section>
-
-          <section className="space-y-3" aria-labelledby="steam-auth-title">
-            <h3 id="steam-auth-title" className="font-semibold">OpenID Sign-In</h3>
-            <button
-              type="button"
-              onClick={startSteamOpenId}
-              className="inline-block rounded-md overflow-hidden border border-border hover:opacity-90 transition-opacity"
-            >
-              <img
-                src="/sits_02.png"
-                alt="Sign in through Steam"
-                width={180}
-                height={42}
-              />
-            </button>
-            {isWaitingSteamAuth && (
-              <p className="text-sm text-primary">Waiting for Steam authentication...</p>
-            )}
-          </section>
-
-          <section className="space-y-2" aria-live="polite" aria-label="Steam test result">
-            {steamId && (
-              <p className="text-sm">
-                <span className="font-semibold">steamId:</span> {steamId}
+          <div className="space-y-5 px-6 py-6">
+            <section className="rounded-2xl border border-border bg-secondary/30 p-4 text-center" aria-labelledby="steam-privacy-title">
+              <h3 id="steam-privacy-title" className="mb-2 font-semibold">
+                Privacy information
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                By continuing, QCoop will request read access to the following Steam account data:
               </p>
-            )}
+              <ul className="mt-3 space-y-1 text-sm text-muted-foreground">
+                <li>Owned game library</li>
+                <li>Friends list</li>
+              </ul>
+            </section>
 
-            {isFetchingSteamData && (
-              <p className="text-sm text-primary">Loading owned games from Steam API...</p>
-            )}
+            <section className="space-y-3 text-center" aria-labelledby="steam-auth-title">
+              <h3 id="steam-auth-title" className="font-semibold">
+                OpenID Sign-In
+              </h3>
+              <div className="flex justify-center">
+                <button
+                  type="button"
+                  onClick={startSteamOpenId}
+                  className="inline-flex items-center justify-center overflow-hidden rounded-md border border-border bg-[#171a21] transition-opacity cursor-pointer"
+                >
+                  <img
+                    src="/sits_01.png"
+                    alt="Sign in through Steam"
+                    width={180}
+                    height={42}
+                    className="block h-auto w-auto"
+                  />
+                </button>
+              </div>
+              {isWaitingSteamAuth && (
+                <p className="text-sm text-primary">Waiting for Steam authentication...</p>
+              )}
+              {steamId && (
+                <div className="rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm text-primary">
+                  Steam authenticated successfully. steamId: {steamId}
+                </div>
+              )}
+              {steamError && <p className="text-sm text-destructive">{steamError}</p>}
+            </section>
+          </div>
+        </DialogContent>
+      </Dialog>
 
-            {steamError && (
-              <p className="text-sm text-destructive">{steamError}</p>
-            )}
+      <Dialog open={epicModalOpen} onOpenChange={setEpicModalOpen}>
+        <DialogContent className="max-w-xl overflow-hidden border-border bg-card/95 p-0 shadow-2xl backdrop-blur-xl">
+          <div className="bg-gradient-to-br from-primary/15 via-transparent to-accent/10 px-6 pt-8 pb-6 text-center">
+            <DialogHeader className="items-center text-center">
+              <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#313131] text-white shadow-lg shadow-primary/15">
+                <span className="text-xl font-bold">E</span>
+              </div>
+              <DialogTitle>Connect Epic Games</DialogTitle>
+              <DialogDescription className="max-w-sm text-sm">
+                Connect your Epic Games account to continue building your multiplayer match profile.
+              </DialogDescription>
+            </DialogHeader>
+          </div>
 
-            {steamResponseText && (
-              <pre className="max-h-80 overflow-auto rounded-md border border-border bg-secondary/30 p-3 text-xs whitespace-pre-wrap">
-                {steamResponseText}
-              </pre>
-            )}
-          </section>
+          <div className="space-y-5 px-6 py-6">
+            <section className="rounded-2xl border border-border bg-secondary/30 p-4 text-center" aria-labelledby="epic-privacy-title">
+              <h3 id="epic-privacy-title" className="mb-2 font-semibold">
+                Privacy information
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                By continuing, QCoop will request read access to the following account data:
+              </p>
+              <ul className="mt-3 space-y-1 text-sm text-muted-foreground">
+                <li>Owned game library</li>
+                <li>Friends list</li>
+              </ul>
+            </section>
+
+            <section className="space-y-3 text-center" aria-labelledby="epic-auth-title">
+              <h3 id="epic-auth-title" className="font-semibold">
+                Account Sign-In
+              </h3>
+              <div className="flex justify-center">
+                <Button type="button" onClick={connectEpicAccount} className="bg-[#313131] hover:bg-[#444444] text-white">
+                  Continue with Epic Games
+                </Button>
+              </div>
+            </section>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={xboxModalOpen} onOpenChange={setXboxModalOpen}>
+        <DialogContent className="max-w-xl overflow-hidden border-border bg-card/95 p-0 shadow-2xl backdrop-blur-xl">
+          <div className="bg-gradient-to-br from-primary/15 via-transparent to-accent/10 px-6 pt-8 pb-6 text-center">
+            <DialogHeader className="items-center text-center">
+              <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#107c10] text-white shadow-lg shadow-primary/15">
+                <span className="text-xl font-bold">X</span>
+              </div>
+              <DialogTitle>Connect Xbox account</DialogTitle>
+              <DialogDescription className="max-w-sm text-sm">
+                Connect your Xbox account to include your console profile in future game matching.
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+
+          <div className="space-y-5 px-6 py-6">
+            <section className="rounded-2xl border border-border bg-secondary/30 p-4 text-center" aria-labelledby="xbox-privacy-title">
+              <h3 id="xbox-privacy-title" className="mb-2 font-semibold">
+                Privacy information
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                By continuing, QCoop will request read access to the following account data:
+              </p>
+              <ul className="mt-3 space-y-1 text-sm text-muted-foreground">
+                <li>Owned game library</li>
+                <li>Friends list</li>
+              </ul>
+            </section>
+
+            <section className="space-y-3 text-center" aria-labelledby="xbox-auth-title">
+              <h3 id="xbox-auth-title" className="font-semibold">
+                Account Sign-In
+              </h3>
+              <div className="flex justify-center">
+                <Button type="button" onClick={connectXboxAccount} className="bg-[#107c10] hover:bg-[#0f6f0f] text-white">
+                  Continue with Xbox
+                </Button>
+              </div>
+            </section>
+          </div>
         </DialogContent>
       </Dialog>
 
