@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -56,6 +57,7 @@ const games = [
 const STEAM_SESSION_KEY = "qcoop-steam-id"
 
 export function LandingCyber() {
+  const router = useRouter()
   const [importMode, setImportMode] = useState<"link" | "import">("link")
   const [steamModalOpen, setSteamModalOpen] = useState(false)
   const [epicModalOpen, setEpicModalOpen] = useState(false)
@@ -63,6 +65,8 @@ export function LandingCyber() {
   const [steamId, setSteamId] = useState<string | null>(null)
   const [steamError, setSteamError] = useState<string | null>(null)
   const [isWaitingSteamAuth, setIsWaitingSteamAuth] = useState(false)
+
+  const canBeginMatching = Boolean(steamId)
 
   useEffect(() => {
     const storedSteamId = window.sessionStorage.getItem(STEAM_SESSION_KEY)
@@ -250,10 +254,20 @@ export function LandingCyber() {
                       </span>
                       Connect Xbox account
                     </Button>
-                    <Button type="button" className="w-full mt-2" disabled={!steamId}>
+                    <Button
+                      type="button"
+                      className="w-full mt-2"
+                      disabled={!canBeginMatching}
+                      onClick={() => {
+                        if (!canBeginMatching) {
+                          return
+                        }
+                        router.push("/matching")
+                      }}
+                    >
                       Begin matching
                     </Button>
-                    {!steamId && (
+                    {!canBeginMatching && (
                       <p className="text-xs text-muted-foreground text-center">
                         Connect at least one account to begin. Steam is the only integration enabled for now.
                       </p>
