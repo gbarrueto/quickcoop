@@ -65,7 +65,7 @@ export function LandingGlass() {
           <span className="text-xl font-bold">PlayMate</span>
         </div>
         <div className="hidden md:flex items-center gap-1">
-          {["Features", "Discover", "Pricing", "About"].map((item) => (
+          {["Features", "Discover", "About"].map((item) => (
             <a
               key={item}
               href="#"

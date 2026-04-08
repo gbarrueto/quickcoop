@@ -97,9 +97,6 @@ export function LandingMinimal() {
           <a href="#" className="text-muted-foreground hover:text-foreground transition-colors">
             How It Works
           </a>
-          <a href="#" className="text-muted-foreground hover:text-foreground transition-colors">
-            Pricing
-          </a>
         </div>
         <div className="flex items-center gap-3">
           <Button variant="ghost" className="hidden sm:inline-flex">

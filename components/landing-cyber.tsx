@@ -42,7 +42,7 @@ const features = [
   {
     icon: <Star className="w-6 h-6" />,
     title: "Smart Recommendations",
-    description: "AI-powered suggestions based on your play style",
+    description: "Suggestions based on your play style",
   },
   {
     icon: <Zap className="w-6 h-6" />,
@@ -298,9 +298,6 @@ export function LandingCyber() {
             <a href="#how-it-works" className="text-muted-foreground hover:text-foreground transition-colors">
               How It Works
             </a>
-            <a href="#pricing" className="text-muted-foreground hover:text-foreground transition-colors">
-              Pricing
-            </a>
           </div>
           <Button variant="outline" className="border-primary/50 hover:bg-primary/10">
             Sign In
@@ -314,10 +311,6 @@ export function LandingCyber() {
         <div className="max-w-7xl mx-auto">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <article>
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/30 text-primary text-sm mb-6">
-                <Zap className="w-4 h-4" />
-                <span>No Installation Required</span>
-              </div>
               <h1 id="hero-title" className="text-4xl md:text-6xl font-bold leading-tight mb-6">
                 Find Your Next
                 <span className="block text-primary drop-shadow-[0_0_30px_rgba(0,255,200,0.5)]">
