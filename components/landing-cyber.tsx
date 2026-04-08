@@ -54,8 +54,6 @@ const games = [
 ]
 
 const STEAM_SESSION_KEY = "qcoop-steam-id"
-const EPIC_CONNECTED_SESSION_KEY = "qcoop-epic-connected"
-const XBOX_CONNECTED_SESSION_KEY = "qcoop-xbox-connected"
 
 export function LandingCyber() {
   const [importMode, setImportMode] = useState<"link" | "import">("link")
@@ -63,26 +61,14 @@ export function LandingCyber() {
   const [epicModalOpen, setEpicModalOpen] = useState(false)
   const [xboxModalOpen, setXboxModalOpen] = useState(false)
   const [steamId, setSteamId] = useState<string | null>(null)
-  const [isEpicConnected, setIsEpicConnected] = useState(false)
-  const [isXboxConnected, setIsXboxConnected] = useState(false)
   const [steamError, setSteamError] = useState<string | null>(null)
   const [isWaitingSteamAuth, setIsWaitingSteamAuth] = useState(false)
 
   useEffect(() => {
     const storedSteamId = window.sessionStorage.getItem(STEAM_SESSION_KEY)
-    const storedEpicConnected = window.sessionStorage.getItem(EPIC_CONNECTED_SESSION_KEY)
-    const storedXboxConnected = window.sessionStorage.getItem(XBOX_CONNECTED_SESSION_KEY)
 
     if (storedSteamId) {
       setSteamId(storedSteamId)
-    }
-
-    if (storedEpicConnected === "true") {
-      setIsEpicConnected(true)
-    }
-
-    if (storedXboxConnected === "true") {
-      setIsXboxConnected(true)
     }
   }, [])
 
@@ -100,18 +86,6 @@ export function LandingCyber() {
       setIsWaitingSteamAuth(false)
       setSteamError("Popup blocked. Please allow popups and try again.")
     }
-  }
-
-  const connectEpicAccount = () => {
-    setIsEpicConnected(true)
-    window.sessionStorage.setItem(EPIC_CONNECTED_SESSION_KEY, "true")
-    setEpicModalOpen(false)
-  }
-
-  const connectXboxAccount = () => {
-    setIsXboxConnected(true)
-    window.sessionStorage.setItem(XBOX_CONNECTED_SESSION_KEY, "true")
-    setXboxModalOpen(false)
   }
 
   useEffect(() => {
@@ -259,46 +233,31 @@ export function LandingCyber() {
                     <Button
                       type="button"
                       onClick={() => setEpicModalOpen(true)}
-                      className={`w-full justify-start gap-3 text-white ${
-                        isEpicConnected
-                          ? "bg-emerald-600 hover:bg-emerald-500"
-                          : "bg-[#313131] hover:bg-[#444444]"
-                      }`}
+                      className="w-full justify-start gap-3 text-white bg-[#313131] hover:bg-[#444444]"
                     >
                       <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
                         <path d="M3.537 0C2.165 0 1.66.506 1.66 1.879V18.44a4.262 4.262 0 00.136 1.049c.238.97.848 1.877 1.877 2.635l6.26 4.588c.57.418.879.418 1.449 0l6.261-4.588c1.029-.758 1.639-1.665 1.877-2.635a4.262 4.262 0 00.136-1.049V1.879C19.656.506 19.151 0 17.779 0zm7.12 2.963l5.912 11.26h-3.188l-1.073-2.208H8.63l-1.072 2.208H4.37zm0 3.947l1.767 3.631H8.89z" />
                       </svg>
                       Connect Epic Games
-                      {isEpicConnected && (
-                        <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-white/15 px-2 py-1 text-xs">
-                          <CheckCircle2 className="h-4 w-4" />
-                          Connected
-                        </span>
-                      )}
                     </Button>
                     <Button
                       type="button"
                       onClick={() => setXboxModalOpen(true)}
-                      className={`w-full justify-start gap-3 text-white ${
-                        isXboxConnected
-                          ? "bg-emerald-600 hover:bg-emerald-500"
-                          : "bg-[#107c10] hover:bg-[#0f6f0f]"
-                      }`}
+                      className="w-full justify-start gap-3 text-white bg-[#107c10] hover:bg-[#0f6f0f]"
                     >
                       <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-white/35 text-xs font-semibold">
                         X
                       </span>
                       Connect Xbox account
-                      {isXboxConnected && (
-                        <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-white/15 px-2 py-1 text-xs">
-                          <CheckCircle2 className="h-4 w-4" />
-                          Connected
-                        </span>
-                      )}
                     </Button>
-                    <Button type="button" className="w-full mt-2">
+                    <Button type="button" className="w-full mt-2" disabled={!steamId}>
                       Begin matching
                     </Button>
+                    {!steamId && (
+                      <p className="text-xs text-muted-foreground text-center">
+                        Connect at least one account to begin. Steam is the only integration enabled for now.
+                      </p>
+                    )}
                   </div>
                 ) : (
                   <div className="space-y-3" role="group" aria-label="Import game list">
@@ -535,8 +494,8 @@ export function LandingCyber() {
                 Account Sign-In
               </h3>
               <div className="flex justify-center">
-                <Button type="button" onClick={connectEpicAccount} className="bg-[#313131] hover:bg-[#444444] text-white">
-                  Continue with Epic Games
+                <Button type="button" disabled className="bg-[#313131] text-white opacity-70 cursor-not-allowed">
+                  Epic integration coming soon
                 </Button>
               </div>
             </section>
@@ -577,8 +536,8 @@ export function LandingCyber() {
                 Account Sign-In
               </h3>
               <div className="flex justify-center">
-                <Button type="button" onClick={connectXboxAccount} className="bg-[#107c10] hover:bg-[#0f6f0f] text-white">
-                  Continue with Xbox
+                <Button type="button" disabled className="bg-[#107c10] text-white opacity-70 cursor-not-allowed">
+                  Xbox integration coming soon
                 </Button>
               </div>
             </section>
