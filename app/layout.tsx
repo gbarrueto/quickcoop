@@ -7,24 +7,16 @@ const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: 'PlayMate - Find Games to Play with Friends',
+  title: 'QCoop - Find Games to Play with Friends',
   description: 'Sync your Steam and Epic libraries, match games with friends, and find the perfect multiplayer experience.',
   generator: 'v0.app',
   icons: {
-    icon: [
+    icon: 
       {
-        url: '/icon-light-32x32.png',
-        media: '(prefers-color-scheme: light)',
-      },
-      {
-        url: '/icon-dark-32x32.png',
-        media: '(prefers-color-scheme: dark)',
-      },
-      {
-        url: '/icon.svg',
+        url: '/gamepad-2.svg',
         type: 'image/svg+xml',
       },
-    ],
+    
     apple: '/apple-icon.png',
   },
 }

@@ -62,10 +62,10 @@ export function LandingGlass() {
           <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg shadow-primary/25">
             <Gamepad2 className="w-6 h-6 text-primary-foreground" />
           </div>
-          <span className="text-xl font-bold">PlayMate</span>
+          <span className="text-xl font-bold">QCoop</span>
         </div>
         <div className="hidden md:flex items-center gap-1">
-          {["Features", "Discover", "Pricing", "About"].map((item) => (
+          {["Features", "Discover", "About"].map((item) => (
             <a
               key={item}
               href="#"
