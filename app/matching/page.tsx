@@ -701,13 +701,10 @@ export default function MatchingPage() {
                     Game recommendations
                   </h2>
                   <p className="text-[11px] text-muted-foreground">
-                    Browse games in a horizontal carousel before selecting friends.
+                    You might be interested in these games.
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[10px] uppercase tracking-wide text-primary">
-                    2 visible
-                  </span>
                   <div className="flex items-center gap-1">
                     <Button
                       type="button"
