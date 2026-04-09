@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { CheckCircle2, UserRoundPlus, ArrowLeft } from "lucide-react"
 
 type Platform = "steam" | "epic" | "xbox"
+type CategoryFilterMode = "or" | "and"
 
 type SteamOwnedGame = {
   appid: number
@@ -27,6 +28,11 @@ type GameCard = {
   imageUrl: string
   rating: number
   players: string
+}
+
+type GameCategoriesPayload = {
+  categoriesByApp?: Record<string, string[]>
+  error?: string
 }
 
 type FriendFromApi = {
@@ -107,6 +113,11 @@ export default function MatchingPage() {
   const [identityLibraries, setIdentityLibraries] = useState<Record<string, Set<number>>>({})
   const [loadingIdentities, setLoadingIdentities] = useState<Record<string, boolean>>({})
   const [identityErrors, setIdentityErrors] = useState<Record<string, string | null>>({})
+  const [categoriesByApp, setCategoriesByApp] = useState<Record<number, string[]>>({})
+  const [isLoadingCategories, setIsLoadingCategories] = useState(false)
+  const [categoryFilterError, setCategoryFilterError] = useState<string | null>(null)
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([])
+  const [categoryFilterMode, setCategoryFilterMode] = useState<CategoryFilterMode>("or")
 
   useEffect(() => {
     const initialize = async () => {
@@ -323,6 +334,92 @@ export default function MatchingPage() {
     return userGames.filter((game) => selectedSets.every((set) => set.has(game.appId)))
   }, [friendProfiles, identityLibraries, userGames])
 
+  useEffect(() => {
+    if (filteredGames.length === 0) {
+      return
+    }
+
+    const missingAppIds = filteredGames
+      .map((game) => game.appId)
+      .filter((appId) => !(appId in categoriesByApp))
+      .slice(0, 80)
+
+    if (missingAppIds.length === 0) {
+      return
+    }
+
+    let isCancelled = false
+
+    const loadCategories = async () => {
+      setIsLoadingCategories(true)
+      setCategoryFilterError(null)
+
+      try {
+        const response = await fetch(`/api/steam/game-categories?appIds=${missingAppIds.join(",")}`)
+        const payload = (await response.json()) as GameCategoriesPayload
+
+        if (!response.ok) {
+          throw new Error(payload.error || "Failed to load game categories")
+        }
+
+        const incoming = payload.categoriesByApp ?? {}
+        if (!isCancelled) {
+          setCategoriesByApp((prev) => {
+            const next = { ...prev }
+            Object.entries(incoming).forEach(([appId, categories]) => {
+              next[Number(appId)] = categories
+            })
+            return next
+          })
+        }
+      } catch (error) {
+        if (!isCancelled) {
+          setCategoryFilterError(error instanceof Error ? error.message : "Failed to load categories")
+        }
+      } finally {
+        if (!isCancelled) {
+          setIsLoadingCategories(false)
+        }
+      }
+    }
+
+    void loadCategories()
+
+    return () => {
+      isCancelled = true
+    }
+  }, [filteredGames, categoriesByApp])
+
+  const availableCategories = useMemo(() => {
+    const unique = new Set<string>()
+    filteredGames.forEach((game) => {
+      ;(categoriesByApp[game.appId] ?? []).forEach((category) => unique.add(category))
+    })
+
+    return [...unique].sort((a, b) => a.localeCompare(b))
+  }, [filteredGames, categoriesByApp])
+
+  const categoryFilteredGames = useMemo(() => {
+    if (selectedCategories.length === 0) {
+      return filteredGames
+    }
+
+    return filteredGames.filter((game) => {
+      const gameCategories = categoriesByApp[game.appId] ?? []
+      if (categoryFilterMode === "and") {
+        return selectedCategories.every((selectedCategory) => gameCategories.includes(selectedCategory))
+      }
+
+      return selectedCategories.some((selectedCategory) => gameCategories.includes(selectedCategory))
+    })
+  }, [filteredGames, categoriesByApp, selectedCategories, categoryFilterMode])
+
+  const toggleCategoryFilter = (category: string) => {
+    setSelectedCategories((prev) =>
+      prev.includes(category) ? prev.filter((current) => current !== category) : [...prev, category],
+    )
+  }
+
   const selectedCount = friendProfiles.filter((profile) => profile.selected).length
   const selectedProfiles = friendProfiles.filter((profile) => profile.selected)
 
@@ -379,14 +476,89 @@ export default function MatchingPage() {
               <h2 className="text-xl font-semibold">Your library</h2>
               <p className="text-sm text-muted-foreground">
                 {selectedCount > 0
-                  ? `${filteredGames.length} shared games with selected friends`
+                  ? `${categoryFilteredGames.length} shared games with selected friends`
                   : `${userGames.length} games in your library`}
               </p>
             </div>
 
+            <div className="mb-4 rounded-xl border border-border/70 bg-background/40 p-3">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-xs font-medium">Category filters</p>
+                <div className="flex items-center gap-2">
+                  {isLoadingCategories && <p className="text-[11px] text-primary">Loading categories...</p>}
+                  <div className="inline-flex overflow-hidden rounded-md border border-border/80 bg-background/70 text-[10px] uppercase tracking-wide">
+                    <button
+                      type="button"
+                      className={`px-2 py-1 transition-colors ${
+                        categoryFilterMode === "or" ? "bg-primary/15 text-primary" : "text-muted-foreground hover:text-foreground"
+                      }`}
+                      onClick={() => setCategoryFilterMode("or")}
+                    >
+                      ANY
+                    </button>
+                    <button
+                      type="button"
+                      className={`border-l border-border/80 px-2 py-1 transition-colors ${
+                        categoryFilterMode === "and" ? "bg-primary/15 text-primary" : "text-muted-foreground hover:text-foreground"
+                      }`}
+                      onClick={() => setCategoryFilterMode("and")}
+                    >
+                      ALL
+                    </button>
+                  </div>
+                  {selectedCategories.length > 0 && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="h-6 px-2 text-[10px]"
+                      onClick={() => setSelectedCategories([])}
+                    >
+                      Clear filters
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              {categoryFilterError && (
+                <p className="mt-2 text-[11px] text-destructive">{categoryFilterError}</p>
+              )}
+
+              <div className="mt-2 flex flex-wrap gap-2">
+                {availableCategories.length > 0 ? (
+                  availableCategories.map((category) => {
+                    const selected = selectedCategories.includes(category)
+                    return (
+                      <button
+                        key={category}
+                        type="button"
+                        onClick={() => toggleCategoryFilter(category)}
+                        className={`rounded-full border px-2.5 py-1 text-[10px] uppercase tracking-wide transition-colors ${
+                          selected
+                            ? "border-primary bg-primary/15 text-primary"
+                            : "border-border bg-background/70 text-muted-foreground hover:text-foreground"
+                        }`}
+                      >
+                        {category}
+                      </button>
+                    )
+                  })
+                ) : (
+                  <p className="text-[11px] text-muted-foreground">
+                    No category data available yet for the visible games.
+                  </p>
+                )}
+              </div>
+              {selectedCategories.length > 1 && (
+                <p className="mt-2 text-[11px] text-muted-foreground">
+                  Current mode: {categoryFilterMode.toUpperCase()} ({categoryFilterMode === "or" ? "matches any selected category" : "must match all selected categories"})
+                </p>
+              )}
+            </div>
+
             <div className="max-h-[calc(100vh-16rem)] overflow-y-auto pr-1">
             <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
-              {filteredGames.map((game) => (
+              {categoryFilteredGames.map((game) => (
                 <article
                   key={game.appId}
                   className="overflow-hidden rounded-xl border border-border bg-secondary/20"
@@ -405,11 +577,21 @@ export default function MatchingPage() {
                       <span>{game.players} players</span>
                       <span>Rating {game.rating}</span>
                     </div>
+                    <div className="flex flex-wrap gap-1 pt-1">
+                      {(categoriesByApp[game.appId] ?? []).slice(0, 2).map((category) => (
+                        <span
+                          key={`${game.appId}-${category}`}
+                          className="rounded-full border border-border/80 bg-background/70 px-1.5 py-0.5 text-[9px] uppercase tracking-wide text-muted-foreground"
+                        >
+                          {category}
+                        </span>
+                      ))}
+                    </div>
                   </div>
                 </article>
               ))}
             </div>
-            {filteredGames.length === 0 && (
+            {categoryFilteredGames.length === 0 && (
               <p className="text-sm text-muted-foreground mt-4">
                 No shared games found for the current friend selection.
               </p>
