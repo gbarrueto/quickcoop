@@ -4,7 +4,20 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { CheckCircle2, UserRoundPlus, ArrowLeft, ArrowRight } from "lucide-react"
+import {
+  CheckCircle2,
+  UserRoundPlus,
+  ArrowLeft,
+  ArrowRight,
+  XCircle,
+} from "lucide-react"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 
 type Platform = "steam" | "epic" | "xbox"
 type CategoryFilterMode = "or" | "and"
@@ -67,9 +80,54 @@ type FriendProfile = {
   expanded: boolean
 }
 
+type GameRequirementsPayload = {
+  appId: number
+  minimumText: string
+  parsed: {
+    os?: string
+    processor?: string
+    graphics?: string
+    memoryGb?: number
+    storageGb?: number
+    vramGb?: number
+  }
+  error?: string
+}
+
+type PlayerSystemSpecs = {
+  os: string
+  cpuTier: number
+  gpuTier: number
+  ramGb: number
+  vramGb: number
+  storageGb: number
+}
+
+type RequirementsParticipant = {
+  id: string
+  name: string
+}
+
 const STEAM_SESSION_KEY = "qcoop-steam-id"
 const EPIC_CONNECTED_SESSION_KEY = "qcoop-epic-connected"
 const XBOX_CONNECTED_SESSION_KEY = "qcoop-xbox-connected"
+
+const DEFAULT_PLAYER_SPECS: PlayerSystemSpecs = {
+  os: "Windows 10",
+  cpuTier: 3,
+  gpuTier: 3,
+  ramGb: 8,
+  vramGb: 4,
+  storageGb: 40,
+}
+
+const TIER_OPTIONS = [
+  { value: 1, label: "Tier 1" },
+  { value: 2, label: "Tier 2" },
+  { value: 3, label: "Tier 3" },
+  { value: 4, label: "Tier 4" },
+  { value: 5, label: "Tier 5" },
+]
 
 function identityKey(identity: IdentityRef): string {
   return `${identity.platform}:${identity.accountId}`
@@ -102,6 +160,81 @@ function toGameCards(games: SteamOwnedGame[]): GameCard[] {
     rating: deriveRating(game.appid),
     players: derivePlayers(game.appid),
   }))
+}
+
+function inferCpuTier(text?: string): number | null {
+  if (!text) {
+    return null
+  }
+
+  const normalized = text.toLowerCase()
+
+  if (/i9|ryzen\s*9/.test(normalized)) {
+    return 5
+  }
+
+  if (/i7|ryzen\s*7|8\s*core|octa/.test(normalized)) {
+    return 4
+  }
+
+  if (/i5|ryzen\s*5|6\s*core|quad|fx-6/.test(normalized)) {
+    return 3
+  }
+
+  if (/i3|ryzen\s*3|dual|2\s*core|fx-4/.test(normalized)) {
+    return 2
+  }
+
+  return 1
+}
+
+function inferGpuTier(text?: string): number | null {
+  if (!text) {
+    return null
+  }
+
+  const normalized = text.toLowerCase()
+
+  if (/rtx\s*40|rx\s*7|arc\s*a7/.test(normalized)) {
+    return 5
+  }
+
+  if (/rtx\s*30|rtx\s*20|gtx\s*10|rx\s*6|vulkan/.test(normalized)) {
+    return 4
+  }
+
+  if (/gtx\s*9|r9|rx\s*5|dx11|directx\s*11/.test(normalized)) {
+    return 3
+  }
+
+  if (/gtx\s*7|gt\s*7|hd\s*5|dx10/.test(normalized)) {
+    return 2
+  }
+
+  return 1
+}
+
+function osMatchesPlayer(requiredOs: string | undefined, playerOs: string): boolean {
+  if (!requiredOs) {
+    return true
+  }
+
+  const normalizedRequired = requiredOs.toLowerCase()
+  const normalizedPlayer = playerOs.toLowerCase()
+
+  if (normalizedRequired.includes("windows")) {
+    return normalizedPlayer.includes("windows")
+  }
+
+  if (normalizedRequired.includes("linux") || normalizedRequired.includes("steamos")) {
+    return normalizedPlayer.includes("linux") || normalizedPlayer.includes("steamos")
+  }
+
+  if (normalizedRequired.includes("mac") || normalizedRequired.includes("os x")) {
+    return normalizedPlayer.includes("mac") || normalizedPlayer.includes("os x")
+  }
+
+  return normalizedPlayer.includes(normalizedRequired.slice(0, 8))
 }
 
 const recommendedGames: RecommendedGame[] = [
@@ -200,6 +333,12 @@ export default function MatchingPage() {
   const [categoryFilterError, setCategoryFilterError] = useState<string | null>(null)
   const [selectedCategories, setSelectedCategories] = useState<string[]>([])
   const [categoryFilterMode, setCategoryFilterMode] = useState<CategoryFilterMode>("or")
+  const [requirementsByApp, setRequirementsByApp] = useState<Record<number, GameRequirementsPayload>>({})
+  const [requirementsLoadingByApp, setRequirementsLoadingByApp] = useState<Record<number, boolean>>({})
+  const [requirementsErrorByApp, setRequirementsErrorByApp] = useState<Record<number, string | null>>({})
+  const [selectedGameForRequirements, setSelectedGameForRequirements] = useState<GameCard | null>(null)
+  const [isRequirementsModalOpen, setIsRequirementsModalOpen] = useState(false)
+  const [playerSpecsById, setPlayerSpecsById] = useState<Record<string, PlayerSystemSpecs>>({})
 
   const scrollRecommendations = (direction: -1 | 1) => {
     const container = recommendationsRef.current
@@ -514,6 +653,134 @@ export default function MatchingPage() {
     )
   }
 
+  const requirementsParticipants = useMemo<RequirementsParticipant[]>(
+    () => [
+      { id: "self", name: "You" },
+      ...friendProfiles
+        .filter((profile) => profile.selected)
+        .map((profile) => ({
+          id: profile.profileId,
+          name: profile.identities[0]?.displayName ?? "Player",
+        })),
+    ],
+    [friendProfiles],
+  )
+
+  useEffect(() => {
+    setPlayerSpecsById((prev) => {
+      const next = { ...prev }
+      requirementsParticipants.forEach((participant) => {
+        if (!next[participant.id]) {
+          next[participant.id] = { ...DEFAULT_PLAYER_SPECS }
+        }
+      })
+      return next
+    })
+  }, [requirementsParticipants])
+
+  const updatePlayerSpecs = (
+    participantId: string,
+    field: keyof PlayerSystemSpecs,
+    value: string | number,
+  ) => {
+    setPlayerSpecsById((prev) => {
+      const current = prev[participantId] ?? { ...DEFAULT_PLAYER_SPECS }
+      return {
+        ...prev,
+        [participantId]: {
+          ...current,
+          [field]: value,
+        },
+      }
+    })
+  }
+
+  const openRequirementsModal = async (game: GameCard) => {
+    setSelectedGameForRequirements(game)
+    setIsRequirementsModalOpen(true)
+
+    if (requirementsByApp[game.appId] || requirementsLoadingByApp[game.appId]) {
+      return
+    }
+
+    setRequirementsLoadingByApp((prev) => ({ ...prev, [game.appId]: true }))
+    setRequirementsErrorByApp((prev) => ({ ...prev, [game.appId]: null }))
+
+    try {
+      const response = await fetch(`/api/steam/game-requirements?appId=${game.appId}`)
+      const payload = (await response.json()) as GameRequirementsPayload
+
+      if (!response.ok) {
+        throw new Error(payload.error || "Failed to load game requirements")
+      }
+
+      setRequirementsByApp((prev) => ({ ...prev, [game.appId]: payload }))
+    } catch (error) {
+      setRequirementsErrorByApp((prev) => ({
+        ...prev,
+        [game.appId]: error instanceof Error ? error.message : "Failed to load requirements",
+      }))
+    } finally {
+      setRequirementsLoadingByApp((prev) => ({ ...prev, [game.appId]: false }))
+    }
+  }
+
+  const evaluateParticipantCompatibility = (
+    participantId: string,
+    requirements: GameRequirementsPayload,
+  ) => {
+    const specs = playerSpecsById[participantId] ?? DEFAULT_PLAYER_SPECS
+    const requiredCpuTier = inferCpuTier(requirements.parsed.processor)
+    const requiredGpuTier = inferGpuTier(requirements.parsed.graphics)
+
+    const checks = [
+      {
+        key: "os",
+        label: "Operating system",
+        pass: osMatchesPlayer(requirements.parsed.os, specs.os),
+      },
+      {
+        key: "cpu",
+        label: "Processor",
+        pass: requiredCpuTier === null ? true : specs.cpuTier >= requiredCpuTier,
+      },
+      {
+        key: "gpu",
+        label: "Graphics card",
+        pass: requiredGpuTier === null ? true : specs.gpuTier >= requiredGpuTier,
+      },
+      {
+        key: "ram",
+        label: "Memory (RAM)",
+        pass:
+          requirements.parsed.memoryGb === undefined
+            ? true
+            : specs.ramGb >= requirements.parsed.memoryGb,
+      },
+      {
+        key: "vram",
+        label: "Video memory (VRAM)",
+        pass:
+          requirements.parsed.vramGb === undefined
+            ? true
+            : specs.vramGb >= requirements.parsed.vramGb,
+      },
+      {
+        key: "storage",
+        label: "Available storage",
+        pass:
+          requirements.parsed.storageGb === undefined
+            ? true
+            : specs.storageGb >= requirements.parsed.storageGb,
+      },
+    ]
+
+    return {
+      allChecksPass: checks.every((check) => check.pass),
+      failedLabels: checks.filter((check) => !check.pass).map((check) => check.label),
+    }
+  }
+
   const selectedCount = friendProfiles.filter((profile) => profile.selected).length
   const selectedProfiles = friendProfiles.filter((profile) => profile.selected)
 
@@ -650,12 +917,14 @@ export default function MatchingPage() {
               )}
             </div>
 
-            <div className="max-h-[calc(100vh-16rem)] overflow-y-auto pr-1">
+            <div className="max-h-screen overflow-y-auto pr-1">
             <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
               {categoryFilteredGames.map((game) => (
-                <article
+                <button
+                  type="button"
                   key={game.appId}
-                  className="overflow-hidden rounded-xl border border-border bg-secondary/20"
+                  onClick={() => openRequirementsModal(game)}
+                  className="overflow-hidden rounded-xl border border-border bg-secondary/20 text-left transition-colors hover:border-primary/40 hover:bg-secondary/30"
                 >
                   <div className="h-20 w-full bg-secondary/40">
                     <img
@@ -682,7 +951,7 @@ export default function MatchingPage() {
                       ))}
                     </div>
                   </div>
-                </article>
+                </button>
               ))}
             </div>
             {categoryFilteredGames.length === 0 && (
@@ -955,6 +1224,272 @@ export default function MatchingPage() {
             </section>
           </aside>
         </section>
+
+        <Dialog open={isRequirementsModalOpen} onOpenChange={setIsRequirementsModalOpen}>
+          <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto p-0">
+            <div className="border-b border-border/70 p-4 sm:p-6">
+              <DialogHeader className="gap-3">
+                <div className="overflow-hidden rounded-xl border border-border/70 bg-secondary/30">
+                  {selectedGameForRequirements ? (
+                    <img
+                      src={selectedGameForRequirements.imageUrl}
+                      alt={selectedGameForRequirements.name}
+                      className="h-40 w-full object-cover"
+                    />
+                  ) : null}
+                </div>
+                <DialogTitle>
+                  {selectedGameForRequirements?.name ?? "Game requirements"}
+                </DialogTitle>
+                <DialogDescription>
+                  Review quickly if every selected player can run this game.
+                </DialogDescription>
+              </DialogHeader>
+            </div>
+
+            <div className="space-y-4 p-4 sm:p-6">
+              {selectedGameForRequirements && requirementsLoadingByApp[selectedGameForRequirements.appId] && (
+                <p className="text-sm text-muted-foreground">Loading minimum requirements...</p>
+              )}
+
+              {selectedGameForRequirements && requirementsErrorByApp[selectedGameForRequirements.appId] && (
+                <p className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                  {requirementsErrorByApp[selectedGameForRequirements.appId]}
+                </p>
+              )}
+
+              {selectedGameForRequirements && requirementsByApp[selectedGameForRequirements.appId] && (
+                <div className="space-y-4">
+                  {(() => {
+                    const requirements = requirementsByApp[selectedGameForRequirements.appId]
+                    const failedParticipants = requirementsParticipants.filter((participant) => {
+                      const summary = evaluateParticipantCompatibility(participant.id, requirements)
+                      return !summary.allChecksPass
+                    })
+
+                    const everyonePasses = failedParticipants.length === 0
+
+                    return (
+                      <div
+                        className={`rounded-xl border px-3 py-2 text-sm ${
+                          everyonePasses
+                            ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-700"
+                            : "border-destructive/40 bg-destructive/10 text-destructive"
+                        }`}
+                      >
+                        {everyonePasses ? (
+                          <p className="inline-flex items-center gap-1.5 font-medium">
+                            <CheckCircle2 className="h-4 w-4" />
+                            All selected players meet the minimum requirements.
+                          </p>
+                        ) : (
+                          <p className="font-medium">
+                            The minimum requirements are not met by: {failedParticipants.map((participant) => participant.name).join(", ")}.
+                          </p>
+                        )}
+                      </div>
+                    )
+                  })()}
+
+                  {requirementsParticipants.map((participant) => {
+                    const specs = playerSpecsById[participant.id] ?? DEFAULT_PLAYER_SPECS
+                    const requirements = requirementsByApp[selectedGameForRequirements.appId]
+                    const requiredCpuTier = inferCpuTier(requirements.parsed.processor)
+                    const requiredGpuTier = inferGpuTier(requirements.parsed.graphics)
+
+                    const checks = [
+                      {
+                        key: "os",
+                        label: "Operating system",
+                        pass: osMatchesPlayer(requirements.parsed.os, specs.os),
+                        mine: (
+                          <input
+                            type="text"
+                            value={specs.os}
+                            onChange={(event) => updatePlayerSpecs(participant.id, "os", event.target.value)}
+                            className="h-8 w-full rounded-md border border-border bg-background px-2 text-xs"
+                          />
+                        ),
+                        required: requirements.parsed.os ?? "Not specified",
+                      },
+                      {
+                        key: "cpu",
+                        label: "Processor",
+                        pass: requiredCpuTier === null ? true : specs.cpuTier >= requiredCpuTier,
+                        mine: (
+                          <select
+                            value={specs.cpuTier}
+                            onChange={(event) => updatePlayerSpecs(participant.id, "cpuTier", Number(event.target.value))}
+                            className="h-8 w-full rounded-md border border-border bg-background px-2 text-xs"
+                          >
+                            {TIER_OPTIONS.map((tier) => (
+                              <option key={`cpu-${tier.value}`} value={tier.value}>
+                                {tier.label}
+                              </option>
+                            ))}
+                          </select>
+                        ),
+                        required:
+                          requirements.parsed.processor && requiredCpuTier !== null
+                            ? `${requirements.parsed.processor} (Tier ${requiredCpuTier})`
+                            : requirements.parsed.processor ?? "Not specified",
+                      },
+                      {
+                        key: "gpu",
+                        label: "Graphics card",
+                        pass: requiredGpuTier === null ? true : specs.gpuTier >= requiredGpuTier,
+                        mine: (
+                          <select
+                            value={specs.gpuTier}
+                            onChange={(event) => updatePlayerSpecs(participant.id, "gpuTier", Number(event.target.value))}
+                            className="h-8 w-full rounded-md border border-border bg-background px-2 text-xs"
+                          >
+                            {TIER_OPTIONS.map((tier) => (
+                              <option key={`gpu-${tier.value}`} value={tier.value}>
+                                {tier.label}
+                              </option>
+                            ))}
+                          </select>
+                        ),
+                        required:
+                          requirements.parsed.graphics && requiredGpuTier !== null
+                            ? `${requirements.parsed.graphics} (Tier ${requiredGpuTier})`
+                            : requirements.parsed.graphics ?? "Not specified",
+                      },
+                      {
+                        key: "ram",
+                        label: "Memory (RAM)",
+                        pass:
+                          requirements.parsed.memoryGb === undefined
+                            ? true
+                            : specs.ramGb >= requirements.parsed.memoryGb,
+                        mine: (
+                          <input
+                            type="number"
+                            min={1}
+                            value={specs.ramGb}
+                            onChange={(event) =>
+                              updatePlayerSpecs(participant.id, "ramGb", Number(event.target.value) || 0)
+                            }
+                            className="h-8 w-full rounded-md border border-border bg-background px-2 text-xs"
+                          />
+                        ),
+                        required:
+                          requirements.parsed.memoryGb !== undefined
+                            ? `${requirements.parsed.memoryGb} GB`
+                            : "Not specified",
+                      },
+                      {
+                        key: "vram",
+                        label: "Video memory (VRAM)",
+                        pass:
+                          requirements.parsed.vramGb === undefined
+                            ? true
+                            : specs.vramGb >= requirements.parsed.vramGb,
+                        mine: (
+                          <input
+                            type="number"
+                            min={1}
+                            value={specs.vramGb}
+                            onChange={(event) =>
+                              updatePlayerSpecs(participant.id, "vramGb", Number(event.target.value) || 0)
+                            }
+                            className="h-8 w-full rounded-md border border-border bg-background px-2 text-xs"
+                          />
+                        ),
+                        required:
+                          requirements.parsed.vramGb !== undefined
+                            ? `${requirements.parsed.vramGb} GB`
+                            : "Not specified",
+                      },
+                      {
+                        key: "storage",
+                        label: "Available storage",
+                        pass:
+                          requirements.parsed.storageGb === undefined
+                            ? true
+                            : specs.storageGb >= requirements.parsed.storageGb,
+                        mine: (
+                          <input
+                            type="number"
+                            min={1}
+                            value={specs.storageGb}
+                            onChange={(event) =>
+                              updatePlayerSpecs(participant.id, "storageGb", Number(event.target.value) || 0)
+                            }
+                            className="h-8 w-full rounded-md border border-border bg-background px-2 text-xs"
+                          />
+                        ),
+                        required:
+                          requirements.parsed.storageGb !== undefined
+                            ? `${requirements.parsed.storageGb} GB`
+                            : "Not specified",
+                      },
+                    ]
+
+                    const compatibilitySummary = evaluateParticipantCompatibility(participant.id, requirements)
+                    const allChecksPass = compatibilitySummary.allChecksPass
+
+                    return (
+                      <section
+                        key={`requirements-${participant.id}`}
+                        className="rounded-xl border border-border/70 bg-card/60 p-3"
+                      >
+                        <div className="mb-3 flex items-center justify-between gap-2">
+                          <h3 className="text-sm font-semibold">{participant.name}</h3>
+                          <span
+                            className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium ${
+                              allChecksPass
+                                ? "bg-emerald-500/15 text-emerald-600"
+                                : "bg-destructive/15 text-destructive"
+                            }`}
+                          >
+                            {allChecksPass ? (
+                              <CheckCircle2 className="h-3.5 w-3.5" />
+                            ) : (
+                              <XCircle className="h-3.5 w-3.5" />
+                            )}
+                            {allChecksPass
+                              ? "Minimum requirements are met"
+                              : "Minimum requirements are not met"}
+                          </span>
+                        </div>
+
+                        <div className="space-y-2">
+                          {checks.map((check) => (
+                            <div
+                              key={`${participant.id}-${check.key}`}
+                              className={`grid gap-2 rounded-lg border p-2 sm:grid-cols-2 ${
+                                check.pass
+                                  ? "border-emerald-500/30 bg-emerald-500/10"
+                                  : "border-destructive/30 bg-destructive/10"
+                              }`}
+                            >
+                              <div>
+                                <p className="mb-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                                  {check.label} - Your specs
+                                </p>
+                                {check.mine}
+                              </div>
+                              <div>
+                                <p className="mb-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                                  Minimum required
+                                </p>
+                                <p className="min-h-8 rounded-md border border-border bg-background/70 px-2 py-1.5 text-xs">
+                                  {check.required}
+                                </p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </section>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </main>
   )
