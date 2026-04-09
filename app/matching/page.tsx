@@ -1,10 +1,10 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { CheckCircle2, UserRoundPlus, ArrowLeft } from "lucide-react"
+import { CheckCircle2, UserRoundPlus, ArrowLeft, ArrowRight } from "lucide-react"
 
 type Platform = "steam" | "epic" | "xbox"
 type CategoryFilterMode = "or" | "and"
@@ -28,6 +28,14 @@ type GameCard = {
   imageUrl: string
   rating: number
   players: string
+}
+
+type RecommendedGame = {
+  appId: number
+  name: string
+  imageUrl: string
+  categories: [string, string]
+  rating: number
 }
 
 type GameCategoriesPayload = {
@@ -96,8 +104,82 @@ function toGameCards(games: SteamOwnedGame[]): GameCard[] {
   }))
 }
 
+const recommendedGames: RecommendedGame[] = [
+  {
+    appId: 730,
+    name: "Counter-Strike 2",
+    imageUrl: "https://cdn.akamai.steamstatic.com/steam/apps/730/header.jpg",
+    categories: ["FPS", "Competitive"],
+    rating: 4.8,
+  },
+  {
+    appId: 553850,
+    name: "Helldivers 2",
+    imageUrl: "https://cdn.akamai.steamstatic.com/steam/apps/553850/header.jpg",
+    categories: ["Co-op", "Shooter"],
+    rating: 4.7,
+  },
+  {
+    appId: 1172470,
+    name: "Apex Legends",
+    imageUrl: "https://cdn.akamai.steamstatic.com/steam/apps/1172470/header.jpg",
+    categories: ["Battle Royale", "Hero Shooter"],
+    rating: 4.5,
+  },
+  {
+    appId: 252950,
+    name: "Rocket League",
+    imageUrl: "https://cdn.akamai.steamstatic.com/steam/apps/252950/header.jpg",
+    categories: ["Sports", "Arcade"],
+    rating: 4.8,
+  },
+  {
+    appId: 1091500,
+    name: "Cyberpunk 2077",
+    imageUrl: "https://cdn.akamai.steamstatic.com/steam/apps/1091500/header.jpg",
+    categories: ["RPG", "Open World"],
+    rating: 4.6,
+  },
+  {
+    appId: 271590,
+    name: "Grand Theft Auto V",
+    imageUrl: "https://cdn.akamai.steamstatic.com/steam/apps/271590/header.jpg",
+    categories: ["Action", "Open World"],
+    rating: 4.9,
+  },
+  {
+    appId: 413150,
+    name: "Stardew Valley",
+    imageUrl: "https://cdn.akamai.steamstatic.com/steam/apps/413150/header.jpg",
+    categories: ["Farming", "Co-op"],
+    rating: 4.9,
+  },
+  {
+    appId: 322330,
+    name: "Don't Starve Together",
+    imageUrl: "https://cdn.akamai.steamstatic.com/steam/apps/322330/header.jpg",
+    categories: ["Survival", "Co-op"],
+    rating: 4.6,
+  },
+  {
+    appId: 381210,
+    name: "Dead by Daylight",
+    imageUrl: "https://cdn.akamai.steamstatic.com/steam/apps/381210/header.jpg",
+    categories: ["Horror", "Multiplayer"],
+    rating: 4.4,
+  },
+  {
+    appId: 1174180,
+    name: "Red Dead Redemption 2",
+    imageUrl: "https://cdn.akamai.steamstatic.com/steam/apps/1174180/header.jpg",
+    categories: ["Adventure", "Open World"],
+    rating: 4.9,
+  },
+]
+
 export default function MatchingPage() {
   const router = useRouter()
+  const recommendationsRef = useRef<HTMLDivElement | null>(null)
 
   const [steamId, setSteamId] = useState<string | null>(null)
   const [availablePlatforms, setAvailablePlatforms] = useState<Platform[]>([])
@@ -118,6 +200,18 @@ export default function MatchingPage() {
   const [categoryFilterError, setCategoryFilterError] = useState<string | null>(null)
   const [selectedCategories, setSelectedCategories] = useState<string[]>([])
   const [categoryFilterMode, setCategoryFilterMode] = useState<CategoryFilterMode>("or")
+
+  const scrollRecommendations = (direction: -1 | 1) => {
+    const container = recommendationsRef.current
+    if (!container) {
+      return
+    }
+
+    container.scrollBy({
+      left: direction * container.clientWidth,
+      behavior: "smooth",
+    })
+  }
 
   useEffect(() => {
     const initialize = async () => {
@@ -600,6 +694,92 @@ export default function MatchingPage() {
           </article>
 
           <aside className="space-y-4 flex flex-col">
+            <section className="rounded-2xl border border-border bg-card/50 p-3" aria-labelledby="recommendations-title">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <div>
+                  <h2 id="recommendations-title" className="text-base font-semibold">
+                    Game recommendations
+                  </h2>
+                  <p className="text-[11px] text-muted-foreground">
+                    Browse games in a horizontal carousel before selecting friends.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[10px] uppercase tracking-wide text-primary">
+                    2 visible
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="h-7 w-7"
+                      onClick={() => scrollRecommendations(-1)}
+                      aria-label="Scroll recommendations left"
+                    >
+                      <ArrowLeft className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="h-7 w-7"
+                      onClick={() => scrollRecommendations(1)}
+                      aria-label="Scroll recommendations right"
+                    >
+                      <ArrowRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              <div
+                ref={recommendationsRef}
+                className="overflow-x-auto pb-2"
+                style={{ scrollbarWidth: "none" }}
+              >
+                <div className="grid grid-flow-col auto-cols-[calc((100%-0.75rem)/2)] gap-3 px-1">
+                  {recommendedGames.map((game) => (
+                    <article
+                      key={game.appId}
+                      className="overflow-hidden rounded-xl border border-border bg-secondary/20"
+                    >
+                      <div className="h-20 w-full bg-secondary/40">
+                        <img
+                          src={game.imageUrl}
+                          alt={game.name}
+                          className="h-full w-full object-cover"
+                          loading="lazy"
+                        />
+                      </div>
+                      <div className="space-y-1.5 p-2.5">
+                        <div>
+                          <h3 className="line-clamp-1 text-xs font-semibold">{game.name}</h3>
+                          <div className="mt-1 flex flex-wrap gap-1">
+                            {game.categories.map((category) => (
+                              <span
+                                key={`${game.appId}-${category}`}
+                                className="rounded-full border border-border/80 bg-background/70 px-1.5 py-0.5 text-[8px] uppercase tracking-wide text-muted-foreground"
+                              >
+                                {category}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                          <span>Recommended</span>
+                          <span className="inline-flex items-center gap-1 text-amber-500">
+                            <CheckCircle2 className="h-3 w-3" />
+                            {game.rating}
+                          </span>
+                        </div>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              </div>
+            </section>
+
             <section className="rounded-2xl border border-border bg-card/50 p-4" aria-labelledby="friend-group-title">
               <h2 id="friend-group-title" className="text-lg font-semibold mb-2">
                 Your friend group
