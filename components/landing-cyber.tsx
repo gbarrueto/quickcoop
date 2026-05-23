@@ -23,6 +23,7 @@ import {
   Shield,
   CheckCircle2,
 } from "lucide-react"
+import Link from "next/link"
 
 type TrendingGame = {
   name: string
@@ -733,6 +734,12 @@ export function LandingCyber() {
           <p className="text-sm text-muted-foreground">
             Built for UI/UX Course • 2026
           </p>
+          <Link
+            href="/privacy"
+            className="text-sm text-muted-foreground hover:text-primary transition-colors"
+          >
+            Privacy Policy
+          </Link>
         </div>
       </footer>
     </div>
