@@ -92,64 +92,6 @@ const sections: Section[] = [
     ),
   },
   {
-    id: "third-party",
-    icon: <Lock className="w-5 h-5" />,
-    title: "Third-Party Services",
-    content: (
-      <div className="space-y-4 text-muted-foreground">
-        <p>
-          QCoop integrates with external platforms to authenticate your identity
-          and read your game library. Each platform governs its own data under
-          its respective privacy policy:
-        </p>
-        <div className="space-y-3">
-          {[
-            {
-              name: "Steam / Valve",
-              scope: "OpenID authentication + public game library",
-              url: "https://store.steampowered.com/privacy_agreement/",
-            },
-            {
-              name: "Epic Games",
-              scope: "OAuth 2.0 basic_profile scope",
-              url: "https://www.epicgames.com/site/en-US/privacypolicy",
-            },
-            {
-              name: "Xbox / Microsoft",
-              scope: "Game Pass catalog (public, no personal data)",
-              url: "https://privacy.microsoft.com/en-us/privacystatement",
-            },
-          ].map((tp) => (
-            <div
-              key={tp.name}
-              className="flex items-start justify-between gap-4 rounded-lg border border-border bg-secondary/30 px-4 py-3"
-            >
-              <div>
-                <p className="font-medium text-foreground">{tp.name}</p>
-                <p className="text-sm">{tp.scope}</p>
-              </div>
-              <a
-                href={tp.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="shrink-0 text-xs text-primary underline underline-offset-2 hover:text-primary/80 transition-colors"
-              >
-                Privacy Policy ↗
-              </a>
-            </div>
-          ))}
-        </div>
-        <p>
-          QCoop also fetches the public Game Pass catalog from
-          <code className="mx-1 rounded bg-secondary px-1.5 py-0.5 text-xs font-mono text-foreground">
-            catalog.gamepass.com
-          </code>
-          — this request contains no personal data.
-        </p>
-      </div>
-    ),
-  },
-  {
     id: "data-storage",
     icon: <Shield className="w-5 h-5" />,
     title: "Data Storage & Security",
@@ -216,7 +158,7 @@ const sections: Section[] = [
           reach us at:
         </p>
         <div className="rounded-lg border border-border bg-secondary/30 px-4 py-3 font-mono text-sm text-foreground">
-          privacy@quickcoop.vercel.app
+          quickcoop6@gmail.com
         </div>
         <p className="text-xs">
           We will respond to all privacy-related inquiries within 30 days.
