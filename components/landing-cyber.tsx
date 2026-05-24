@@ -149,7 +149,7 @@ export function LandingCyber() {
     setIsWaitingEpicAuth(true)
 
     const popup = window.open(
-      "/api/epic",
+      "/api/epic/login",
       "epic-oauth-login",
       "width=700,height=760,menubar=no,toolbar=no,location=no,status=no",
     )
