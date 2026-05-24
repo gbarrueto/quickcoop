@@ -23,6 +23,7 @@ import {
   Shield,
   CheckCircle2,
 } from "lucide-react"
+import Link from "next/link"
 
 type TrendingGame = {
   name: string
@@ -93,6 +94,7 @@ const fallbackTrendingMultiplayerGames: TrendingGame[] = [
 
 const STEAM_SESSION_KEY = "qcoop-steam-id"
 const XBOX_SESSION_KEY = "qcoop-xbox-gamepass"
+const EPIC_SESSION_KEY = "qcoop-epic-id"
 const EPIC_CONNECTED_SESSION_KEY = "qcoop-epic-connected"
 const XBOX_CONNECTED_SESSION_KEY = "qcoop-xbox-connected"
 const TRENDING_CACHE_KEY = "qcoop-trending-multiplayer-cache"
@@ -112,21 +114,28 @@ export function LandingCyber() {
   const [trendingLoadError, setTrendingLoadError] = useState<string | null>(null)
   const [hasGamePass, setHasGamePass] = useState<boolean | null>(null)
   const [xboxConnected, setXboxConnected] = useState(false)
+  const [epicId, setEpicId] = useState<string | null>(null)
+  const [epicError, setEpicError] = useState<string | null>(null)
+  const [isWaitingEpicAuth, setIsWaitingEpicAuth] = useState(false)
 
-  const canBeginMatching = Boolean(steamId) || xboxConnected
+  const canBeginMatching = Boolean(steamId) || Boolean(epicId) || xboxConnected
 
   useEffect(() => {
     const storedSteamId = window.sessionStorage.getItem(STEAM_SESSION_KEY)
     const storedXbox = window.sessionStorage.getItem(XBOX_SESSION_KEY)
+    const storedEpicId = window.sessionStorage.getItem(EPIC_SESSION_KEY)
 
     if (storedSteamId) {
       setSteamId(storedSteamId)
     }
+
     if (storedXbox) {
       const parsed = JSON.parse(storedXbox)
       setXboxConnected(true)
       setHasGamePass(parsed.hasGamePass)
     }
+
+    if (storedEpicId) setEpicId(storedEpicId)
   }, [])
 
   const startSteamOpenId = () => {
@@ -142,6 +151,22 @@ export function LandingCyber() {
     if (!popup) {
       setIsWaitingSteamAuth(false)
       setSteamError("Popup blocked. Please allow popups and try again.")
+    }
+  }
+
+  const startEpicOAuth = () => {
+    setEpicError(null)
+    setIsWaitingEpicAuth(true)
+
+    const popup = window.open(
+      "/api/epic/login",
+      "epic-oauth-login",
+      "width=700,height=760,menubar=no,toolbar=no,location=no,status=no",
+    )
+
+    if (!popup) {
+      setIsWaitingEpicAuth(false)
+      setEpicError("Popup blocked. Please allow popups and try again.")
     }
   }
 
@@ -168,6 +193,18 @@ export function LandingCyber() {
       if (event.data.type === "steam-auth-error") {
         setIsWaitingSteamAuth(false)
         setSteamError(event.data.error || "Steam authentication failed")
+      }
+
+      if (event.data.type === "epic-auth-success") {
+        const resolvedEpicId = String(event.data.epicAccountId || "")
+        setEpicId(resolvedEpicId)
+        window.sessionStorage.setItem(EPIC_SESSION_KEY, resolvedEpicId)
+        setIsWaitingEpicAuth(false)
+      }
+
+      if (event.data.type === "epic-auth-error") {
+        setIsWaitingEpicAuth(false)
+        setEpicError(event.data.error || "Epic authentication failed")
       }
     }
 
@@ -384,12 +421,20 @@ export function LandingCyber() {
                     <Button
                       type="button"
                       onClick={() => setEpicModalOpen(true)}
-                      className="w-full justify-start gap-3 text-white bg-[#313131] hover:bg-[#444444]"
+                      className={`w-full justify-start gap-3 text-white ${
+                        epicId
+                          ? "bg-emerald-600 hover:bg-emerald-500"
+                          : "bg-[#313131] hover:bg-[#444444]"
+                      }`}
                     >
-                      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M3.537 0C2.165 0 1.66.506 1.66 1.879V18.44a4.262 4.262 0 00.136 1.049c.238.97.848 1.877 1.877 2.635l6.26 4.588c.57.418.879.418 1.449 0l6.261-4.588c1.029-.758 1.639-1.665 1.877-2.635a4.262 4.262 0 00.136-1.049V1.879C19.656.506 19.151 0 17.779 0zm7.12 2.963l5.912 11.26h-3.188l-1.073-2.208H8.63l-1.072 2.208H4.37zm0 3.947l1.767 3.631H8.89z" />
-                      </svg>
+                      {/* SVG epic igual que tienes */}
                       Connect Epic Games
+                      {epicId && (
+                        <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-white/15 px-2 py-1 text-xs">
+                          <CheckCircle2 className="h-4 w-4" />
+                          Connected
+                        </span>
+                      )}
                     </Button>
                     <Button
                       type="button"
@@ -689,10 +734,23 @@ export function LandingCyber() {
                 Account Sign-In
               </h3>
               <div className="flex justify-center">
-                <Button type="button" disabled className="bg-[#313131] text-white opacity-70 cursor-not-allowed">
-                  Epic integration coming soon
+                <Button
+                  type="button"
+                  onClick={startEpicOAuth}
+                  className="bg-[#313131] hover:bg-[#444444] text-white"
+                >
+                  Sign in with Epic Games
                 </Button>
               </div>
+              {isWaitingEpicAuth && (
+                <p className="text-sm text-primary">Waiting for Epic authentication...</p>
+              )}
+              {epicId && (
+                <div className="rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm text-primary">
+                  Epic authenticated. Account ID: {epicId}
+                </div>
+              )}
+              {epicError && <p className="text-sm text-destructive">{epicError}</p>}
             </section>
           </div>
         </DialogContent>
@@ -810,6 +868,12 @@ export function LandingCyber() {
           <p className="text-sm text-muted-foreground">
             Built for UI/UX Course • 2026
           </p>
+          <Link
+            href="/privacy"
+            className="text-sm text-muted-foreground hover:text-primary transition-colors"
+          >
+            Privacy Policy
+          </Link>
         </div>
       </footer>
     </div>
