@@ -89,11 +89,27 @@ export async function GET(request: NextRequest) {
         window.close()
       </script>
     `
-
     const response = new NextResponse(html, {
       headers: { "Content-Type": "text/html" },
     })
     response.cookies.delete("epic_oauth_state")
+
+    // Guarda el access token en cookie httpOnly para usarlo en las API routes
+    response.cookies.set("epic_access_token", access_token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 60 * 60 * 8, // 8 horas
+      path: "/",
+    })
+    response.cookies.set("epic_account_id", user.sub, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 60 * 60 * 8,
+      path: "/",
+    })
+
     return response
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown Epic callback error"
