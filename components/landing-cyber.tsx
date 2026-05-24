@@ -93,6 +93,7 @@ const fallbackTrendingMultiplayerGames: TrendingGame[] = [
 ]
 
 const STEAM_SESSION_KEY = "qcoop-steam-id"
+const XBOX_SESSION_KEY = "qcoop-xbox-gamepass"
 const EPIC_SESSION_KEY = "qcoop-epic-id"
 const EPIC_CONNECTED_SESSION_KEY = "qcoop-epic-connected"
 const XBOX_CONNECTED_SESSION_KEY = "qcoop-xbox-connected"
@@ -111,18 +112,27 @@ export function LandingCyber() {
   const [trendingGames, setTrendingGames] = useState<TrendingGame[]>(fallbackTrendingMultiplayerGames)
   const [isTrendingLoading, setIsTrendingLoading] = useState(true)
   const [trendingLoadError, setTrendingLoadError] = useState<string | null>(null)
+  const [hasGamePass, setHasGamePass] = useState<boolean | null>(null)
+  const [xboxConnected, setXboxConnected] = useState(false)
   const [epicId, setEpicId] = useState<string | null>(null)
   const [epicError, setEpicError] = useState<string | null>(null)
   const [isWaitingEpicAuth, setIsWaitingEpicAuth] = useState(false)
 
-  const canBeginMatching = Boolean(steamId) || Boolean(epicId)
+  const canBeginMatching = Boolean(steamId) || Boolean(epicId) || xboxConnected
 
   useEffect(() => {
     const storedSteamId = window.sessionStorage.getItem(STEAM_SESSION_KEY)
+    const storedXbox = window.sessionStorage.getItem(XBOX_SESSION_KEY)
     const storedEpicId = window.sessionStorage.getItem(EPIC_SESSION_KEY)
 
     if (storedSteamId) {
       setSteamId(storedSteamId)
+    }
+
+    if (storedXbox) {
+      const parsed = JSON.parse(storedXbox)
+      setXboxConnected(true)
+      setHasGamePass(parsed.hasGamePass)
     }
 
     if (storedEpicId) setEpicId(storedEpicId)
@@ -429,12 +439,22 @@ export function LandingCyber() {
                     <Button
                       type="button"
                       onClick={() => setXboxModalOpen(true)}
-                      className="w-full justify-start gap-3 text-white bg-[#107c10] hover:bg-[#0f6f0f]"
+                      className={`w-full justify-start gap-3 text-white ${
+                        xboxConnected
+                          ? "bg-emerald-600 hover:bg-emerald-500"
+                          : "bg-[#107c10] hover:bg-[#0f6f0f]"
+                      }`}
                     >
                       <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-white/35 text-xs font-semibold">
                         X
                       </span>
-                      Connect Xbox account
+                      Connect Xbox / Game Pass
+                      {xboxConnected && (
+                        <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-white/15 px-2 py-1 text-xs">
+                          <CheckCircle2 className="h-4 w-4" />
+                          {hasGamePass ? "Game Pass" : "Connected"}
+                        </span>
+                      )}
                     </Button>
                     <Button
                       type="button"
@@ -743,37 +763,95 @@ export function LandingCyber() {
               <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#107c10] text-white shadow-lg shadow-primary/15">
                 <span className="text-xl font-bold">X</span>
               </div>
-              <DialogTitle>Connect Xbox account</DialogTitle>
+              <DialogTitle>Connect Xbox / Game Pass</DialogTitle>
               <DialogDescription className="max-w-sm text-sm">
-                Connect your Xbox account to include your console profile in future game matching.
+                Indica si tienes una suscripción activa de Game Pass para incluir
+                su catálogo completo en el matching.
               </DialogDescription>
             </DialogHeader>
           </div>
 
           <div className="space-y-5 px-6 py-6">
-            <section className="rounded-2xl border border-border bg-secondary/30 p-4 text-center" aria-labelledby="xbox-privacy-title">
-              <h3 id="xbox-privacy-title" className="mb-2 font-semibold">
-                Privacy information
+            {/* Info sobre Game Pass */}
+            <section
+              className="rounded-2xl border border-border bg-secondary/30 p-4"
+              aria-labelledby="xbox-gamepass-info"
+            >
+              <h3 id="xbox-gamepass-info" className="mb-2 font-semibold text-center">
+                ¿Cómo funciona?
               </h3>
-              <p className="text-sm text-muted-foreground">
-                By continuing, QCoop will request read access to the following account data:
+              <p className="text-sm text-muted-foreground text-center">
+                Game Pass es un catálogo compartido — si tienes suscripción activa,
+                tienes acceso a los mismos ~500 juegos que cualquier otro suscriptor.
+                No necesitamos acceder a tu cuenta para saberlo.
               </p>
-              <ul className="mt-3 space-y-1 text-sm text-muted-foreground">
-                <li>Owned game library</li>
-                <li>Friends list</li>
-              </ul>
             </section>
 
-            <section className="space-y-3 text-center" aria-labelledby="xbox-auth-title">
-              <h3 id="xbox-auth-title" className="font-semibold">
-                Account Sign-In
+            {/* Selector de suscripción */}
+            <section className="space-y-3" aria-labelledby="xbox-sub-title">
+              <h3 id="xbox-sub-title" className="font-semibold text-center">
+                ¿Tienes Game Pass activo?
               </h3>
-              <div className="flex justify-center">
-                <Button type="button" disabled className="bg-[#107c10] text-white opacity-70 cursor-not-allowed">
-                  Xbox integration coming soon
-                </Button>
+
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setHasGamePass(true)}
+                  className={`flex flex-col items-center gap-2 rounded-xl border p-4 transition-all ${
+                    hasGamePass === true
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border bg-secondary/30 text-muted-foreground hover:border-primary/50"
+                  }`}
+                >
+                  <span className="text-2xl">🎮</span>
+                  <span className="text-sm font-medium">Sí, tengo Game Pass</span>
+                  <span className="text-xs opacity-70">~500 juegos incluidos</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setHasGamePass(false)}
+                  className={`flex flex-col items-center gap-2 rounded-xl border p-4 transition-all ${
+                    hasGamePass === false
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border bg-secondary/30 text-muted-foreground hover:border-primary/50"
+                  }`}
+                >
+                  <span className="text-2xl">🕹️</span>
+                  <span className="text-sm font-medium">No, solo Xbox</span>
+                  <span className="text-xs opacity-70">Solo juegos comprados</span>
+                </button>
               </div>
             </section>
+
+            {/* Botón confirmar */}
+            <Button
+              type="button"
+              disabled={hasGamePass === null}
+              className="w-full bg-[#107c10] hover:bg-[#0f6f0f] text-white disabled:opacity-50"
+              onClick={() => {
+                if (hasGamePass === null) return
+
+                window.sessionStorage.setItem(
+                  XBOX_SESSION_KEY,
+                  JSON.stringify({ hasGamePass })
+                )
+                setXboxConnected(true)
+                setXboxModalOpen(false)
+              }}
+            >
+              <CheckCircle2 className="w-4 h-4 mr-2" />
+              Confirmar
+            </Button>
+
+            {/* Estado confirmado */}
+            {xboxConnected && (
+              <div className="rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm text-primary text-center">
+                {hasGamePass
+                  ? "✅ Game Pass activo — catálogo completo incluido en el matching"
+                  : "✅ Xbox conectado — solo juegos comprados"}
+              </div>
+            )}
           </div>
         </DialogContent>
       </Dialog>
