@@ -390,6 +390,7 @@ export default function MatchingPage() {
       const storedSteamId = window.sessionStorage.getItem(STEAM_SESSION_KEY)
       const storedEpicId = window.sessionStorage.getItem(EPIC_SESSION_KEY)
       const xboxRaw = window.sessionStorage.getItem(XBOX_SESSION_KEY)
+      console.log(`[matching xbox] ${xboxRaw}`)
       const xboxData = xboxRaw ? JSON.parse(xboxRaw) as { hasGamePass: boolean } : null
 
       if (!storedSteamId) {
@@ -438,6 +439,23 @@ export default function MatchingPage() {
         }))
         setFriendProfiles(steamProfiles)
 
+        // Biblioteca manual
+        const storedManual = window.sessionStorage.getItem("qcoop-manual-games")
+        if (storedManual) {
+          const manualNames = JSON.parse(storedManual) as string[]
+          const manualCards: GameCard[] = manualNames.map((name) => ({
+            appId: Math.abs(
+              name.toLowerCase().split("").reduce((acc, c) => acc * 31 + c.charCodeAt(0), 0)
+            ) % 9999999,
+            name,
+            imageUrl: "",
+            rating: 0,
+            players: "1+",
+            platform: "steam" as const, // puedes agregar "manual" como plataforma si quieres
+          }))
+          setUserGames((prev) => [...prev, ...manualCards])
+        }
+
         // Epic: juegos + amigos
         if (storedEpicId) {
           const [epicLibRes, epicFriendsRes] = await Promise.all([
@@ -475,6 +493,21 @@ export default function MatchingPage() {
             }))
             setEpicFriends(epicProfiles)
           }
+        }
+
+        // Lee juegos manuales de Epic si los hay
+        const epicManualRaw = window.sessionStorage.getItem("qcoop-epic-manual-games")
+        if (epicManualRaw) {
+          const epicManualNames = JSON.parse(epicManualRaw) as string[]
+          const manualCards: GameCard[] = epicManualNames.map((name, i) => ({
+            appId: Math.abs(name.split("").reduce((acc, c) => acc * 31 + c.charCodeAt(0), 0)) % 9999999,
+            name,
+            imageUrl: "",
+            rating: 0,
+            players: "1+",
+            platform: "epic" as const,
+          }))
+          setEpicGames(manualCards)
         }
 
         // GamePass: catálogo público

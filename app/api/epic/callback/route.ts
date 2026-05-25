@@ -68,12 +68,15 @@ export async function GET(request: NextRequest) {
     }
 
     const origin = getOrigin(request)
+    console.log("[epic/callback] exchanging code for token...")
     const { access_token, refresh_token } = await exchangeCodeForToken(
       code,
       `${origin}/api/epic/callback`
     )
+    console.log("[epic/callback] token obtained, fetching user info...")
 
     const user = await getEpicUserInfo(access_token)
+    console.log("[epic/callback] user:", user)
     // user.sub  → Epic Account ID
     // user.name → display name
 
@@ -113,6 +116,7 @@ export async function GET(request: NextRequest) {
     return response
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown Epic callback error"
+    console.log("[epic/callback] error:", message)
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }

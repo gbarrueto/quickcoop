@@ -4,6 +4,9 @@ export async function GET(request: NextRequest) {
   const accessToken = request.cookies.get("epic_access_token")?.value
   const accountId = request.cookies.get("epic_account_id")?.value
 
+  console.log("[epic/friends] accessToken:", accessToken ? "present" : "missing")
+  console.log("[epic/friends] accountId:", accountId ?? "missing")
+
   if (!accessToken || !accountId) {
     return NextResponse.json({ error: "Epic session not found" }, { status: 401 })
   }
@@ -19,6 +22,7 @@ export async function GET(request: NextRequest) {
 
     if (!friendsRes.ok) {
       const err = await friendsRes.text()
+      console.log("[epic/friends] Epic API error:", err)
       throw new Error(`Epic friends fetch failed: ${err}`)
     }
 
@@ -59,6 +63,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ friends })
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error"
+    console.log("[epic/friends] catch error:", message)
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }

@@ -15,8 +15,9 @@ function buildEpicAuthUrl(origin: string, state: string): string {
     client_id: process.env.EPIC_CLIENT_ID!,
     redirect_uri: `${origin}/api/epic/callback`,
     response_type: "code",
-    scope: "basic_profile",
+    scope: "basic_profile friends_list",
     state,
+    prompt: "consent",
   })
 
   return `${EPIC_AUTH_ENDPOINT}?${params.toString()}`
