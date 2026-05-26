@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import {
   CheckCircle2,
@@ -18,6 +17,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import {
+  ensureStoredUserProfile,
+  type FriendIdentity,
+  type StoredFriendProfile,
+  updateStoredUserProfile,
+} from "@/lib/user-profile"
 
 type Platform = "steam" | "epic" | "xbox" | "import"
 type CategoryFilterMode = "or" | "and"
@@ -129,10 +134,6 @@ type RequirementsParticipant = {
   id: string
   name: string
 }
-
-const STEAM_SESSION_KEY = "qcoop-steam-id"
-const EPIC_SESSION_KEY = "qcoop-epic-id"
-const XBOX_SESSION_KEY = "qcoop-xbox-gamepass"
 
 const DEFAULT_PLAYER_SPECS: PlayerSystemSpecs = {
   os: "Windows 10",
@@ -260,6 +261,41 @@ function osMatchesPlayer(requiredOs: string | undefined, playerOs: string): bool
   return normalizedPlayer.includes(normalizedRequired.slice(0, 8))
 }
 
+function toFriendProfile(profile: StoredFriendProfile): FriendProfile {
+  return {
+    profileId: profile.profileId,
+    identities: profile.identities,
+    selected: profile.selected,
+    expanded: profile.expanded,
+  }
+}
+
+function toImportedGameCard(name: string): GameCard {
+  return {
+    appId: Math.abs(
+      name.toLowerCase().trim().split("").reduce((acc, c) => acc * 31 + c.charCodeAt(0), 0),
+    ) % 9999999,
+    name,
+    imageUrl: "",
+    rating: 0,
+    players: "??",
+    platform: "import",
+  }
+}
+
+function mergeFriendProfiles(existing: FriendProfile[], incoming: FriendProfile[]): FriendProfile[] {
+  const next = [...existing]
+
+  incoming.forEach((profile) => {
+    const duplicate = next.some((current) => current.profileId === profile.profileId)
+    if (!duplicate) {
+      next.push(profile)
+    }
+  })
+
+  return next
+}
+
 const recommendedGames: RecommendedGame[] = [
   {
     appId: 730,
@@ -334,7 +370,6 @@ const recommendedGames: RecommendedGame[] = [
 ]
 
 export default function MatchingPage() {
-  const router = useRouter()
   const recommendationsRef = useRef<HTMLDivElement | null>(null)
 
   const [steamId, setSteamId] = useState<string | null>(null)
@@ -387,10 +422,7 @@ export default function MatchingPage() {
 
   useEffect(() => {
     const initialize = async () => {
-      const storedSteamId = window.sessionStorage.getItem(STEAM_SESSION_KEY)
-      const storedEpicId = window.sessionStorage.getItem(EPIC_SESSION_KEY)
-      const xboxRaw = window.sessionStorage.getItem(XBOX_SESSION_KEY)
-      const xboxData = xboxRaw ? JSON.parse(xboxRaw) as { hasGamePass: boolean } : null
+      const profile = ensureStoredUserProfile()
 
       // if (!storedSteamId) {
       //   router.push("/")
@@ -398,24 +430,34 @@ export default function MatchingPage() {
       // }
 
       const platforms: Platform[] = []
-      if (storedSteamId) platforms.push("steam")
-      if (storedEpicId) platforms.push("epic")
-      if (xboxData) platforms.push("xbox")
+      if (profile.connections.steamId) platforms.push("steam")
+      if (profile.connections.epicAccountId) platforms.push("epic")
+      if (profile.connections.hasGamePass) platforms.push("xbox")
 
       setAvailablePlatforms(platforms)
-      if (storedSteamId) setSteamId(storedSteamId)
-      if (storedEpicId) setEpicAccountId(storedEpicId)
-      if (xboxData?.hasGamePass) setHasGamePass(true)
+      if (profile.connections.steamId) setSteamId(profile.connections.steamId)
+      if (profile.connections.epicAccountId) setEpicAccountId(profile.connections.epicAccountId)
+      setHasGamePass(profile.connections.hasGamePass)
+      setUserGames(profile.importedGames.map(toImportedGameCard))
+      setFriendProfiles(profile.friends.map(toFriendProfile))
+      setIdentityLibraries(
+        profile.friends.reduce<Record<string, Set<number>>>((acc, friend) => {
+          friend.identities.forEach((identity) => {
+            acc[identityKey(identity)] = new Set(friend.libraryAppIds)
+          })
+          return acc
+        }, {}),
+      )
 
       setLoading(true)
       setPageError(null)
 
       try {
-        // Steam: juegos + amigos (ya existente)
-        if (storedSteamId) {
+        // Steam: juegos + amigos (optional enrichment)
+        if (profile.connections.steamId) {
           const [gamesRes, friendsRes] = await Promise.all([
-            fetch(`/api/steam/owned-games?steamId=${storedSteamId}`),
-            fetch(`/api/steam/friends?steamId=${storedSteamId}`),
+            fetch(`/api/steam/owned-games?steamId=${profile.connections.steamId}`),
+            fetch(`/api/steam/friends?steamId=${profile.connections.steamId}`),
           ])
   
           const gamesJson = (await gamesRes.json()) as OwnedGamesPayload & { error?: string }
@@ -425,7 +467,7 @@ export default function MatchingPage() {
           if (!friendsRes.ok) throw new Error(friendsJson.error || "Failed to fetch your Steam friends")
   
           const ownedGames = gamesJson.data?.response?.games ?? []
-          setUserGames(toGameCards(ownedGames, "steam"))
+            setUserGames((prev) => [...prev, ...toGameCards(ownedGames, "steam")])
   
           const steamProfiles = (friendsJson.friends ?? []).map((friend) => ({
             profileId: `profile:steam:${friend.steamId}`,
@@ -438,31 +480,14 @@ export default function MatchingPage() {
             selected: false,
             expanded: false,
           }))
-          setFriendProfiles(steamProfiles)
-        }
-
-        // Biblioteca manual
-        const storedManual = window.sessionStorage.getItem("qcoop-manual-games")
-        if (storedManual) {
-          const manualNames = JSON.parse(storedManual) as string[]
-          const manualCards: GameCard[] = manualNames.map((name) => ({
-            appId: Math.abs(
-              name.toLowerCase().trim().split("").reduce((acc, c) => acc * 31 + c.charCodeAt(0), 0)
-            ) % 9999999,
-            name,
-            imageUrl: "",
-            rating: 0,
-            players: "??",
-            platform: "import" as const, // puedes agregar "manual" como plataforma si quieres
-          }))
-          setUserGames((prev) => [...prev, ...manualCards])
+          setFriendProfiles((prev) => mergeFriendProfiles(prev, steamProfiles))
         }
 
         // Epic: juegos + amigos
-        if (storedEpicId) {
+        if (profile.connections.epicAccountId) {
           const [epicLibRes, epicFriendsRes] = await Promise.all([
-            fetch(`/api/epic/library?accountId=${storedEpicId}`),
-            fetch(`/api/epic/friends?accountId=${storedEpicId}`),
+            fetch(`/api/epic/library?accountId=${profile.connections.epicAccountId}`),
+            fetch(`/api/epic/friends?accountId=${profile.connections.epicAccountId}`),
           ])
 
           if (epicLibRes.ok) {
@@ -477,7 +502,7 @@ export default function MatchingPage() {
               players: "1+",
               platform: "epic" as const,
             }))
-            setEpicGames(mapped)
+            setEpicGames((prev) => [...prev, ...mapped])
           }
 
           if (epicFriendsRes.ok) {
@@ -493,12 +518,12 @@ export default function MatchingPage() {
               selected: false,
               expanded: false,
             }))
-            setEpicFriends(epicProfiles)
+            setEpicFriends((prev) => mergeFriendProfiles(prev, epicProfiles))
           }
         }
 
         // GamePass: catálogo público
-        if (xboxData?.hasGamePass) {
+        if (profile.connections.hasGamePass) {
           const gpRes = await fetch("/api/gamepass")
           if (gpRes.ok) {
             const gpJson = (await gpRes.json()) as GamePassPayload
@@ -510,7 +535,7 @@ export default function MatchingPage() {
               players: "1+",
               platform: "xbox" as const,
             }))
-            setGamePassGames(mapped)
+            setGamePassGames((prev) => [...prev, ...mapped])
           }
         }
 
@@ -522,7 +547,7 @@ export default function MatchingPage() {
     }
 
     initialize()
-  }, [router])
+  }, [])
 
   const loadIdentityLibrary = async (identity: IdentityRef) => {
     const key = identityKey(identity)
@@ -532,7 +557,6 @@ export default function MatchingPage() {
     }
 
     if (identity.platform !== "steam") {
-      setIdentityErrors((prev) => ({ ...prev, [key]: "Library import for this platform is not available yet." }))
       return
     }
 
@@ -549,6 +573,14 @@ export default function MatchingPage() {
 
       const appIds = (payload.data?.response?.games ?? []).map((game) => game.appid)
       setIdentityLibraries((prev) => ({ ...prev, [key]: new Set(appIds) }))
+      updateStoredUserProfile((profile) => ({
+        ...profile,
+        friends: profile.friends.map((friend) =>
+          friend.identities.some((current) => identityKey(current) === key)
+            ? { ...friend, libraryAppIds: appIds }
+            : friend,
+        ),
+      }))
     } catch (error) {
       setIdentityErrors((prev) => ({
         ...prev,
@@ -635,7 +667,7 @@ export default function MatchingPage() {
         }
       })
 
-      return prev
+      const nextProfiles = prev
         .filter((profile) => profile.profileId !== sourceProfile.profileId)
         .map((profile) =>
           profile.profileId === targetProfile.profileId
@@ -646,6 +678,36 @@ export default function MatchingPage() {
               }
             : profile,
         )
+
+      updateStoredUserProfile((profile) => {
+        const sourceStored = profile.friends.find((friend) => friend.profileId === sourceProfile.profileId)
+        const targetStored = profile.friends.find((friend) => friend.profileId === targetProfile.profileId)
+        const mergedLibraryAppIds = Array.from(
+          new Set([...(targetStored?.libraryAppIds ?? []), ...(sourceStored?.libraryAppIds ?? [])]),
+        )
+        const storedIdentities = mergedIdentities.filter(
+          (identity): identity is FriendIdentity => identity.platform !== "import",
+        )
+
+        return {
+          ...profile,
+          friends: profile.friends
+            .filter((friend) => friend.profileId !== sourceProfile.profileId)
+            .map((friend) =>
+              friend.profileId === targetProfile.profileId
+                ? {
+                    ...friend,
+                    identities: storedIdentities,
+                    selected: friend.selected || sourceStored?.selected || false,
+                    expanded: friend.expanded || sourceStored?.expanded || false,
+                    libraryAppIds: mergedLibraryAppIds,
+                  }
+                : friend,
+            ),
+        }
+      })
+
+      return nextProfiles
     })
   }
 

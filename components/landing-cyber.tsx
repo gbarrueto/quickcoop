@@ -12,6 +12,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import {
+  ensureStoredUserProfile,
+  updateStoredUserProfile,
+} from "@/lib/user-profile"
+import {
   Gamepad2,
   Users,
   Zap,
@@ -92,9 +96,6 @@ const fallbackTrendingMultiplayerGames: TrendingGame[] = [
   },
 ]
 
-const STEAM_SESSION_KEY = "qcoop-steam-id"
-const XBOX_SESSION_KEY = "qcoop-xbox-gamepass"
-const EPIC_SESSION_KEY = "qcoop-epic-id"
 const EPIC_CONNECTED_SESSION_KEY = "qcoop-epic-connected"
 const XBOX_CONNECTED_SESSION_KEY = "qcoop-xbox-connected"
 const TRENDING_CACHE_KEY = "qcoop-trending-multiplayer-cache"
@@ -128,32 +129,32 @@ export function LandingCyber() {
       .split("\n")
       .map((g) => g.trim())
       .filter(Boolean)
+    const mergedGames = Array.from(new Set([...importedGames, ...games]))
 
-    setImportedGames(games)
-    window.sessionStorage.setItem("qcoop-manual-games", JSON.stringify(games))
+    setImportedGames(mergedGames)
+    updateStoredUserProfile((profile) => ({
+      ...profile,
+      importedGames: mergedGames,
+    }))
     setImportModalOpen(false)
   }
 
   useEffect(() => {
-    const storedSteamId = window.sessionStorage.getItem(STEAM_SESSION_KEY)
-    const storedXbox = window.sessionStorage.getItem(XBOX_SESSION_KEY)
-    const storedEpicId = window.sessionStorage.getItem(EPIC_SESSION_KEY)
+    const profile = ensureStoredUserProfile()
 
-    if (storedSteamId) {
-      setSteamId(storedSteamId)
+    if (profile.connections.steamId) {
+      setSteamId(profile.connections.steamId)
     }
 
-    if (storedXbox) {
-      const parsed = JSON.parse(storedXbox)
-      setXboxConnected(true)
-      setHasGamePass(parsed.hasGamePass)
+    if (profile.connections.epicAccountId) {
+      setEpicId(profile.connections.epicAccountId)
     }
 
-    if (storedEpicId) setEpicId(storedEpicId)
+    setHasGamePass(profile.connections.hasGamePass)
+    setXboxConnected(profile.connections.hasGamePass)
 
-    const storedManual = window.sessionStorage.getItem("qcoop-manual-games")
-    if (storedManual) {
-      setImportedGames(JSON.parse(storedManual) as string[])
+    if (profile.importedGames.length > 0) {
+      setImportedGames(profile.importedGames)
     }
   }, [])
 
@@ -205,7 +206,13 @@ export function LandingCyber() {
         }
 
         setSteamId(resolvedSteamId)
-        window.sessionStorage.setItem(STEAM_SESSION_KEY, resolvedSteamId)
+        updateStoredUserProfile((profile) => ({
+          ...profile,
+          connections: {
+            ...profile.connections,
+            steamId: resolvedSteamId,
+          },
+        }))
         setIsWaitingSteamAuth(false)
       }
 
@@ -217,7 +224,13 @@ export function LandingCyber() {
       if (event.data.type === "epic-auth-success") {
         const resolvedEpicId = String(event.data.epicAccountId || "")
         setEpicId(resolvedEpicId)
-        window.sessionStorage.setItem(EPIC_SESSION_KEY, resolvedEpicId)
+        updateStoredUserProfile((profile) => ({
+          ...profile,
+          connections: {
+            ...profile.connections,
+            epicAccountId: resolvedEpicId,
+          },
+        }))
         setIsWaitingEpicAuth(false)
       }
 
@@ -464,10 +477,14 @@ export function LandingCyber() {
                         const next = !hasGamePass
                         setHasGamePass(next)
                         setXboxConnected(next)
-                        if (next) {
-                          window.sessionStorage.setItem(XBOX_SESSION_KEY, JSON.stringify({ hasGamePass: true }))
-                        } else {
-                          window.sessionStorage.removeItem(XBOX_SESSION_KEY)
+                        updateStoredUserProfile((profile) => ({
+                          ...profile,
+                          connections: {
+                            ...profile.connections,
+                            hasGamePass: next,
+                          },
+                        }))
+                        if (!next) {
                           setXboxConnected(false)
                         }
                       }}
@@ -841,11 +858,10 @@ export function LandingCyber() {
                       .split("\n")
                       .map((g) => g.trim())
                       .filter(Boolean)
-                    // guarda en sessionStorage para usarlo en matching
-                    window.sessionStorage.setItem(
-                      "qcoop-epic-manual-games",
-                      JSON.stringify(games)
-                    )
+                      updateStoredUserProfile((profile) => ({
+                        ...profile,
+                        importedGames: Array.from(new Set([...profile.importedGames, ...games])),
+                      }))
                   }}
                 />
                 <p className="text-[10px] text-muted-foreground text-center">
