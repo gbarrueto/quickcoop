@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import {
   Dialog,
   DialogContent,
@@ -16,6 +15,14 @@ import {
   updateStoredUserProfile,
 } from "@/lib/user-profile"
 import {
+  ensureMockUsers,
+  getCurrentMockUser,
+  loginMockUser,
+  logoutMockUser,
+  registerMockUser,
+  type MockUser,
+} from "@/lib/mock-auth"
+import {
   Gamepad2,
   Users,
   Zap,
@@ -26,6 +33,7 @@ import {
   Link2,
   Shield,
   CheckCircle2,
+  User,
 } from "lucide-react"
 import Link from "next/link"
 
@@ -103,6 +111,13 @@ const TRENDING_CACHE_TTL_MS = 1000 * 60 * 60 * 24
 
 export function LandingCyber() {
   const router = useRouter()
+  const [currentUser, setCurrentUser] = useState<MockUser | null>(null)
+  const [authModalOpen, setAuthModalOpen] = useState(false)
+  const [authMode, setAuthMode] = useState<"login" | "register">("login")
+  const [authName, setAuthName] = useState("")
+  const [authEmail, setAuthEmail] = useState("")
+  const [authPassword, setAuthPassword] = useState("")
+  const [authError, setAuthError] = useState<string | null>(null)
   const [importMode, setImportMode] = useState<"link" | "import">("link")
   const [steamModalOpen, setSteamModalOpen] = useState(false)
   const [epicModalOpen, setEpicModalOpen] = useState(false)
@@ -122,7 +137,47 @@ export function LandingCyber() {
   const [importText, setImportText] = useState("")
   const [importedGames, setImportedGames] = useState<string[]>([])
 
-  const canBeginMatching = Boolean(steamId) || Boolean(epicId) || xboxConnected || importedGames.length > 0
+  const canBeginMatching =
+    Boolean(currentUser) && (Boolean(steamId) || Boolean(epicId) || xboxConnected || importedGames.length > 0)
+
+  const handleAuthSubmit = () => {
+    setAuthError(null)
+
+    if (authMode === "register") {
+      const result = registerMockUser({
+        name: authName,
+        email: authEmail,
+        password: authPassword,
+      })
+
+      if (!result.ok) {
+        setAuthError(result.message)
+        return
+      }
+
+      setCurrentUser(result.user)
+      setAuthModalOpen(false)
+      return
+    }
+
+    const result = loginMockUser({
+      email: authEmail,
+      password: authPassword,
+    })
+
+    if (!result.ok) {
+      setAuthError(result.message)
+      return
+    }
+
+    setCurrentUser(result.user)
+    setAuthModalOpen(false)
+  }
+
+  const handleLogout = () => {
+    logoutMockUser()
+    setCurrentUser(null)
+  }
 
   const confirmImport = () => {
     const games = importText
@@ -140,6 +195,9 @@ export function LandingCyber() {
   }
 
   useEffect(() => {
+    ensureMockUsers()
+    setCurrentUser(getCurrentMockUser())
+
     const profile = ensureStoredUserProfile()
 
     if (profile.connections.steamId) {
@@ -377,9 +435,33 @@ export function LandingCyber() {
               How It Works
             </a>
           </div>
-          {/* <Button variant="outline" className="border-primary/50 hover:bg-primary/10">
-            Sign In
-          </Button> */}
+          {currentUser ? (
+            <div className="flex items-center gap-2">
+              <div className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-primary/40 bg-primary/15 text-primary">
+                <User className="h-4 w-4" />
+              </div>
+              <div className="hidden sm:block text-right">
+                <p className="text-xs font-medium leading-none">{currentUser.name}</p>
+                <p className="text-[10px] text-muted-foreground leading-none mt-1">Connected</p>
+              </div>
+              <Button type="button" size="sm" variant="outline" onClick={handleLogout}>
+                Logout
+              </Button>
+            </div>
+          ) : (
+            <Button
+              type="button"
+              variant="outline"
+              className="border-primary/50 hover:bg-primary/10"
+              onClick={() => {
+                setAuthMode("login")
+                setAuthError(null)
+                setAuthModalOpen(true)
+              }}
+            >
+              Login
+            </Button>
+          )}
         </nav>
       </header>
 
@@ -536,7 +618,9 @@ export function LandingCyber() {
                     </Button>
                     {!canBeginMatching && (
                       <p className="text-xs text-muted-foreground text-center">
-                        Connect at least one account to begin.
+                        {!currentUser
+                          ? "Login first to continue."
+                          : "Connect at least one account to begin."}
                       </p>
                     )}
                   </div>
@@ -788,6 +872,82 @@ export function LandingCyber() {
               )}
               {steamError && <p className="text-sm text-destructive">{steamError}</p>}
             </section>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={authModalOpen} onOpenChange={setAuthModalOpen}>
+        <DialogContent className="max-w-md overflow-hidden border-border bg-card/95 p-0 shadow-2xl backdrop-blur-xl">
+          <div className="bg-gradient-to-br from-primary/15 via-transparent to-accent/10 px-6 pt-8 pb-6 text-center">
+            <DialogHeader className="items-center text-center">
+              <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/15 text-primary shadow-lg shadow-primary/15">
+                <User className="h-7 w-7" />
+              </div>
+              <DialogTitle>{authMode === "login" ? "Login" : "Create account"}</DialogTitle>
+              <DialogDescription className="max-w-sm text-sm">
+                {authMode === "login"
+                  ? "Use fixed mock credentials or your registered local user."
+                  : "Create a local mock account without database."}
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+
+          <div className="space-y-4 px-6 py-6">
+            {authMode === "register" && (
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">Name</label>
+                <input
+                  type="text"
+                  value={authName}
+                  onChange={(event) => setAuthName(event.target.value)}
+                  className="h-9 w-full rounded-md border border-border bg-background px-2 text-sm"
+                  placeholder="Your name"
+                />
+              </div>
+            )}
+            <div>
+              <label className="mb-1 block text-xs font-medium text-muted-foreground">Email</label>
+              <input
+                type="email"
+                value={authEmail}
+                onChange={(event) => setAuthEmail(event.target.value)}
+                className="h-9 w-full rounded-md border border-border bg-background px-2 text-sm"
+                placeholder="demo@qcoop.app"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-muted-foreground">Password</label>
+              <input
+                type="password"
+                value={authPassword}
+                onChange={(event) => setAuthPassword(event.target.value)}
+                className="h-9 w-full rounded-md border border-border bg-background px-2 text-sm"
+                placeholder="demo123"
+              />
+            </div>
+
+            {authError && <p className="text-xs text-destructive">{authError}</p>}
+
+            <div className="rounded-md border border-border/70 bg-secondary/20 p-2 text-[11px] text-muted-foreground">
+              Demo login: demo@qcoop.app / demo123
+            </div>
+
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="flex-1"
+                onClick={() => {
+                  setAuthMode(authMode === "login" ? "register" : "login")
+                  setAuthError(null)
+                }}
+              >
+                {authMode === "login" ? "Need account" : "Have account"}
+              </Button>
+              <Button type="button" className="flex-1" onClick={handleAuthSubmit}>
+                {authMode === "login" ? "Login" : "Register"}
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

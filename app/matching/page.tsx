@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import {
   CheckCircle2,
@@ -9,6 +10,7 @@ import {
   ArrowLeft,
   ArrowRight,
   XCircle,
+  User,
 } from "lucide-react"
 import {
   Dialog,
@@ -23,6 +25,10 @@ import {
   type StoredFriendProfile,
   updateStoredUserProfile,
 } from "@/lib/user-profile"
+import {
+  getCurrentMockUser,
+  type MockUser,
+} from "@/lib/mock-auth"
 
 type Platform = "steam" | "epic" | "xbox" | "import"
 type CategoryFilterMode = "or" | "and"
@@ -370,7 +376,9 @@ const recommendedGames: RecommendedGame[] = [
 ]
 
 export default function MatchingPage() {
+  const router = useRouter()
   const recommendationsRef = useRef<HTMLDivElement | null>(null)
+  const [currentUser, setCurrentUser] = useState<MockUser | null>(null)
 
   const [steamId, setSteamId] = useState<string | null>(null)
   const [availablePlatforms, setAvailablePlatforms] = useState<Platform[]>([])
@@ -422,6 +430,13 @@ export default function MatchingPage() {
 
   useEffect(() => {
     const initialize = async () => {
+      const loggedInUser = getCurrentMockUser()
+      if (!loggedInUser) {
+        router.push("/")
+        return
+      }
+
+      setCurrentUser(loggedInUser)
       const profile = ensureStoredUserProfile()
 
       // if (!storedSteamId) {
@@ -547,7 +562,7 @@ export default function MatchingPage() {
     }
 
     initialize()
-  }, [])
+  }, [router])
 
   const loadIdentityLibrary = async (identity: IdentityRef) => {
     const key = identityKey(identity)
@@ -996,6 +1011,14 @@ export default function MatchingPage() {
             )}
           </div>
           <div className="flex gap-3">
+            {currentUser && (
+              <div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1.5 text-xs text-primary">
+                <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-primary/40 bg-primary/20">
+                  <User className="h-3.5 w-3.5" />
+                </span>
+                <span className="font-medium">{currentUser.name}</span>
+              </div>
+            )}
             <Link href="/">
               <Button variant="outline">
                 <ArrowLeft className="h-4 w-4 mr-2" />
