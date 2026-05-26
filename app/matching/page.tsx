@@ -390,7 +390,6 @@ export default function MatchingPage() {
       const storedSteamId = window.sessionStorage.getItem(STEAM_SESSION_KEY)
       const storedEpicId = window.sessionStorage.getItem(EPIC_SESSION_KEY)
       const xboxRaw = window.sessionStorage.getItem(XBOX_SESSION_KEY)
-      console.log(`[matching xbox] ${xboxRaw}`)
       const xboxData = xboxRaw ? JSON.parse(xboxRaw) as { hasGamePass: boolean } : null
 
       // if (!storedSteamId) {
