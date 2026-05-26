@@ -117,8 +117,22 @@ export function LandingCyber() {
   const [epicId, setEpicId] = useState<string | null>(null)
   const [epicError, setEpicError] = useState<string | null>(null)
   const [isWaitingEpicAuth, setIsWaitingEpicAuth] = useState(false)
+  const [importModalOpen, setImportModalOpen] = useState(false)
+  const [importText, setImportText] = useState("")
+  const [importedGames, setImportedGames] = useState<string[]>([])
 
-  const canBeginMatching = Boolean(steamId) || Boolean(epicId) || xboxConnected
+  const canBeginMatching = Boolean(steamId) || Boolean(epicId) || xboxConnected || importedGames.length > 0
+
+  const confirmImport = () => {
+    const games = importText
+      .split("\n")
+      .map((g) => g.trim())
+      .filter(Boolean)
+
+    setImportedGames(games)
+    window.sessionStorage.setItem("qcoop-manual-games", JSON.stringify(games))
+    setImportModalOpen(false)
+  }
 
   useEffect(() => {
     const storedSteamId = window.sessionStorage.getItem(STEAM_SESSION_KEY)
@@ -136,6 +150,11 @@ export function LandingCyber() {
     }
 
     if (storedEpicId) setEpicId(storedEpicId)
+
+    const storedManual = window.sessionStorage.getItem("qcoop-manual-games")
+    if (storedManual) {
+      setImportedGames(JSON.parse(storedManual) as string[])
+    }
   }, [])
 
   const startSteamOpenId = () => {
@@ -345,9 +364,9 @@ export function LandingCyber() {
               How It Works
             </a>
           </div>
-          <Button variant="outline" className="border-primary/50 hover:bg-primary/10">
+          {/* <Button variant="outline" className="border-primary/50 hover:bg-primary/10">
             Sign In
-          </Button>
+          </Button> */}
         </nav>
       </header>
 
@@ -418,7 +437,7 @@ export function LandingCyber() {
                         </span>
                       )}
                     </Button>
-                    <Button
+                    {/* <Button
                       type="button"
                       onClick={() => setEpicModalOpen(true)}
                       className={`w-full justify-start gap-3 text-white ${
@@ -427,7 +446,6 @@ export function LandingCyber() {
                           : "bg-[#313131] hover:bg-[#444444]"
                       }`}
                     >
-                      {/* SVG epic igual que tienes */}
                       Connect Epic Games
                       {epicId && (
                         <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-white/15 px-2 py-1 text-xs">
@@ -435,27 +453,57 @@ export function LandingCyber() {
                           Connected
                         </span>
                       )}
-                    </Button>
-                    <Button
+                    </Button> */}
+
+                    {/* GAMEPASS */}
+                    <button
                       type="button"
-                      onClick={() => setXboxModalOpen(true)}
-                      className={`w-full justify-start gap-3 text-white ${
-                        xboxConnected
+                      role="switch"
+                      aria-checked={hasGamePass ?? false}
+                      onClick={() => {
+                        const next = !hasGamePass
+                        setHasGamePass(next)
+                        setXboxConnected(next)
+                        if (next) {
+                          window.sessionStorage.setItem(XBOX_SESSION_KEY, JSON.stringify({ hasGamePass: true }))
+                        } else {
+                          window.sessionStorage.removeItem(XBOX_SESSION_KEY)
+                          setXboxConnected(false)
+                        }
+                      }}
+                      className={`w-full flex items-center justify-between gap-3 px-4 py-2 rounded-md text-white text-sm font-medium transition-colors ${
+                        hasGamePass
                           ? "bg-emerald-600 hover:bg-emerald-500"
                           : "bg-[#107c10] hover:bg-[#0f6f0f]"
                       }`}
                     >
-                      <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-white/35 text-xs font-semibold">
-                        X
-                      </span>
-                      Connect Xbox / Game Pass
-                      {xboxConnected && (
-                        <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-white/15 px-2 py-1 text-xs">
-                          <CheckCircle2 className="h-4 w-4" />
-                          {hasGamePass ? "Game Pass" : "Connected"}
+                      <div className="flex items-center gap-3">
+                        <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-white/35 text-xs font-semibold">
+                          X
                         </span>
-                      )}
-                    </Button>
+                        <span>{hasGamePass ? "Game Pass activo" : "Connect Xbox / Game Pass"}</span>
+                        {hasGamePass && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-2 py-1 text-xs">
+                            <CheckCircle2 className="h-4 w-4" />
+                            Connected
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Switch visual */}
+                      <span
+                        className={`relative inline-flex h-5 w-9 shrink-0 rounded-full border-2 border-white/30 transition-colors duration-200 ${
+                          hasGamePass ? "bg-white/30" : "bg-black/20"
+                        }`}
+                      >
+                        <span
+                          className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow transform transition-transform duration-200 ${
+                            hasGamePass ? "translate-x-4" : "translate-x-0"
+                          }`}
+                        />
+                      </span>
+                    </button>
+
                     <Button
                       type="button"
                       className="w-full mt-2"
@@ -471,23 +519,49 @@ export function LandingCyber() {
                     </Button>
                     {!canBeginMatching && (
                       <p className="text-xs text-muted-foreground text-center">
-                        Connect at least one account to begin. Steam is the only integration enabled for now.
+                        Connect at least one account to begin.
                       </p>
                     )}
                   </div>
                 ) : (
                   <div className="space-y-3" role="group" aria-label="Import game list">
-                    <Input
-                      placeholder="Paste your game list here..."
-                      className="bg-input border-border"
-                    />
                     <p className="text-xs text-muted-foreground">
-                      Export your library from Steam or Epic and paste it here
+                      Manually import your library from any platform — one game per line.
                     </p>
-                    <Button className="w-full">
+
+                    {importedGames.length > 0 && (
+                      <div className="rounded-lg border border-primary/30 bg-primary/10 px-3 py-2">
+                        <p className="text-xs text-primary font-medium">
+                          ✅ {importedGames.length} games imported
+                        </p>
+                        <p className="text-[10px] text-muted-foreground mt-0.5 line-clamp-2">
+                          {importedGames.slice(0, 3).join(", ")}
+                          {importedGames.length > 3 && ` and ${importedGames.length - 3} more...`}
+                        </p>
+                      </div>
+                    )}
+
+                    <Button
+                      className="w-full"
+                      onClick={() => setImportModalOpen(true)}
+                    >
                       <Upload className="w-4 h-4 mr-2" />
-                      Import Games
+                      {importedGames.length > 0 ? "Edit imported list" : "Import game list"}
                     </Button>
+
+                    {importedGames.length > 0 && (
+                      <Button
+                        className="w-full mt-2"
+                        onClick={() => {
+                          if (!canBeginMatching) return
+                          router.push("/matching")
+                        }}
+                        disabled={!canBeginMatching}
+                      >
+                        Begin matching
+                        <ArrowRight className="w-4 h-4 ml-2" />
+                      </Button>
+                    )}
                   </div>
                 )}
               </section>
@@ -627,7 +701,7 @@ export function LandingCyber() {
           <p className="text-muted-foreground mb-8 max-w-2xl mx-auto">
             Join thousands of gamers who use QCoop to discover what to play with friends.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          {/* <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button size="lg" className="text-lg px-8">
               Get Started Free
               <ArrowRight className="w-5 h-5 ml-2" />
@@ -635,7 +709,7 @@ export function LandingCyber() {
             <Button size="lg" variant="outline" className="text-lg px-8">
               Watch Demo
             </Button>
-          </div>
+          </div> */}
         </div>
       </section>
       </main>
@@ -716,7 +790,7 @@ export function LandingCyber() {
           </div>
 
           <div className="space-y-5 px-6 py-6">
-            <section className="rounded-2xl border border-border bg-secondary/30 p-4 text-center" aria-labelledby="epic-privacy-title">
+            {/* <section className="rounded-2xl border border-border bg-secondary/30 p-4 text-center" aria-labelledby="epic-privacy-title">
               <h3 id="epic-privacy-title" className="mb-2 font-semibold">
                 Privacy information
               </h3>
@@ -727,10 +801,10 @@ export function LandingCyber() {
                 <li>Owned game library</li>
                 <li>Friends list</li>
               </ul>
-            </section>
+            </section> */}
 
-            <section className="space-y-3 text-center" aria-labelledby="epic-auth-title">
-              <h3 id="epic-auth-title" className="font-semibold">
+            <section className="space-y-3" aria-labelledby="epic-auth-title">
+              {/* <h3 id="epic-auth-title" className="font-semibold text-center">
                 Account Sign-In
               </h3>
               <div className="flex justify-center">
@@ -741,117 +815,152 @@ export function LandingCyber() {
                 >
                   Sign in with Epic Games
                 </Button>
+              </div> */}
+
+              {/* Aviso sobre limitación de biblioteca */}
+              <div className="rounded-lg border border-amber-400/20 bg-amber-400/5 px-3 py-2 text-xs text-amber-300">
+                <p className="font-medium mb-1">⚠️ Library access not available</p>
+                <p>
+                  Epic Games does not allow third-party apps to read your game library. 
+                  So you have to import your library manually below.
+                  {/* You can still connect your account for identity and friends matching, 
+                  or import your library manually below. */}
+                </p>
               </div>
-              {isWaitingEpicAuth && (
-                <p className="text-sm text-primary">Waiting for Epic authentication...</p>
-              )}
-              {epicId && (
-                <div className="rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm text-primary">
-                  Epic authenticated. Account ID: {epicId}
-                </div>
-              )}
-              {epicError && <p className="text-sm text-destructive">{epicError}</p>}
+
+              {/* Import manual */}
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground text-center">
+                  To add Epic games manually, paste your library below:
+                </p>
+                <textarea
+                  className="w-full rounded-md border border-border bg-background px-3 py-2 text-xs min-h-[80px] resize-none"
+                  placeholder={"Fortnite\nRocket League\nFallen Order\n..."}
+                  onChange={(e) => {
+                    const games = e.target.value
+                      .split("\n")
+                      .map((g) => g.trim())
+                      .filter(Boolean)
+                    // guarda en sessionStorage para usarlo en matching
+                    window.sessionStorage.setItem(
+                      "qcoop-epic-manual-games",
+                      JSON.stringify(games)
+                    )
+                  }}
+                />
+                <p className="text-[10px] text-muted-foreground text-center">
+                  One game per line.
+                  {/* <a
+                    href="https://store.epicgames.com/en-US/library"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary underline"
+                  >
+                    store.epicgames.com/library ↗
+                  </a> */}
+                </p>
+              </div>
             </section>
           </div>
         </DialogContent>
       </Dialog>
 
-      <Dialog open={xboxModalOpen} onOpenChange={setXboxModalOpen}>
-        <DialogContent className="max-w-xl overflow-hidden border-border bg-card/95 p-0 shadow-2xl backdrop-blur-xl">
-          <div className="bg-gradient-to-br from-primary/15 via-transparent to-accent/10 px-6 pt-8 pb-6 text-center">
+      {/* Modal para importar libreria manual */}
+      <Dialog open={importModalOpen} onOpenChange={() => {}}>
+        <DialogContent
+          className="max-w-xl overflow-hidden border-border bg-card/95 p-0 shadow-2xl backdrop-blur-xl"
+          onPointerDownOutside={(e) => e.preventDefault()}
+          onEscapeKeyDown={(e) => e.preventDefault()}
+        >
+          <div className="bg-gradient-to-br from-primary/15 via-transparent to-accent/10 px-6 pt-8 pb-6">
             <DialogHeader className="items-center text-center">
-              <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#107c10] text-white shadow-lg shadow-primary/15">
-                <span className="text-xl font-bold">X</span>
+              <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-secondary shadow-lg">
+                <Upload className="w-6 h-6 text-primary" />
               </div>
-              <DialogTitle>Connect Xbox / Game Pass</DialogTitle>
+              <DialogTitle>Import game list</DialogTitle>
               <DialogDescription className="max-w-sm text-sm">
-                Indica si tienes una suscripción activa de Game Pass para incluir
-                su catálogo completo en el matching.
+                Paste your games one per line. Works with any platform — Epic, Xbox, GOG, or any other.
               </DialogDescription>
             </DialogHeader>
           </div>
 
           <div className="space-y-5 px-6 py-6">
-            {/* Info sobre Game Pass */}
-            <section
-              className="rounded-2xl border border-border bg-secondary/30 p-4"
-              aria-labelledby="xbox-gamepass-info"
-            >
-              <h3 id="xbox-gamepass-info" className="mb-2 font-semibold text-center">
-                ¿Cómo funciona?
-              </h3>
-              <p className="text-sm text-muted-foreground text-center">
-                Game Pass es un catálogo compartido — si tienes suscripción activa,
-                tienes acceso a los mismos ~500 juegos que cualquier otro suscriptor.
-                No necesitamos acceder a tu cuenta para saberlo.
+
+            {/* Textarea */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium" htmlFor="import-textarea">
+                  Your games
+                </label>
+                {importText.split("\n").filter((g) => g.trim()).length > 0 && (
+                  <span className="text-xs text-primary">
+                    {importText.split("\n").filter((g) => g.trim()).length} games detected
+                  </span>
+                )}
+              </div>
+              <textarea
+                id="import-textarea"
+                className="w-full rounded-xl border border-border bg-background/70 px-4 py-3 text-sm min-h-[200px] resize-none focus:outline-none focus:ring-1 focus:ring-primary/50 placeholder:text-muted-foreground/50"
+                placeholder={"Rocket League\nFortnite\nFallen Order\nCyberpunk 2077\n..."}
+                value={importText}
+                onChange={(e) => setImportText(e.target.value)}
+                spellCheck={false}
+              />
+              <p className="text-[10px] text-muted-foreground">
+                One game per line. Names are matched case-insensitively when comparing with friends.
               </p>
-            </section>
+            </div>
 
-            {/* Selector de suscripción */}
-            <section className="space-y-3" aria-labelledby="xbox-sub-title">
-              <h3 id="xbox-sub-title" className="font-semibold text-center">
-                ¿Tienes Game Pass activo?
-              </h3>
-
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={() => setHasGamePass(true)}
-                  className={`flex flex-col items-center gap-2 rounded-xl border p-4 transition-all ${
-                    hasGamePass === true
-                      ? "border-primary bg-primary/10 text-primary"
-                      : "border-border bg-secondary/30 text-muted-foreground hover:border-primary/50"
-                  }`}
-                >
-                  <span className="text-2xl">🎮</span>
-                  <span className="text-sm font-medium">Sí, tengo Game Pass</span>
-                  <span className="text-xs opacity-70">~500 juegos incluidos</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setHasGamePass(false)}
-                  className={`flex flex-col items-center gap-2 rounded-xl border p-4 transition-all ${
-                    hasGamePass === false
-                      ? "border-primary bg-primary/10 text-primary"
-                      : "border-border bg-secondary/30 text-muted-foreground hover:border-primary/50"
-                  }`}
-                >
-                  <span className="text-2xl">🕹️</span>
-                  <span className="text-sm font-medium">No, solo Xbox</span>
-                  <span className="text-xs opacity-70">Solo juegos comprados</span>
-                </button>
-              </div>
-            </section>
-
-            {/* Botón confirmar */}
-            <Button
-              type="button"
-              disabled={hasGamePass === null}
-              className="w-full bg-[#107c10] hover:bg-[#0f6f0f] text-white disabled:opacity-50"
-              onClick={() => {
-                if (hasGamePass === null) return
-
-                window.sessionStorage.setItem(
-                  XBOX_SESSION_KEY,
-                  JSON.stringify({ hasGamePass })
-                )
-                setXboxConnected(true)
-                setXboxModalOpen(false)
-              }}
-            >
-              <CheckCircle2 className="w-4 h-4 mr-2" />
-              Confirmar
-            </Button>
-
-            {/* Estado confirmado */}
-            {xboxConnected && (
-              <div className="rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm text-primary text-center">
-                {hasGamePass
-                  ? "✅ Game Pass activo — catálogo completo incluido en el matching"
-                  : "✅ Xbox conectado — solo juegos comprados"}
-              </div>
+            {/* Preview de los juegos detectados */}
+            {importText.split("\n").filter((g) => g.trim()).length > 0 && (
+              <section className="rounded-xl border border-border bg-secondary/20 p-3 max-h-32 overflow-y-auto">
+                <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-2 font-medium">Preview</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {importText
+                    .split("\n")
+                    .map((g) => g.trim())
+                    .filter(Boolean)
+                    .map((game, i) => (
+                      <span
+                        key={i}
+                        className="rounded-full border border-border bg-background/70 px-2 py-0.5 text-[10px] text-muted-foreground"
+                      >
+                        {game}
+                      </span>
+                    ))}
+                </div>
+              </section>
             )}
+
+            {/* Botones */}
+            <div className="flex gap-3 pt-1">
+              <Button
+                type="button"
+                variant="outline"
+                className="flex-1"
+                onClick={() => {
+                  setImportText(
+                    importedGames.length > 0
+                      ? importedGames.join("\n")
+                      : ""
+                  )
+                  setImportModalOpen(false)
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                className="flex-1"
+                disabled={importText.split("\n").filter((g) => g.trim()).length === 0}
+                onClick={confirmImport}
+              >
+                <CheckCircle2 className="w-4 h-4 mr-2" />
+                Import {importText.split("\n").filter((g) => g.trim()).length > 0
+                  ? `${importText.split("\n").filter((g) => g.trim()).length} games`
+                  : ""}
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
