@@ -19,7 +19,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 
-type Platform = "steam" | "epic" | "xbox"
+type Platform = "steam" | "epic" | "xbox" | "import"
 type CategoryFilterMode = "or" | "and"
 
 type SteamOwnedGame = {
@@ -35,12 +35,34 @@ type OwnedGamesPayload = {
   }
 }
 
+type EpicGame = {
+  id: string
+  title: string
+  keyImages?: { type: string; url: string }[]
+}
+
+type EpicLibraryPayload = {
+  games?: EpicGame[]
+  error?: string
+}
+
+type GamePassGame = {
+  id: string
+  title: string
+}
+
+type GamePassPayload = {
+  games?: GamePassGame[]
+  error?: string
+}
+
 type GameCard = {
   appId: number
   name: string
   imageUrl: string
   rating: number
   players: string
+  platform: Platform
 }
 
 type RecommendedGame = {
@@ -109,8 +131,8 @@ type RequirementsParticipant = {
 }
 
 const STEAM_SESSION_KEY = "qcoop-steam-id"
-const EPIC_CONNECTED_SESSION_KEY = "qcoop-epic-connected"
-const XBOX_CONNECTED_SESSION_KEY = "qcoop-xbox-connected"
+const EPIC_SESSION_KEY = "qcoop-epic-id"
+const XBOX_SESSION_KEY = "qcoop-xbox-gamepass"
 
 const DEFAULT_PLAYER_SPECS: PlayerSystemSpecs = {
   os: "Windows 10",
@@ -152,13 +174,14 @@ function derivePlayers(appId: number): string {
   return ranges[stableNumberFromId(appId) % ranges.length]
 }
 
-function toGameCards(games: SteamOwnedGame[]): GameCard[] {
+function toGameCards(games: SteamOwnedGame[], platform: Platform = "steam"): GameCard[] {
   return games.map((game) => ({
     appId: game.appid,
     name: game.name ?? `Steam App ${game.appid}`,
     imageUrl: `https://cdn.akamai.steamstatic.com/steam/apps/${game.appid}/header.jpg`,
     rating: deriveRating(game.appid),
     players: derivePlayers(game.appid),
+    platform,
   }))
 }
 
@@ -320,6 +343,11 @@ export default function MatchingPage() {
   const [pageError, setPageError] = useState<string | null>(null)
 
   const [userGames, setUserGames] = useState<GameCard[]>([])
+  const [epicGames, setEpicGames] = useState<GameCard[]>([])
+  const [gamePassGames, setGamePassGames] = useState<GameCard[]>([])
+  const [epicFriends, setEpicFriends] = useState<FriendProfile[]>([])
+  const [epicAccountId, setEpicAccountId] = useState<string | null>(null)
+  const [hasGamePass, setHasGamePass] = useState(false)
   const [friendProfiles, setFriendProfiles] = useState<FriendProfile[]>([])
 
   const [draggingProfileId, setDraggingProfileId] = useState<string | null>(null)
@@ -340,6 +368,11 @@ export default function MatchingPage() {
   const [isRequirementsModalOpen, setIsRequirementsModalOpen] = useState(false)
   const [playerSpecsById, setPlayerSpecsById] = useState<Record<string, PlayerSystemSpecs>>({})
 
+  const allFriendProfiles = useMemo(
+    () => [...friendProfiles, ...epicFriends],
+    [friendProfiles, epicFriends]
+  )
+
   const scrollRecommendations = (direction: -1 | 1) => {
     const container = recommendationsRef.current
     if (!container) {
@@ -355,63 +388,133 @@ export default function MatchingPage() {
   useEffect(() => {
     const initialize = async () => {
       const storedSteamId = window.sessionStorage.getItem(STEAM_SESSION_KEY)
-      const epicConnected = window.sessionStorage.getItem(EPIC_CONNECTED_SESSION_KEY) === "true"
-      const xboxConnected = window.sessionStorage.getItem(XBOX_CONNECTED_SESSION_KEY) === "true"
+      const storedEpicId = window.sessionStorage.getItem(EPIC_SESSION_KEY)
+      const xboxRaw = window.sessionStorage.getItem(XBOX_SESSION_KEY)
+      console.log(`[matching xbox] ${xboxRaw}`)
+      const xboxData = xboxRaw ? JSON.parse(xboxRaw) as { hasGamePass: boolean } : null
 
-      if (!storedSteamId) {
-        router.push("/")
-        return
-      }
+      // if (!storedSteamId) {
+      //   router.push("/")
+      //   return
+      // }
 
-      const platforms: Platform[] = ["steam"]
-      if (epicConnected) {
-        platforms.push("epic")
-      }
-      if (xboxConnected) {
-        platforms.push("xbox")
-      }
+      const platforms: Platform[] = []
+      if (storedSteamId) platforms.push("steam")
+      if (storedEpicId) platforms.push("epic")
+      if (xboxData) platforms.push("xbox")
 
       setAvailablePlatforms(platforms)
+      if (storedSteamId) setSteamId(storedSteamId)
+      if (storedEpicId) setEpicAccountId(storedEpicId)
+      if (xboxData?.hasGamePass) setHasGamePass(true)
 
-      setSteamId(storedSteamId)
       setLoading(true)
       setPageError(null)
 
       try {
-        const [gamesRes, friendsRes] = await Promise.all([
-          fetch(`/api/steam/owned-games?steamId=${storedSteamId}`),
-          fetch(`/api/steam/friends?steamId=${storedSteamId}`),
-        ])
-
-        const gamesJson = (await gamesRes.json()) as OwnedGamesPayload & { error?: string }
-        const friendsJson = (await friendsRes.json()) as FriendsPayload & { error?: string }
-
-        if (!gamesRes.ok) {
-          throw new Error(gamesJson.error || "Failed to fetch your Steam library")
-        }
-
-        if (!friendsRes.ok) {
-          throw new Error(friendsJson.error || "Failed to fetch your Steam friends")
-        }
-
-        const ownedGames = gamesJson.data?.response?.games ?? []
-        setUserGames(toGameCards(ownedGames))
-
-        const profiles = (friendsJson.friends ?? []).map((friend) => ({
-          profileId: `profile:steam:${friend.steamId}`,
-          identities: [
-            {
+        // Steam: juegos + amigos (ya existente)
+        if (storedSteamId) {
+          const [gamesRes, friendsRes] = await Promise.all([
+            fetch(`/api/steam/owned-games?steamId=${storedSteamId}`),
+            fetch(`/api/steam/friends?steamId=${storedSteamId}`),
+          ])
+  
+          const gamesJson = (await gamesRes.json()) as OwnedGamesPayload & { error?: string }
+          const friendsJson = (await friendsRes.json()) as FriendsPayload & { error?: string }
+  
+          if (!gamesRes.ok) throw new Error(gamesJson.error || "Failed to fetch your Steam library")
+          if (!friendsRes.ok) throw new Error(friendsJson.error || "Failed to fetch your Steam friends")
+  
+          const ownedGames = gamesJson.data?.response?.games ?? []
+          setUserGames(toGameCards(ownedGames, "steam"))
+  
+          const steamProfiles = (friendsJson.friends ?? []).map((friend) => ({
+            profileId: `profile:steam:${friend.steamId}`,
+            identities: [{
               platform: "steam" as const,
               accountId: friend.steamId,
               displayName: friend.name,
               avatar: friend.avatar ?? null,
-            },
-          ],
-          selected: false,
-          expanded: false,
-        }))
+            }],
+            selected: false,
+            expanded: false,
+          }))
+          setFriendProfiles(steamProfiles)
+        }
 
-        setFriendProfiles(profiles)
+        // Biblioteca manual
+        const storedManual = window.sessionStorage.getItem("qcoop-manual-games")
+        if (storedManual) {
+          const manualNames = JSON.parse(storedManual) as string[]
+          const manualCards: GameCard[] = manualNames.map((name) => ({
+            appId: Math.abs(
+              name.toLowerCase().trim().split("").reduce((acc, c) => acc * 31 + c.charCodeAt(0), 0)
+            ) % 9999999,
+            name,
+            imageUrl: "",
+            rating: 0,
+            players: "??",
+            platform: "import" as const, // puedes agregar "manual" como plataforma si quieres
+          }))
+          setUserGames((prev) => [...prev, ...manualCards])
+        }
+
+        // Epic: juegos + amigos
+        if (storedEpicId) {
+          const [epicLibRes, epicFriendsRes] = await Promise.all([
+            fetch(`/api/epic/library?accountId=${storedEpicId}`),
+            fetch(`/api/epic/friends?accountId=${storedEpicId}`),
+          ])
+
+          if (epicLibRes.ok) {
+            const epicLibJson = (await epicLibRes.json()) as EpicLibraryPayload
+            const mapped: GameCard[] = (epicLibJson.games ?? []).map((game) => ({
+              appId: Math.abs(game.id.split("").reduce((acc, c) => acc * 31 + c.charCodeAt(0), 0)) % 9999999,
+              name: game.title,
+              imageUrl: game.keyImages?.find((img) => img.type === "DieselGameBoxTall")?.url
+                ?? game.keyImages?.[0]?.url
+                ?? "",
+              rating: 0,
+              players: "1+",
+              platform: "epic" as const,
+            }))
+            setEpicGames(mapped)
+          }
+
+          if (epicFriendsRes.ok) {
+            const epicFriendsJson = (await epicFriendsRes.json()) as { friends?: { accountId: string; displayName: string }[] }
+            const epicProfiles: FriendProfile[] = (epicFriendsJson.friends ?? []).map((friend) => ({
+              profileId: `profile:epic:${friend.accountId}`,
+              identities: [{
+                platform: "epic" as const,
+                accountId: friend.accountId,
+                displayName: friend.displayName,
+                avatar: null,
+              }],
+              selected: false,
+              expanded: false,
+            }))
+            setEpicFriends(epicProfiles)
+          }
+        }
+
+        // GamePass: catálogo público
+        if (xboxData?.hasGamePass) {
+          const gpRes = await fetch("/api/gamepass")
+          if (gpRes.ok) {
+            const gpJson = (await gpRes.json()) as GamePassPayload
+            const mapped: GameCard[] = (gpJson.games ?? []).map((game) => ({
+              appId: Math.abs(game.id.split("").reduce((acc, c) => acc * 31 + c.charCodeAt(0), 0)) % 9999999,
+              name: game.title,
+              imageUrl: "",
+              rating: 0,
+              players: "1+",
+              platform: "xbox" as const,
+            }))
+            setGamePassGames(mapped)
+          }
+        }
+
       } catch (error) {
         setPageError(error instanceof Error ? error.message : "Failed to initialize matching view")
       } finally {
@@ -469,17 +572,19 @@ export default function MatchingPage() {
 
   const toggleFriendSelection = (profileId: string) => {
     setFriendProfiles((prev) =>
-      prev.map((profile) =>
-        profile.profileId === profileId ? { ...profile, selected: !profile.selected } : profile,
-      ),
+      prev.map((p) => p.profileId === profileId ? { ...p, selected: !p.selected } : p)
+    )
+    setEpicFriends((prev) =>
+      prev.map((p) => p.profileId === profileId ? { ...p, selected: !p.selected } : p)
     )
   }
 
   const toggleProfileExpanded = (profileId: string) => {
     setFriendProfiles((prev) =>
-      prev.map((profile) =>
-        profile.profileId === profileId ? { ...profile, expanded: !profile.expanded } : profile,
-      ),
+      prev.map((p) => p.profileId === profileId ? { ...p, expanded: !p.expanded } : p)
+    )
+    setEpicFriends((prev) =>
+      prev.map((p) => p.profileId === profileId ? { ...p, expanded: !p.expanded } : p)
     )
   }
 
@@ -547,25 +652,31 @@ export default function MatchingPage() {
 
   const canDragMerge = availablePlatforms.length >= 2
 
+  const allUserGames = useMemo(() => {
+    const seen = new Set<string>()
+    return [...userGames, ...epicGames, ...gamePassGames].filter((game) => {
+      const key = `${game.platform}-${game.appId}`
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+  }, [userGames, epicGames, gamePassGames])
+
   const filteredGames = useMemo(() => {
-    const selectedProfiles = friendProfiles.filter((profile) => profile.selected)
-    if (selectedProfiles.length === 0) {
-      return userGames
-    }
+    const selectedProfiles = allFriendProfiles.filter((p) => p.selected)
+    if (selectedProfiles.length === 0) return allUserGames
 
     const selectedSets = selectedProfiles.map((profile) => {
       const mergedSet = new Set<number>()
       profile.identities.forEach((identity) => {
         const library = identityLibraries[identityKey(identity)]
-        if (library) {
-          library.forEach((appId) => mergedSet.add(appId))
-        }
+        if (library) library.forEach((appId) => mergedSet.add(appId))
       })
       return mergedSet
     })
 
-    return userGames.filter((game) => selectedSets.every((set) => set.has(game.appId)))
-  }, [friendProfiles, identityLibraries, userGames])
+    return allUserGames.filter((game) => selectedSets.every((set) => set.has(game.appId)))
+  }, [allFriendProfiles, identityLibraries, allUserGames])
 
   useEffect(() => {
     if (filteredGames.length === 0) {
@@ -656,14 +767,14 @@ export default function MatchingPage() {
   const requirementsParticipants = useMemo<RequirementsParticipant[]>(
     () => [
       { id: "self", name: "You" },
-      ...friendProfiles
+      ...allFriendProfiles
         .filter((profile) => profile.selected)
         .map((profile) => ({
           id: profile.profileId,
           name: profile.identities[0]?.displayName ?? "Player",
         })),
     ],
-    [friendProfiles],
+    [allFriendProfiles],
   )
 
   useEffect(() => {
@@ -781,8 +892,8 @@ export default function MatchingPage() {
     }
   }
 
-  const selectedCount = friendProfiles.filter((profile) => profile.selected).length
-  const selectedProfiles = friendProfiles.filter((profile) => profile.selected)
+  const selectedCount = allFriendProfiles.filter((p) => p.selected).length
+  const selectedProfiles = allFriendProfiles.filter((p) => p.selected)
 
   if (loading) {
     return (
@@ -819,7 +930,9 @@ export default function MatchingPage() {
             <p className="text-muted-foreground mt-1">
               Select friends to filter games everyone owns. Drag one friend onto another to merge identities across platforms.
             </p>
-            <p className="text-xs text-muted-foreground mt-2">Signed in with Steam ID: {steamId}</p>
+            {steamId && (
+              <p className="text-xs text-muted-foreground mt-2">Signed in with Steam ID: {steamId}</p>
+            )}
           </div>
           <div className="flex gap-3">
             <Link href="/">
@@ -838,7 +951,7 @@ export default function MatchingPage() {
               <p className="text-sm text-muted-foreground">
                 {selectedCount > 0
                   ? `${categoryFilteredGames.length} shared games with selected friends`
-                  : `${userGames.length} games in your library`}
+                  : `${allUserGames.length} games in your library`}
               </p>
             </div>
 
@@ -919,26 +1032,50 @@ export default function MatchingPage() {
 
             <div className="max-h-screen overflow-y-auto pr-1">
             <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
-              {categoryFilteredGames.map((game) => (
+              {categoryFilteredGames.map((game, index) => (
                 <button
                   type="button"
-                  key={game.appId}
+                  key={`${game.platform}-${game.appId}-${index}`}
                   onClick={() => openRequirementsModal(game)}
                   className="overflow-hidden rounded-xl border border-border bg-secondary/20 text-left transition-colors hover:border-primary/40 hover:bg-secondary/30"
                 >
                   <div className="h-20 w-full bg-secondary/40">
-                    <img
-                      src={game.imageUrl}
-                      alt={game.name}
-                      className="h-full w-full object-cover"
-                      loading="lazy"
-                    />
+                    {game.imageUrl ? (
+                      <img
+                        src={game.imageUrl}
+                        alt={game.name}
+                        className="h-full w-full object-cover"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center bg-secondary/60">
+                        <span className={`text-[10px] uppercase tracking-wide font-medium text-white/50`}>
+                          No Image
+                        </span>
+                      </div>
+                    )}
                   </div>
                   <div className="space-y-1 p-2.5">
                     <h3 className="font-medium leading-tight text-sm line-clamp-2">{game.name}</h3>
+
+                    <span className={`inline-block rounded-full px-1.5 py-0.5 text-[9px] uppercase tracking-wide font-medium mt-0.5 ${
+                      game.platform === "steam"
+                        ? "bg-[#1b2838] text-[#66c0f4] border border-[#66c0f4]/30"
+                        : game.platform === "epic"
+                        ? "bg-[#313131] text-white border border-white/20"
+                        : game.platform === "xbox"
+                        ? "bg-[#107c10] text-white border border-white/20"
+                        : "bg-[#7c5c10] text-white border border-white/20"
+                    }`}>
+                      {game.platform === "steam" ? "Steam" 
+                      : game.platform === "epic" ? "Epic" 
+                      : game.platform === "xbox" ? "Game Pass"
+                      : "Import"}
+                    </span>
+
                     <div className="flex items-center justify-between text-xs text-muted-foreground">
                       <span>{game.players} players</span>
-                      <span>Rating {game.rating}</span>
+                      <span>{game.rating > 0 ? `Rating ${game.rating}` : ""}</span>
                     </div>
                     <div className="flex flex-wrap gap-1 pt-1">
                       {(categoriesByApp[game.appId] ?? []).slice(0, 2).map((category) => (
@@ -1011,12 +1148,22 @@ export default function MatchingPage() {
                       className="overflow-hidden rounded-xl border border-border bg-secondary/20"
                     >
                       <div className="h-20 w-full bg-secondary/40">
-                        <img
-                          src={game.imageUrl}
-                          alt={game.name}
-                          className="h-full w-full object-cover"
-                          loading="lazy"
-                        />
+                        {game.imageUrl ? (
+                          <img
+                            src={game.imageUrl}
+                            alt={game.name}
+                            className="h-full w-full object-cover"
+                            loading="lazy"
+                          />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center bg-secondary/60">
+                            <span className={`text-[10px] uppercase tracking-wide font-medium ${
+                              "text-white/50"
+                            }`}>
+                              NoImage
+                            </span>
+                          </div>
+                        )}
                       </div>
                       <div className="space-y-1.5 p-2.5">
                         <div>
@@ -1067,10 +1214,16 @@ export default function MatchingPage() {
                       <div className="flex items-center gap-1">
                         {profile.identities.map((identity) => (
                           <span
-                            key={`group-${profile.profileId}-${identityKey(identity)}`}
-                            className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] uppercase tracking-wide text-primary"
+                            key={identityKey(identity)}
+                            className={`rounded-full px-2 py-0.5 text-[10px] uppercase tracking-wide font-medium ${
+                              identity.platform === "steam"
+                                ? "bg-[#1b2838] text-[#66c0f4] border border-[#66c0f4]/30"
+                                : identity.platform === "epic"
+                                ? "bg-[#313131] text-white border border-white/20"
+                                : "bg-[#107c10] text-white border border-white/20"
+                            }`}
                           >
-                            {identity.platform}
+                            {identity.platform === "steam" ? "Steam" : identity.platform === "epic" ? "Epic" : "Game Pass"}
                           </span>
                         ))}
                         <Button
@@ -1099,7 +1252,7 @@ export default function MatchingPage() {
 
               <div className="max-h-[calc(100vh-20rem)] overflow-y-auto pr-1">
               <div className="space-y-3">
-              {friendProfiles.map((profile) => {
+              {allFriendProfiles.map((profile) => {
                 const primaryIdentity = profile.identities[0]
                 const hasMultipleIdentities = profile.identities.length > 1
                 const hasLoadingIdentity = profile.identities.some(
@@ -1161,9 +1314,15 @@ export default function MatchingPage() {
                         {profile.identities.map((identity) => (
                           <span
                             key={identityKey(identity)}
-                            className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] uppercase tracking-wide text-primary"
+                            className={`rounded-full px-2 py-0.5 text-[10px] uppercase tracking-wide font-medium ${
+                              identity.platform === "steam"
+                                ? "bg-[#1b2838] text-[#66c0f4] border border-[#66c0f4]/30"
+                                : identity.platform === "epic"
+                                ? "bg-[#313131] text-white border border-white/20"
+                                : "bg-[#107c10] text-white border border-white/20"
+                            }`}
                           >
-                            {identity.platform}
+                            {identity.platform === "steam" ? "Steam" : identity.platform === "epic" ? "Epic" : "Game Pass"}
                           </span>
                         ))}
                       </div>
@@ -1194,8 +1353,8 @@ export default function MatchingPage() {
                 )
               })}
 
-              {friendProfiles.length === 0 && (
-                <p className="text-sm text-muted-foreground">No Steam friends available to import.</p>
+              {allFriendProfiles.length === 0 && (
+                <p className="text-sm text-muted-foreground">No friends available to import.</p>
               )}
               </div>
 
