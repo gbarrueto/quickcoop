@@ -437,7 +437,7 @@ export function LandingCyber() {
                         </span>
                       )}
                     </Button>
-                    <Button
+                    {/* <Button
                       type="button"
                       onClick={() => setEpicModalOpen(true)}
                       className={`w-full justify-start gap-3 text-white ${
@@ -446,7 +446,6 @@ export function LandingCyber() {
                           : "bg-[#313131] hover:bg-[#444444]"
                       }`}
                     >
-                      {/* SVG epic igual que tienes */}
                       Connect Epic Games
                       {epicId && (
                         <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-white/15 px-2 py-1 text-xs">
@@ -454,27 +453,57 @@ export function LandingCyber() {
                           Connected
                         </span>
                       )}
-                    </Button>
-                    <Button
+                    </Button> */}
+
+                    {/* GAMEPASS */}
+                    <button
                       type="button"
-                      onClick={() => setXboxModalOpen(true)}
-                      className={`w-full justify-start gap-3 text-white ${
-                        xboxConnected
+                      role="switch"
+                      aria-checked={hasGamePass ?? false}
+                      onClick={() => {
+                        const next = !hasGamePass
+                        setHasGamePass(next)
+                        setXboxConnected(next)
+                        if (next) {
+                          window.sessionStorage.setItem(XBOX_SESSION_KEY, JSON.stringify({ hasGamePass: true }))
+                        } else {
+                          window.sessionStorage.removeItem(XBOX_SESSION_KEY)
+                          setXboxConnected(false)
+                        }
+                      }}
+                      className={`w-full flex items-center justify-between gap-3 px-4 py-2 rounded-md text-white text-sm font-medium transition-colors ${
+                        hasGamePass
                           ? "bg-emerald-600 hover:bg-emerald-500"
                           : "bg-[#107c10] hover:bg-[#0f6f0f]"
                       }`}
                     >
-                      <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-white/35 text-xs font-semibold">
-                        X
-                      </span>
-                      Connect Xbox / Game Pass
-                      {xboxConnected && (
-                        <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-white/15 px-2 py-1 text-xs">
-                          <CheckCircle2 className="h-4 w-4" />
-                          {hasGamePass ? "Game Pass" : "Connected"}
+                      <div className="flex items-center gap-3">
+                        <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-white/35 text-xs font-semibold">
+                          X
                         </span>
-                      )}
-                    </Button>
+                        <span>{hasGamePass ? "Game Pass activo" : "Connect Xbox / Game Pass"}</span>
+                        {hasGamePass && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-2 py-1 text-xs">
+                            <CheckCircle2 className="h-4 w-4" />
+                            Connected
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Switch visual */}
+                      <span
+                        className={`relative inline-flex h-5 w-9 shrink-0 rounded-full border-2 border-white/30 transition-colors duration-200 ${
+                          hasGamePass ? "bg-white/30" : "bg-black/20"
+                        }`}
+                      >
+                        <span
+                          className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow transform transition-transform duration-200 ${
+                            hasGamePass ? "translate-x-4" : "translate-x-0"
+                          }`}
+                        />
+                      </span>
+                    </button>
+
                     <Button
                       type="button"
                       className="w-full mt-2"
@@ -490,7 +519,7 @@ export function LandingCyber() {
                     </Button>
                     {!canBeginMatching && (
                       <p className="text-xs text-muted-foreground text-center">
-                        Connect at least one account to begin. Steam is the only integration enabled for now.
+                        Connect at least one account to begin.
                       </p>
                     )}
                   </div>
@@ -836,106 +865,6 @@ export function LandingCyber() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={xboxModalOpen} onOpenChange={setXboxModalOpen}>
-        <DialogContent className="max-w-xl overflow-hidden border-border bg-card/95 p-0 shadow-2xl backdrop-blur-xl">
-          <div className="bg-gradient-to-br from-primary/15 via-transparent to-accent/10 px-6 pt-8 pb-6 text-center">
-            <DialogHeader className="items-center text-center">
-              <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#107c10] text-white shadow-lg shadow-primary/15">
-                <span className="text-xl font-bold">X</span>
-              </div>
-              <DialogTitle>Connect Xbox / Game Pass</DialogTitle>
-              <DialogDescription className="max-w-sm text-sm">
-                Indica si tienes una suscripción activa de Game Pass para incluir
-                su catálogo completo en el matching.
-              </DialogDescription>
-            </DialogHeader>
-          </div>
-
-          <div className="space-y-5 px-6 py-6">
-            {/* Info sobre Game Pass */}
-            <section
-              className="rounded-2xl border border-border bg-secondary/30 p-4"
-              aria-labelledby="xbox-gamepass-info"
-            >
-              <h3 id="xbox-gamepass-info" className="mb-2 font-semibold text-center">
-                ¿Cómo funciona?
-              </h3>
-              <p className="text-sm text-muted-foreground text-center">
-                Game Pass es un catálogo compartido — si tienes suscripción activa,
-                tienes acceso a los mismos ~500 juegos que cualquier otro suscriptor.
-                No necesitamos acceder a tu cuenta para saberlo.
-              </p>
-            </section>
-
-            {/* Selector de suscripción */}
-            <section className="space-y-3" aria-labelledby="xbox-sub-title">
-              <h3 id="xbox-sub-title" className="font-semibold text-center">
-                ¿Tienes Game Pass activo?
-              </h3>
-
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={() => setHasGamePass(true)}
-                  className={`flex flex-col items-center gap-2 rounded-xl border p-4 transition-all ${
-                    hasGamePass === true
-                      ? "border-primary bg-primary/10 text-primary"
-                      : "border-border bg-secondary/30 text-muted-foreground hover:border-primary/50"
-                  }`}
-                >
-                  <span className="text-2xl">🎮</span>
-                  <span className="text-sm font-medium">Sí, tengo Game Pass</span>
-                  <span className="text-xs opacity-70">~500 juegos incluidos</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setHasGamePass(false)}
-                  className={`flex flex-col items-center gap-2 rounded-xl border p-4 transition-all ${
-                    hasGamePass === false
-                      ? "border-primary bg-primary/10 text-primary"
-                      : "border-border bg-secondary/30 text-muted-foreground hover:border-primary/50"
-                  }`}
-                >
-                  <span className="text-2xl">🕹️</span>
-                  <span className="text-sm font-medium">No, solo Xbox</span>
-                  <span className="text-xs opacity-70">Solo juegos comprados</span>
-                </button>
-              </div>
-            </section>
-
-            {/* Botón confirmar */}
-            <Button
-              type="button"
-              disabled={hasGamePass === null}
-              className="w-full bg-[#107c10] hover:bg-[#0f6f0f] text-white disabled:opacity-50"
-              onClick={() => {
-                if (hasGamePass === null) return
-
-                window.sessionStorage.setItem(
-                  XBOX_SESSION_KEY,
-                  JSON.stringify({ hasGamePass })
-                )
-                setXboxConnected(true)
-                setXboxModalOpen(false)
-              }}
-            >
-              <CheckCircle2 className="w-4 h-4 mr-2" />
-              Confirmar
-            </Button>
-
-            {/* Estado confirmado */}
-            {xboxConnected && (
-              <div className="rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm text-primary text-center">
-                {hasGamePass
-                  ? "✅ Game Pass activo — catálogo completo incluido en el matching"
-                  : "✅ Xbox conectado — solo juegos comprados"}
-              </div>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
-
       {/* Modal para importar libreria manual */}
       <Dialog open={importModalOpen} onOpenChange={() => {}}>
         <DialogContent
@@ -956,25 +885,6 @@ export function LandingCyber() {
           </div>
 
           <div className="space-y-5 px-6 py-6">
-
-            {/* Instrucciones */}
-            <section className="rounded-2xl border border-border bg-secondary/30 p-4">
-              <h3 className="mb-2 font-semibold text-sm">How to get your list</h3>
-              <ul className="space-y-1.5 text-xs text-muted-foreground">
-                <li className="flex gap-2">
-                  <span className="text-primary shrink-0">Epic</span>
-                  <span>Go to <a href="https://store.epicgames.com/en-US/library" target="_blank" rel="noopener noreferrer" className="text-primary underline">store.epicgames.com/library ↗</a> and copy your game names</span>
-                </li>
-                <li className="flex gap-2">
-                  <span className="text-[#107c10] shrink-0">Xbox</span>
-                  <span>Go to <a href="https://account.xbox.com/en-US/mylibrary" target="_blank" rel="noopener noreferrer" className="text-primary underline">account.xbox.com/mylibrary ↗</a> and copy your game names</span>
-                </li>
-                <li className="flex gap-2">
-                  <span className="text-muted-foreground shrink-0">Other</span>
-                  <span>Any platform — just write one game name per line</span>
-                </li>
-              </ul>
-            </section>
 
             {/* Textarea */}
             <div className="space-y-2">
