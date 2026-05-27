@@ -10,6 +10,8 @@ import {
   ArrowLeft,
   ArrowRight,
   XCircle,
+  User,
+  Cpu,
 } from "lucide-react"
 import {
   Dialog,
@@ -18,8 +20,18 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import {
+  ensureStoredUserProfile,
+  type FriendIdentity,
+  type StoredFriendProfile,
+  updateStoredUserProfile,
+} from "@/lib/user-profile"
+import {
+  getCurrentMockUser,
+  type MockUser,
+} from "@/lib/mock-auth"
 
-type Platform = "steam" | "epic" | "xbox" | "import"
+type Platform = "steam" | "epic" | "xbox" | "import" | "qcoop"
 type CategoryFilterMode = "or" | "and"
 
 type SteamOwnedGame = {
@@ -98,8 +110,18 @@ type IdentityRef = {
 type FriendProfile = {
   profileId: string
   identities: IdentityRef[]
+  connections: {
+    steamId: string | null
+    epicAccountId: string | null
+    hasGamePass: boolean
+  }
   selected: boolean
   expanded: boolean
+}
+
+type FriendLibrarySnapshot = {
+  appIds: Set<number>
+  nameKeys: Set<string>
 }
 
 type GameRequirementsPayload = {
@@ -130,10 +152,6 @@ type RequirementsParticipant = {
   name: string
 }
 
-const STEAM_SESSION_KEY = "qcoop-steam-id"
-const EPIC_SESSION_KEY = "qcoop-epic-id"
-const XBOX_SESSION_KEY = "qcoop-xbox-gamepass"
-
 const DEFAULT_PLAYER_SPECS: PlayerSystemSpecs = {
   os: "Windows 10",
   cpuTier: 3,
@@ -153,6 +171,37 @@ const TIER_OPTIONS = [
 
 function identityKey(identity: IdentityRef): string {
   return `${identity.platform}:${identity.accountId}`
+}
+
+function normalizeGameName(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim().replace(/\s+/g, " ")
+}
+
+function gameMatchKey(game: Pick<GameCard, "name">): string {
+  return normalizeGameName(game.name)
+}
+
+function toLibrarySnapshot(games: { appId: number; name: string }[]): FriendLibrarySnapshot {
+  return {
+    appIds: new Set(games.map((game) => game.appId)),
+    nameKeys: new Set(games.map((game) => gameMatchKey(game))),
+  }
+}
+
+function mergeLibrarySnapshots(...snapshots: Array<FriendLibrarySnapshot | undefined>): FriendLibrarySnapshot {
+  const appIds = new Set<number>()
+  const nameKeys = new Set<string>()
+
+  snapshots.forEach((snapshot) => {
+    if (!snapshot) {
+      return
+    }
+
+    snapshot.appIds.forEach((appId) => appIds.add(appId))
+    snapshot.nameKeys.forEach((nameKey) => nameKeys.add(nameKey))
+  })
+
+  return { appIds, nameKeys }
 }
 
 function stableNumberFromId(id: number): number {
@@ -260,6 +309,49 @@ function osMatchesPlayer(requiredOs: string | undefined, playerOs: string): bool
   return normalizedPlayer.includes(normalizedRequired.slice(0, 8))
 }
 
+function toFriendProfile(profile: StoredFriendProfile): FriendProfile {
+  return {
+    profileId: profile.profileId,
+    identities: profile.identities,
+    connections: profile.connections,
+    selected: profile.selected,
+    expanded: profile.expanded,
+  }
+}
+
+function toImportedGameCard(name: string): GameCard {
+  return {
+    appId: Math.abs(
+      name.toLowerCase().trim().split("").reduce((acc, c) => acc * 31 + c.charCodeAt(0), 0),
+    ) % 9999999,
+    name,
+    imageUrl: "",
+    rating: 0,
+    players: "??",
+    platform: "import",
+  }
+}
+
+function mergeFriendProfiles(existing: FriendProfile[], incoming: FriendProfile[]): FriendProfile[] {
+  const next = [...existing]
+
+  incoming.forEach((profile) => {
+    const duplicate = next.some((current) => current.profileId === profile.profileId)
+    if (!duplicate) {
+      next.push(profile)
+    }
+  })
+
+  return next
+}
+
+function snapshotFromStoredFriend(profile: StoredFriendProfile): FriendLibrarySnapshot {
+  return {
+    appIds: new Set(profile.libraryAppIds),
+    nameKeys: new Set((profile.libraryTitles ?? []).map(normalizeGameName).filter(Boolean)),
+  }
+}
+
 const recommendedGames: RecommendedGame[] = [
   {
     appId: 730,
@@ -336,6 +428,7 @@ const recommendedGames: RecommendedGame[] = [
 export default function MatchingPage() {
   const router = useRouter()
   const recommendationsRef = useRef<HTMLDivElement | null>(null)
+  const [currentUser, setCurrentUser] = useState<MockUser | null>(null)
 
   const [steamId, setSteamId] = useState<string | null>(null)
   const [availablePlatforms, setAvailablePlatforms] = useState<Platform[]>([])
@@ -353,7 +446,7 @@ export default function MatchingPage() {
   const [draggingProfileId, setDraggingProfileId] = useState<string | null>(null)
   const [mergeNotice, setMergeNotice] = useState<string | null>(null)
 
-  const [identityLibraries, setIdentityLibraries] = useState<Record<string, Set<number>>>({})
+  const [identityLibraries, setIdentityLibraries] = useState<Record<string, FriendLibrarySnapshot>>({})
   const [loadingIdentities, setLoadingIdentities] = useState<Record<string, boolean>>({})
   const [identityErrors, setIdentityErrors] = useState<Record<string, string | null>>({})
   const [categoriesByApp, setCategoriesByApp] = useState<Record<number, string[]>>({})
@@ -367,6 +460,8 @@ export default function MatchingPage() {
   const [selectedGameForRequirements, setSelectedGameForRequirements] = useState<GameCard | null>(null)
   const [isRequirementsModalOpen, setIsRequirementsModalOpen] = useState(false)
   const [playerSpecsById, setPlayerSpecsById] = useState<Record<string, PlayerSystemSpecs>>({})
+
+  const [isSpecsModalOpen, setIsSpecsModalOpen] = useState(false)
 
   const allFriendProfiles = useMemo(
     () => [...friendProfiles, ...epicFriends],
@@ -387,36 +482,55 @@ export default function MatchingPage() {
 
   useEffect(() => {
     const initialize = async () => {
-      const storedSteamId = window.sessionStorage.getItem(STEAM_SESSION_KEY)
-      const storedEpicId = window.sessionStorage.getItem(EPIC_SESSION_KEY)
-      const xboxRaw = window.sessionStorage.getItem(XBOX_SESSION_KEY)
-      console.log(`[matching xbox] ${xboxRaw}`)
-      const xboxData = xboxRaw ? JSON.parse(xboxRaw) as { hasGamePass: boolean } : null
+      const loggedInUser = getCurrentMockUser()
+      if (!loggedInUser) {
+        router.push("/")
+        return
+      }
 
-      // if (!storedSteamId) {
-      //   router.push("/")
-      //   return
-      // }
+      setCurrentUser(loggedInUser)
+      const profile = ensureStoredUserProfile()
+      // Precarga specs guardadas del usuario
+      if (profile.playerSpecs) {
+        setPlayerSpecsById((prev) => ({
+          ...prev,
+          self: profile.playerSpecs!,
+        }))
+      }
 
       const platforms: Platform[] = []
-      if (storedSteamId) platforms.push("steam")
-      if (storedEpicId) platforms.push("epic")
-      if (xboxData) platforms.push("xbox")
+      if (profile.connections.steamId) platforms.push("steam")
+      if (profile.connections.epicAccountId) platforms.push("epic")
+      if (profile.connections.hasGamePass) platforms.push("xbox")
 
       setAvailablePlatforms(platforms)
-      if (storedSteamId) setSteamId(storedSteamId)
-      if (storedEpicId) setEpicAccountId(storedEpicId)
-      if (xboxData?.hasGamePass) setHasGamePass(true)
+      if (profile.connections.steamId) setSteamId(profile.connections.steamId)
+      if (profile.connections.epicAccountId) setEpicAccountId(profile.connections.epicAccountId)
+      setHasGamePass(profile.connections.hasGamePass)
+      setUserGames(profile.importedGames.map(toImportedGameCard))
+      setFriendProfiles(profile.friends.map(toFriendProfile))
+      setIdentityLibraries(
+        profile.friends.reduce<Record<string, FriendLibrarySnapshot>>((acc, friend) => {
+          const nameKeys = new Set((friend.libraryTitles ?? []).map(normalizeGameName).filter(Boolean))
+          friend.identities.forEach((identity) => {
+            acc[identityKey(identity)] = {
+              appIds: new Set(friend.libraryAppIds),
+              nameKeys,
+            }
+          })
+          return acc
+        }, {}),
+      )
 
       setLoading(true)
       setPageError(null)
 
       try {
-        // Steam: juegos + amigos (ya existente)
-        if (storedSteamId) {
+        // Steam: juegos + amigos (optional enrichment)
+        if (profile.connections.steamId) {
           const [gamesRes, friendsRes] = await Promise.all([
-            fetch(`/api/steam/owned-games?steamId=${storedSteamId}`),
-            fetch(`/api/steam/friends?steamId=${storedSteamId}`),
+            fetch(`/api/steam/owned-games?steamId=${profile.connections.steamId}`),
+            fetch(`/api/steam/friends?steamId=${profile.connections.steamId}`),
           ])
   
           const gamesJson = (await gamesRes.json()) as OwnedGamesPayload & { error?: string }
@@ -426,7 +540,7 @@ export default function MatchingPage() {
           if (!friendsRes.ok) throw new Error(friendsJson.error || "Failed to fetch your Steam friends")
   
           const ownedGames = gamesJson.data?.response?.games ?? []
-          setUserGames(toGameCards(ownedGames, "steam"))
+            setUserGames((prev) => [...prev, ...toGameCards(ownedGames, "steam")])
   
           const steamProfiles = (friendsJson.friends ?? []).map((friend) => ({
             profileId: `profile:steam:${friend.steamId}`,
@@ -436,34 +550,22 @@ export default function MatchingPage() {
               displayName: friend.name,
               avatar: friend.avatar ?? null,
             }],
+              connections: {
+                steamId: friend.steamId,
+                epicAccountId: null,
+                hasGamePass: false,
+              },
             selected: false,
             expanded: false,
           }))
-          setFriendProfiles(steamProfiles)
-        }
-
-        // Biblioteca manual
-        const storedManual = window.sessionStorage.getItem("qcoop-manual-games")
-        if (storedManual) {
-          const manualNames = JSON.parse(storedManual) as string[]
-          const manualCards: GameCard[] = manualNames.map((name) => ({
-            appId: Math.abs(
-              name.toLowerCase().trim().split("").reduce((acc, c) => acc * 31 + c.charCodeAt(0), 0)
-            ) % 9999999,
-            name,
-            imageUrl: "",
-            rating: 0,
-            players: "??",
-            platform: "import" as const, // puedes agregar "manual" como plataforma si quieres
-          }))
-          setUserGames((prev) => [...prev, ...manualCards])
+          setFriendProfiles((prev) => mergeFriendProfiles(prev, steamProfiles))
         }
 
         // Epic: juegos + amigos
-        if (storedEpicId) {
+        if (profile.connections.epicAccountId) {
           const [epicLibRes, epicFriendsRes] = await Promise.all([
-            fetch(`/api/epic/library?accountId=${storedEpicId}`),
-            fetch(`/api/epic/friends?accountId=${storedEpicId}`),
+            fetch(`/api/epic/library?accountId=${profile.connections.epicAccountId}`),
+            fetch(`/api/epic/friends?accountId=${profile.connections.epicAccountId}`),
           ])
 
           if (epicLibRes.ok) {
@@ -478,7 +580,7 @@ export default function MatchingPage() {
               players: "1+",
               platform: "epic" as const,
             }))
-            setEpicGames(mapped)
+            setEpicGames((prev) => [...prev, ...mapped])
           }
 
           if (epicFriendsRes.ok) {
@@ -491,15 +593,21 @@ export default function MatchingPage() {
                 displayName: friend.displayName,
                 avatar: null,
               }],
+              connections: {
+                steamId: null,
+                epicAccountId: friend.accountId,
+                hasGamePass: false,
+              },
               selected: false,
               expanded: false,
             }))
-            setEpicFriends(epicProfiles)
+            setEpicFriends((prev) => mergeFriendProfiles(prev, epicProfiles))
           }
         }
 
         // GamePass: catálogo público
-        if (xboxData?.hasGamePass) {
+        const hasGamePassFriend = profile.friends.some((friend) => friend.connections.hasGamePass)
+        if (profile.connections.hasGamePass || hasGamePassFriend) {
           const gpRes = await fetch("/api/gamepass")
           if (gpRes.ok) {
             const gpJson = (await gpRes.json()) as GamePassPayload
@@ -511,7 +619,30 @@ export default function MatchingPage() {
               players: "1+",
               platform: "xbox" as const,
             }))
-            setGamePassGames(mapped)
+            setGamePassGames((prev) => [...prev, ...mapped])
+
+            const gamePassSnapshot = toLibrarySnapshot(mapped)
+            if (hasGamePassFriend) {
+              setIdentityLibraries((prev) => {
+                const next = { ...prev }
+
+                profile.friends.forEach((friend) => {
+                  if (!friend.connections.hasGamePass) {
+                    return
+                  }
+
+                  friend.identities.forEach((identity) => {
+                    next[identityKey(identity)] = mergeLibrarySnapshots(
+                      next[identityKey(identity)],
+                      snapshotFromStoredFriend(friend),
+                      gamePassSnapshot,
+                    )
+                  })
+                })
+
+                return next
+              })
+            }
           }
         }
 
@@ -533,7 +664,6 @@ export default function MatchingPage() {
     }
 
     if (identity.platform !== "steam") {
-      setIdentityErrors((prev) => ({ ...prev, [key]: "Library import for this platform is not available yet." }))
       return
     }
 
@@ -549,7 +679,27 @@ export default function MatchingPage() {
       }
 
       const appIds = (payload.data?.response?.games ?? []).map((game) => game.appid)
-      setIdentityLibraries((prev) => ({ ...prev, [key]: new Set(appIds) }))
+      const nameKeys = new Set(
+        (payload.data?.response?.games ?? [])
+          .map((game) => normalizeGameName(game.name ?? `Steam App ${game.appid}`))
+          .filter(Boolean),
+      )
+
+      setIdentityLibraries((prev) => ({ ...prev, [key]: { appIds: new Set(appIds), nameKeys } }))
+      updateStoredUserProfile((profile) => ({
+        ...profile,
+        friends: profile.friends.map((friend) =>
+          friend.identities.some((current) => identityKey(current) === key)
+            ? {
+                ...friend,
+                libraryAppIds: appIds,
+                libraryTitles: (payload.data?.response?.games ?? []).map(
+                  (game) => game.name ?? `Steam App ${game.appid}`,
+                ),
+              }
+            : friend,
+        ),
+      }))
     } catch (error) {
       setIdentityErrors((prev) => ({
         ...prev,
@@ -636,7 +786,7 @@ export default function MatchingPage() {
         }
       })
 
-      return prev
+      const nextProfiles = prev
         .filter((profile) => profile.profileId !== sourceProfile.profileId)
         .map((profile) =>
           profile.profileId === targetProfile.profileId
@@ -647,6 +797,36 @@ export default function MatchingPage() {
               }
             : profile,
         )
+
+      updateStoredUserProfile((profile) => {
+        const sourceStored = profile.friends.find((friend) => friend.profileId === sourceProfile.profileId)
+        const targetStored = profile.friends.find((friend) => friend.profileId === targetProfile.profileId)
+        const mergedLibraryAppIds = Array.from(
+          new Set([...(targetStored?.libraryAppIds ?? []), ...(sourceStored?.libraryAppIds ?? [])]),
+        )
+        const storedIdentities = mergedIdentities.filter(
+          (identity): identity is FriendIdentity => identity.platform !== "import",
+        )
+
+        return {
+          ...profile,
+          friends: profile.friends
+            .filter((friend) => friend.profileId !== sourceProfile.profileId)
+            .map((friend) =>
+              friend.profileId === targetProfile.profileId
+                ? {
+                    ...friend,
+                    identities: storedIdentities,
+                    selected: friend.selected || sourceStored?.selected || false,
+                    expanded: friend.expanded || sourceStored?.expanded || false,
+                    libraryAppIds: mergedLibraryAppIds,
+                  }
+                : friend,
+            ),
+        }
+      })
+
+      return nextProfiles
     })
   }
 
@@ -668,14 +848,31 @@ export default function MatchingPage() {
 
     const selectedSets = selectedProfiles.map((profile) => {
       const mergedSet = new Set<number>()
+      const mergedNameKeys = new Set<string>()
       profile.identities.forEach((identity) => {
         const library = identityLibraries[identityKey(identity)]
-        if (library) library.forEach((appId) => mergedSet.add(appId))
+        if (!library) {
+          return
+        }
+
+        library.appIds.forEach((appId) => mergedSet.add(appId))
+        library.nameKeys.forEach((nameKey) => mergedNameKeys.add(nameKey))
       })
-      return mergedSet
+
+      if (profile.connections.hasGamePass) {
+        gamePassGames.forEach((game) => {
+          mergedSet.add(game.appId)
+          mergedNameKeys.add(gameMatchKey(game))
+        })
+      }
+
+      return { appIds: mergedSet, nameKeys: mergedNameKeys }
     })
 
-    return allUserGames.filter((game) => selectedSets.every((set) => set.has(game.appId)))
+    return allUserGames.filter((game) => {
+      const key = gameMatchKey(game)
+      return selectedSets.every((set) => set.appIds.has(game.appId) || set.nameKeys.has(key))
+    })
   }, [allFriendProfiles, identityLibraries, allUserGames])
 
   useEffect(() => {
@@ -796,13 +993,17 @@ export default function MatchingPage() {
   ) => {
     setPlayerSpecsById((prev) => {
       const current = prev[participantId] ?? { ...DEFAULT_PLAYER_SPECS }
-      return {
-        ...prev,
-        [participantId]: {
-          ...current,
-          [field]: value,
-        },
+      const updated = { ...current, [field]: value }
+
+      // Solo persiste las specs del usuario propio
+      if (participantId === "self") {
+        updateStoredUserProfile((profile) => ({
+          ...profile,
+          playerSpecs: updated,
+        }))
       }
+
+      return { ...prev, [participantId]: updated }
     })
   }
 
@@ -935,6 +1136,22 @@ export default function MatchingPage() {
             )}
           </div>
           <div className="flex gap-3">
+            {currentUser && (
+              <div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1.5 text-xs text-primary">
+                <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-primary/40 bg-primary/20">
+                  <User className="h-3.5 w-3.5" />
+                </span>
+                <span className="font-medium">{currentUser.name}</span>
+                <button
+                  type="button"
+                  onClick={() => setIsSpecsModalOpen(true)}
+                  className="ml-1 inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[10px] hover:bg-primary/20 transition-colors"
+                >
+                  <Cpu className="h-3 w-3" />
+                  My specs
+                </button>
+              </div>
+            )}
             <Link href="/">
               <Button variant="outline">
                 <ArrowLeft className="h-4 w-4 mr-2" />
@@ -1220,10 +1437,15 @@ export default function MatchingPage() {
                                 ? "bg-[#1b2838] text-[#66c0f4] border border-[#66c0f4]/30"
                                 : identity.platform === "epic"
                                 ? "bg-[#313131] text-white border border-white/20"
-                                : "bg-[#107c10] text-white border border-white/20"
+                                : identity.platform === "xbox"
+                                ? "bg-[#107c10] text-white border border-white/20"
+                                : "bg-[#7c5c10] text-white border border-white/20"
                             }`}
                           >
-                            {identity.platform === "steam" ? "Steam" : identity.platform === "epic" ? "Epic" : "Game Pass"}
+                            { identity.platform === "steam" ? "Steam" 
+                            : identity.platform === "epic" ? "Epic" 
+                            : identity.platform === "xbox" ? "Game Pass" 
+                            : "QCoop"}
                           </span>
                         ))}
                         <Button
@@ -1249,6 +1471,28 @@ export default function MatchingPage() {
                   Select friends to filter games. Drag-and-drop to merge identities.
                 </p>
               </div>
+
+              <div className="mt-4 rounded-lg border border-primary/30 bg-primary/10 p-3 text-xs text-primary">
+                <p className="font-medium">Merge tip</p>
+                <p className="mt-1">
+                  Drag one friend row onto another to merge identities. This feature activates only when 2+ platforms are connected.
+                </p>
+                <p className="mt-2 inline-flex items-center gap-1">
+                  <UserRoundPlus className="h-3.5 w-3.5" />
+                  Merging between users of the same platform is blocked.
+                </p>
+              </div>
+
+              {mergeNotice && (
+                <p className="mt-3 text-xs text-amber-500">{mergeNotice}</p>
+              )}
+
+              {selectedCount > 0 && (
+                <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-emerald-500/15 px-3 py-1 text-xs text-emerald-600">
+                  <CheckCircle2 className="h-4 w-4" />
+                  Filtering with {selectedCount} selected {selectedCount === 1 ? "friend" : "friends"}
+                </div>
+              )}
 
               <div className="max-h-[calc(100vh-20rem)] overflow-y-auto pr-1">
               <div className="space-y-3">
@@ -1319,10 +1563,15 @@ export default function MatchingPage() {
                                 ? "bg-[#1b2838] text-[#66c0f4] border border-[#66c0f4]/30"
                                 : identity.platform === "epic"
                                 ? "bg-[#313131] text-white border border-white/20"
-                                : "bg-[#107c10] text-white border border-white/20"
+                                : identity.platform === "xbox"
+                                ? "bg-[#107c10] text-white border border-white/20"
+                                : "bg-[#7c5c10] text-white border border-white/20"
                             }`}
                           >
-                            {identity.platform === "steam" ? "Steam" : identity.platform === "epic" ? "Epic" : "Game Pass"}
+                            { identity.platform === "steam" ? "Steam" 
+                            : identity.platform === "epic" ? "Epic" 
+                            : identity.platform === "xbox" ? "Game Pass"
+                            : "Qcoop"}
                           </span>
                         ))}
                       </div>
@@ -1358,27 +1607,6 @@ export default function MatchingPage() {
               )}
               </div>
 
-              <div className="mt-4 rounded-lg border border-primary/30 bg-primary/10 p-3 text-xs text-primary">
-                <p className="font-medium">Merge tip</p>
-                <p className="mt-1">
-                  Drag one friend row onto another to merge identities. This feature activates only when 2+ platforms are connected.
-                </p>
-                <p className="mt-2 inline-flex items-center gap-1">
-                  <UserRoundPlus className="h-3.5 w-3.5" />
-                  Merging between users of the same platform is blocked.
-                </p>
-              </div>
-
-              {mergeNotice && (
-                <p className="mt-3 text-xs text-amber-500">{mergeNotice}</p>
-              )}
-
-              {selectedCount > 0 && (
-                <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-emerald-500/15 px-3 py-1 text-xs text-emerald-600">
-                  <CheckCircle2 className="h-4 w-4" />
-                  Filtering with {selectedCount} selected {selectedCount === 1 ? "friend" : "friends"}
-                </div>
-              )}
               </div>
             </section>
           </aside>
@@ -1596,6 +1824,11 @@ export default function MatchingPage() {
                       >
                         <div className="mb-3 flex items-center justify-between gap-2">
                           <h3 className="text-sm font-semibold">{participant.name}</h3>
+                          {participant.id === "self" && (
+                            <span className="text-[10px] text-primary bg-primary/10 border border-primary/20 rounded-full px-2 py-0.5">
+                              Auto-saved
+                            </span>
+                          )}
                           <span
                             className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium ${
                               allChecksPass
@@ -1646,6 +1879,211 @@ export default function MatchingPage() {
                   })}
                 </div>
               )}
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* SPECS MODAL */}
+        <Dialog open={isSpecsModalOpen} onOpenChange={setIsSpecsModalOpen}>
+          <DialogContent className="max-w-lg overflow-hidden border-border bg-card/95 p-0 shadow-2xl backdrop-blur-xl">
+            <div className="bg-gradient-to-br from-primary/15 via-transparent to-accent/10 px-6 pt-8 pb-6">
+              <DialogHeader className="items-center text-center">
+                <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/15 text-primary shadow-lg">
+                  <Cpu className="h-7 w-7" />
+                </div>
+                <DialogTitle>My hardware specs</DialogTitle>
+                <DialogDescription className="max-w-sm text-sm">
+                  Set your specs once and they'll be used automatically when checking game requirements.
+                </DialogDescription>
+              </DialogHeader>
+            </div>
+
+            <div className="space-y-4 px-6 py-6">
+              {/* OS */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Operating System
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {["Windows 10", "Windows 11", "macOS", "Linux"].map((os) => {
+                    const specs = playerSpecsById["self"] ?? DEFAULT_PLAYER_SPECS
+                    return (
+                      <button
+                        key={os}
+                        type="button"
+                        onClick={() => updatePlayerSpecs("self", "os", os)}
+                        className={`rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${
+                          specs.os === os
+                            ? "border-primary bg-primary/15 text-primary"
+                            : "border-border bg-secondary/30 text-muted-foreground hover:border-primary/40"
+                        }`}
+                      >
+                        {os}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* CPU */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Processor (CPU)
+                </label>
+                <div className="grid grid-cols-5 gap-2">
+                  {TIER_OPTIONS.map((tier) => {
+                    const specs = playerSpecsById["self"] ?? DEFAULT_PLAYER_SPECS
+                    const labels = ["Budget", "Entry", "Mid", "High", "Top"]
+                    return (
+                      <button
+                        key={tier.value}
+                        type="button"
+                        onClick={() => updatePlayerSpecs("self", "cpuTier", tier.value)}
+                        className={`flex flex-col items-center rounded-lg border px-2 py-2 text-xs transition-colors ${
+                          specs.cpuTier === tier.value
+                            ? "border-primary bg-primary/15 text-primary"
+                            : "border-border bg-secondary/30 text-muted-foreground hover:border-primary/40"
+                        }`}
+                      >
+                        <span className="font-semibold">{tier.value}</span>
+                        <span className="text-[9px] mt-0.5 opacity-70">{labels[tier.value - 1]}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+                <p className="text-[10px] text-muted-foreground">
+                  1 = old budget CPU (Pentium, FX-4) · 5 = flagship (i9, Ryzen 9)
+                </p>
+              </div>
+
+              {/* GPU */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Graphics Card (GPU)
+                </label>
+                <div className="grid grid-cols-5 gap-2">
+                  {TIER_OPTIONS.map((tier) => {
+                    const specs = playerSpecsById["self"] ?? DEFAULT_PLAYER_SPECS
+                    const labels = ["DX10", "DX11", "GTX 9xx", "RTX 20/30", "RTX 40+"]
+                    return (
+                      <button
+                        key={tier.value}
+                        type="button"
+                        onClick={() => updatePlayerSpecs("self", "gpuTier", tier.value)}
+                        className={`flex flex-col items-center rounded-lg border px-2 py-2 text-xs transition-colors ${
+                          specs.gpuTier === tier.value
+                            ? "border-primary bg-primary/15 text-primary"
+                            : "border-border bg-secondary/30 text-muted-foreground hover:border-primary/40"
+                        }`}
+                      >
+                        <span className="font-semibold">{tier.value}</span>
+                        <span className="text-[9px] mt-0.5 opacity-70">{labels[tier.value - 1]}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* RAM y VRAM */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    RAM (GB)
+                  </label>
+                  <div className="grid grid-cols-4 gap-1.5">
+                    {[4, 8, 16, 32].map((gb) => {
+                      const specs = playerSpecsById["self"] ?? DEFAULT_PLAYER_SPECS
+                      return (
+                        <button
+                          key={gb}
+                          type="button"
+                          onClick={() => updatePlayerSpecs("self", "ramGb", gb)}
+                          className={`rounded-lg border py-2 text-xs font-medium transition-colors ${
+                            specs.ramGb === gb
+                              ? "border-primary bg-primary/15 text-primary"
+                              : "border-border bg-secondary/30 text-muted-foreground hover:border-primary/40"
+                          }`}
+                        >
+                          {gb}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    VRAM (GB)
+                  </label>
+                  <div className="grid grid-cols-4 gap-1.5">
+                    {[2, 4, 8, 12].map((gb) => {
+                      const specs = playerSpecsById["self"] ?? DEFAULT_PLAYER_SPECS
+                      return (
+                        <button
+                          key={gb}
+                          type="button"
+                          onClick={() => updatePlayerSpecs("self", "vramGb", gb)}
+                          className={`rounded-lg border py-2 text-xs font-medium transition-colors ${
+                            specs.vramGb === gb
+                              ? "border-primary bg-primary/15 text-primary"
+                              : "border-border bg-secondary/30 text-muted-foreground hover:border-primary/40"
+                          }`}
+                        >
+                          {gb}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* Storage */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Available Storage (GB)
+                </label>
+                <div className="grid grid-cols-5 gap-2">
+                  {[10, 20, 50, 100, 500].map((gb) => {
+                    const specs = playerSpecsById["self"] ?? DEFAULT_PLAYER_SPECS
+                    return (
+                      <button
+                        key={gb}
+                        type="button"
+                        onClick={() => updatePlayerSpecs("self", "storageGb", gb)}
+                        className={`rounded-lg border py-2 text-xs font-medium transition-colors ${
+                          specs.storageGb === gb
+                            ? "border-primary bg-primary/15 text-primary"
+                            : "border-border bg-secondary/30 text-muted-foreground hover:border-primary/40"
+                        }`}
+                      >
+                        {gb}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* Resumen */}
+              <div className="rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 text-xs text-muted-foreground">
+                <p className="font-medium text-foreground mb-1">Current specs</p>
+                {(() => {
+                  const specs = playerSpecsById["self"] ?? DEFAULT_PLAYER_SPECS
+                  return (
+                    <p>
+                      {specs.os} · CPU Tier {specs.cpuTier} · GPU Tier {specs.gpuTier} · {specs.ramGb}GB RAM · {specs.vramGb}GB VRAM · {specs.storageGb}GB Storage
+                    </p>
+                  )
+                })()}
+                <p className="mt-1 text-[10px] text-primary/70">Changes are saved automatically.</p>
+              </div>
+
+              <Button
+                type="button"
+                className="w-full"
+                onClick={() => setIsSpecsModalOpen(false)}
+              >
+                Done
+              </Button>
             </div>
           </DialogContent>
         </Dialog>

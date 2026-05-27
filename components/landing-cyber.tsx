@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import {
   Dialog,
   DialogContent,
@@ -11,6 +10,18 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import {
+  ensureStoredUserProfile,
+  updateStoredUserProfile,
+} from "@/lib/user-profile"
+import {
+  ensureMockUsers,
+  getCurrentMockUser,
+  loginMockUser,
+  logoutMockUser,
+  registerMockUser,
+  type MockUser,
+} from "@/lib/mock-auth"
 import {
   Gamepad2,
   Users,
@@ -22,6 +33,7 @@ import {
   Link2,
   Shield,
   CheckCircle2,
+  User,
 } from "lucide-react"
 import Link from "next/link"
 
@@ -92,9 +104,6 @@ const fallbackTrendingMultiplayerGames: TrendingGame[] = [
   },
 ]
 
-const STEAM_SESSION_KEY = "qcoop-steam-id"
-const XBOX_SESSION_KEY = "qcoop-xbox-gamepass"
-const EPIC_SESSION_KEY = "qcoop-epic-id"
 const EPIC_CONNECTED_SESSION_KEY = "qcoop-epic-connected"
 const XBOX_CONNECTED_SESSION_KEY = "qcoop-xbox-connected"
 const TRENDING_CACHE_KEY = "qcoop-trending-multiplayer-cache"
@@ -102,6 +111,13 @@ const TRENDING_CACHE_TTL_MS = 1000 * 60 * 60 * 24
 
 export function LandingCyber() {
   const router = useRouter()
+  const [currentUser, setCurrentUser] = useState<MockUser | null>(null)
+  const [authModalOpen, setAuthModalOpen] = useState(false)
+  const [authMode, setAuthMode] = useState<"login" | "register">("login")
+  const [authName, setAuthName] = useState("")
+  const [authEmail, setAuthEmail] = useState("")
+  const [authPassword, setAuthPassword] = useState("")
+  const [authError, setAuthError] = useState<string | null>(null)
   const [importMode, setImportMode] = useState<"link" | "import">("link")
   const [steamModalOpen, setSteamModalOpen] = useState(false)
   const [epicModalOpen, setEpicModalOpen] = useState(false)
@@ -121,39 +137,82 @@ export function LandingCyber() {
   const [importText, setImportText] = useState("")
   const [importedGames, setImportedGames] = useState<string[]>([])
 
-  const canBeginMatching = Boolean(steamId) || Boolean(epicId) || xboxConnected || importedGames.length > 0
+  const canBeginMatching =
+    Boolean(currentUser) && (Boolean(steamId) || Boolean(epicId) || xboxConnected || importedGames.length > 0)
+
+  const handleAuthSubmit = () => {
+    setAuthError(null)
+
+    if (authMode === "register") {
+      const result = registerMockUser({
+        name: authName,
+        email: authEmail,
+        password: authPassword,
+      })
+
+      if (!result.ok) {
+        setAuthError(result.message)
+        return
+      }
+
+      setCurrentUser(result.user)
+      setAuthModalOpen(false)
+      return
+    }
+
+    const result = loginMockUser({
+      email: authEmail,
+      password: authPassword,
+    })
+
+    if (!result.ok) {
+      setAuthError(result.message)
+      return
+    }
+
+    setCurrentUser(result.user)
+    setAuthModalOpen(false)
+  }
+
+  const handleLogout = () => {
+    logoutMockUser()
+    setCurrentUser(null)
+  }
 
   const confirmImport = () => {
     const games = importText
       .split("\n")
       .map((g) => g.trim())
       .filter(Boolean)
+    const mergedGames = Array.from(new Set([...importedGames, ...games]))
 
-    setImportedGames(games)
-    window.sessionStorage.setItem("qcoop-manual-games", JSON.stringify(games))
+    setImportedGames(mergedGames)
+    updateStoredUserProfile((profile) => ({
+      ...profile,
+      importedGames: mergedGames,
+    }))
     setImportModalOpen(false)
   }
 
   useEffect(() => {
-    const storedSteamId = window.sessionStorage.getItem(STEAM_SESSION_KEY)
-    const storedXbox = window.sessionStorage.getItem(XBOX_SESSION_KEY)
-    const storedEpicId = window.sessionStorage.getItem(EPIC_SESSION_KEY)
+    ensureMockUsers()
+    setCurrentUser(getCurrentMockUser())
 
-    if (storedSteamId) {
-      setSteamId(storedSteamId)
+    const profile = ensureStoredUserProfile()
+
+    if (profile.connections.steamId) {
+      setSteamId(profile.connections.steamId)
     }
 
-    if (storedXbox) {
-      const parsed = JSON.parse(storedXbox)
-      setXboxConnected(true)
-      setHasGamePass(parsed.hasGamePass)
+    if (profile.connections.epicAccountId) {
+      setEpicId(profile.connections.epicAccountId)
     }
 
-    if (storedEpicId) setEpicId(storedEpicId)
+    setHasGamePass(profile.connections.hasGamePass)
+    setXboxConnected(profile.connections.hasGamePass)
 
-    const storedManual = window.sessionStorage.getItem("qcoop-manual-games")
-    if (storedManual) {
-      setImportedGames(JSON.parse(storedManual) as string[])
+    if (profile.importedGames.length > 0) {
+      setImportedGames(profile.importedGames)
     }
   }, [])
 
@@ -205,7 +264,13 @@ export function LandingCyber() {
         }
 
         setSteamId(resolvedSteamId)
-        window.sessionStorage.setItem(STEAM_SESSION_KEY, resolvedSteamId)
+        updateStoredUserProfile((profile) => ({
+          ...profile,
+          connections: {
+            ...profile.connections,
+            steamId: resolvedSteamId,
+          },
+        }))
         setIsWaitingSteamAuth(false)
       }
 
@@ -217,7 +282,13 @@ export function LandingCyber() {
       if (event.data.type === "epic-auth-success") {
         const resolvedEpicId = String(event.data.epicAccountId || "")
         setEpicId(resolvedEpicId)
-        window.sessionStorage.setItem(EPIC_SESSION_KEY, resolvedEpicId)
+        updateStoredUserProfile((profile) => ({
+          ...profile,
+          connections: {
+            ...profile.connections,
+            epicAccountId: resolvedEpicId,
+          },
+        }))
         setIsWaitingEpicAuth(false)
       }
 
@@ -364,9 +435,33 @@ export function LandingCyber() {
               How It Works
             </a>
           </div>
-          {/* <Button variant="outline" className="border-primary/50 hover:bg-primary/10">
-            Sign In
-          </Button> */}
+          {currentUser ? (
+            <div className="flex items-center gap-2">
+              <div className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-primary/40 bg-primary/15 text-primary">
+                <User className="h-4 w-4" />
+              </div>
+              <div className="hidden sm:block text-right">
+                <p className="text-xs font-medium leading-none">{currentUser.name}</p>
+                <p className="text-[10px] text-muted-foreground leading-none mt-1">Connected</p>
+              </div>
+              <Button type="button" size="sm" variant="outline" onClick={handleLogout}>
+                Logout
+              </Button>
+            </div>
+          ) : (
+            <Button
+              type="button"
+              variant="outline"
+              className="border-primary/50 hover:bg-primary/10"
+              onClick={() => {
+                setAuthMode("login")
+                setAuthError(null)
+                setAuthModalOpen(true)
+              }}
+            >
+              Login
+            </Button>
+          )}
         </nav>
       </header>
 
@@ -464,10 +559,14 @@ export function LandingCyber() {
                         const next = !hasGamePass
                         setHasGamePass(next)
                         setXboxConnected(next)
-                        if (next) {
-                          window.sessionStorage.setItem(XBOX_SESSION_KEY, JSON.stringify({ hasGamePass: true }))
-                        } else {
-                          window.sessionStorage.removeItem(XBOX_SESSION_KEY)
+                        updateStoredUserProfile((profile) => ({
+                          ...profile,
+                          connections: {
+                            ...profile.connections,
+                            hasGamePass: next,
+                          },
+                        }))
+                        if (!next) {
                           setXboxConnected(false)
                         }
                       }}
@@ -481,7 +580,7 @@ export function LandingCyber() {
                         <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-white/35 text-xs font-semibold">
                           X
                         </span>
-                        <span>{hasGamePass ? "Game Pass activo" : "Connect Xbox / Game Pass"}</span>
+                        <span>{hasGamePass ? "Connected Game Pass" : "Connect Xbox / Game Pass"}</span>
                         {hasGamePass && (
                           <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-2 py-1 text-xs">
                             <CheckCircle2 className="h-4 w-4" />
@@ -519,7 +618,9 @@ export function LandingCyber() {
                     </Button>
                     {!canBeginMatching && (
                       <p className="text-xs text-muted-foreground text-center">
-                        Connect at least one account to begin.
+                        {!currentUser
+                          ? "Login first to continue."
+                          : "Connect at least one account to begin."}
                       </p>
                     )}
                   </div>
@@ -775,6 +876,82 @@ export function LandingCyber() {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={authModalOpen} onOpenChange={setAuthModalOpen}>
+        <DialogContent className="max-w-md overflow-hidden border-border bg-card/95 p-0 shadow-2xl backdrop-blur-xl">
+          <div className="bg-gradient-to-br from-primary/15 via-transparent to-accent/10 px-6 pt-8 pb-6 text-center">
+            <DialogHeader className="items-center text-center">
+              <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/15 text-primary shadow-lg shadow-primary/15">
+                <User className="h-7 w-7" />
+              </div>
+              <DialogTitle>{authMode === "login" ? "Login" : "Create account"}</DialogTitle>
+              <DialogDescription className="max-w-sm text-sm">
+                {authMode === "login"
+                  ? "Use fixed mock credentials or your registered local user."
+                  : "Create a local mock account without database."}
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+
+          <div className="space-y-4 px-6 py-6">
+            {authMode === "register" && (
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">Name</label>
+                <input
+                  type="text"
+                  value={authName}
+                  onChange={(event) => setAuthName(event.target.value)}
+                  className="h-9 w-full rounded-md border border-border bg-background px-2 text-sm"
+                  placeholder="Your name"
+                />
+              </div>
+            )}
+            <div>
+              <label className="mb-1 block text-xs font-medium text-muted-foreground">Email</label>
+              <input
+                type="email"
+                value={authEmail}
+                onChange={(event) => setAuthEmail(event.target.value)}
+                className="h-9 w-full rounded-md border border-border bg-background px-2 text-sm"
+                placeholder="demo@qcoop.app"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-muted-foreground">Password</label>
+              <input
+                type="password"
+                value={authPassword}
+                onChange={(event) => setAuthPassword(event.target.value)}
+                className="h-9 w-full rounded-md border border-border bg-background px-2 text-sm"
+                placeholder="demo123"
+              />
+            </div>
+
+            {authError && <p className="text-xs text-destructive">{authError}</p>}
+
+            <div className="rounded-md border border-border/70 bg-secondary/20 p-2 text-[11px] text-muted-foreground">
+              Demo login: demo@qcoop.app / demo123
+            </div>
+
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="flex-1"
+                onClick={() => {
+                  setAuthMode(authMode === "login" ? "register" : "login")
+                  setAuthError(null)
+                }}
+              >
+                {authMode === "login" ? "Need account" : "Have account"}
+              </Button>
+              <Button type="button" className="flex-1" onClick={handleAuthSubmit}>
+                {authMode === "login" ? "Login" : "Register"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={epicModalOpen} onOpenChange={setEpicModalOpen}>
         <DialogContent className="max-w-xl overflow-hidden border-border bg-card/95 p-0 shadow-2xl backdrop-blur-xl">
           <div className="bg-gradient-to-br from-primary/15 via-transparent to-accent/10 px-6 pt-8 pb-6 text-center">
@@ -841,11 +1018,10 @@ export function LandingCyber() {
                       .split("\n")
                       .map((g) => g.trim())
                       .filter(Boolean)
-                    // guarda en sessionStorage para usarlo en matching
-                    window.sessionStorage.setItem(
-                      "qcoop-epic-manual-games",
-                      JSON.stringify(games)
-                    )
+                      updateStoredUserProfile((profile) => ({
+                        ...profile,
+                        importedGames: Array.from(new Set([...profile.importedGames, ...games])),
+                      }))
                   }}
                 />
                 <p className="text-[10px] text-muted-foreground text-center">
