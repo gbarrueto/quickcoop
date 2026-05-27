@@ -61,6 +61,7 @@ type EpicLibraryPayload = {
 type GamePassGame = {
   id: string
   title: string
+  imageUrl: string
 }
 
 type GamePassPayload = {
@@ -614,7 +615,7 @@ export default function MatchingPage() {
             const mapped: GameCard[] = (gpJson.games ?? []).map((game) => ({
               appId: Math.abs(game.id.split("").reduce((acc, c) => acc * 31 + c.charCodeAt(0), 0)) % 9999999,
               name: game.title,
-              imageUrl: "",
+              imageUrl: game.imageUrl ?? "",
               rating: 0,
               players: "1+",
               platform: "xbox" as const,
@@ -1011,20 +1012,23 @@ export default function MatchingPage() {
     setSelectedGameForRequirements(game)
     setIsRequirementsModalOpen(true)
 
-    if (requirementsByApp[game.appId] || requirementsLoadingByApp[game.appId]) {
-      return
-    }
+    if (requirementsByApp[game.appId] || requirementsLoadingByApp[game.appId]) return
 
     setRequirementsLoadingByApp((prev) => ({ ...prev, [game.appId]: true }))
     setRequirementsErrorByApp((prev) => ({ ...prev, [game.appId]: null }))
 
     try {
-      const response = await fetch(`/api/steam/game-requirements?appId=${game.appId}`)
+      let url = `/api/steam/game-requirements?appId=${game.appId}`
+
+      // Para juegos de Game Pass e Import, busca por nombre en Steam
+      if (game.platform === "xbox" || game.platform === "import") {
+        url = `/api/steam/game-requirements?appId=${game.appId}&searchName=${encodeURIComponent(game.name)}`
+      }
+
+      const response = await fetch(url)
       const payload = (await response.json()) as GameRequirementsPayload
 
-      if (!response.ok) {
-        throw new Error(payload.error || "Failed to load game requirements")
-      }
+      if (!response.ok) throw new Error(payload.error || "Failed to load game requirements")
 
       setRequirementsByApp((prev) => ({ ...prev, [game.appId]: payload }))
     } catch (error) {
