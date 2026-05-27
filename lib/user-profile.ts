@@ -21,12 +21,22 @@ export type StoredFriendProfile = {
   libraryTitles?: string[]
 }
 
+export type StoredPlayerSpecs = {
+  os: string
+  cpuTier: number
+  gpuTier: number
+  ramGb: number
+  vramGb: number
+  storageGb: number
+}
+
 export type StoredUserProfile = {
   userId: string
   displayName: string
   connections: ConnectedAccounts
   importedGames: string[]
   friends: StoredFriendProfile[]
+  playerSpecs?: StoredPlayerSpecs
   updatedAt: number
 }
 
@@ -142,6 +152,7 @@ function readProfile(): StoredUserProfile | null {
       },
       importedGames: Array.isArray(parsed.importedGames) ? parsed.importedGames.filter(Boolean) : [],
       friends: Array.isArray(parsed.friends) ? parsed.friends : [],
+      playerSpecs: parsed.playerSpecs ?? undefined,
       updatedAt: typeof parsed.updatedAt === "number" ? parsed.updatedAt : Date.now(),
     }
   } catch {
