@@ -580,7 +580,7 @@ export function LandingCyber() {
                         <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-white/35 text-xs font-semibold">
                           X
                         </span>
-                        <span>{hasGamePass ? "Game Pass activo" : "Connect Xbox / Game Pass"}</span>
+                        <span>{hasGamePass ? "Connected Game Pass" : "Connect Xbox / Game Pass"}</span>
                         {hasGamePass && (
                           <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-2 py-1 text-xs">
                             <CheckCircle2 className="h-4 w-4" />
