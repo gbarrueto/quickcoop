@@ -11,6 +11,7 @@ import {
   ArrowRight,
   XCircle,
   User,
+  Cpu,
 } from "lucide-react"
 import {
   Dialog,
@@ -460,6 +461,8 @@ export default function MatchingPage() {
   const [isRequirementsModalOpen, setIsRequirementsModalOpen] = useState(false)
   const [playerSpecsById, setPlayerSpecsById] = useState<Record<string, PlayerSystemSpecs>>({})
 
+  const [isSpecsModalOpen, setIsSpecsModalOpen] = useState(false)
+
   const allFriendProfiles = useMemo(
     () => [...friendProfiles, ...epicFriends],
     [friendProfiles, epicFriends]
@@ -487,6 +490,13 @@ export default function MatchingPage() {
 
       setCurrentUser(loggedInUser)
       const profile = ensureStoredUserProfile()
+      // Precarga specs guardadas del usuario
+      if (profile.playerSpecs) {
+        setPlayerSpecsById((prev) => ({
+          ...prev,
+          self: profile.playerSpecs!,
+        }))
+      }
 
       const platforms: Platform[] = []
       if (profile.connections.steamId) platforms.push("steam")
@@ -983,13 +993,17 @@ export default function MatchingPage() {
   ) => {
     setPlayerSpecsById((prev) => {
       const current = prev[participantId] ?? { ...DEFAULT_PLAYER_SPECS }
-      return {
-        ...prev,
-        [participantId]: {
-          ...current,
-          [field]: value,
-        },
+      const updated = { ...current, [field]: value }
+
+      // Solo persiste las specs del usuario propio
+      if (participantId === "self") {
+        updateStoredUserProfile((profile) => ({
+          ...profile,
+          playerSpecs: updated,
+        }))
       }
+
+      return { ...prev, [participantId]: updated }
     })
   }
 
@@ -1128,6 +1142,14 @@ export default function MatchingPage() {
                   <User className="h-3.5 w-3.5" />
                 </span>
                 <span className="font-medium">{currentUser.name}</span>
+                <button
+                  type="button"
+                  onClick={() => setIsSpecsModalOpen(true)}
+                  className="ml-1 inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[10px] hover:bg-primary/20 transition-colors"
+                >
+                  <Cpu className="h-3 w-3" />
+                  My specs
+                </button>
               </div>
             )}
             <Link href="/">
@@ -1802,6 +1824,11 @@ export default function MatchingPage() {
                       >
                         <div className="mb-3 flex items-center justify-between gap-2">
                           <h3 className="text-sm font-semibold">{participant.name}</h3>
+                          {participant.id === "self" && (
+                            <span className="text-[10px] text-primary bg-primary/10 border border-primary/20 rounded-full px-2 py-0.5">
+                              Auto-saved
+                            </span>
+                          )}
                           <span
                             className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium ${
                               allChecksPass
@@ -1852,6 +1879,211 @@ export default function MatchingPage() {
                   })}
                 </div>
               )}
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* SPECS MODAL */}
+        <Dialog open={isSpecsModalOpen} onOpenChange={setIsSpecsModalOpen}>
+          <DialogContent className="max-w-lg overflow-hidden border-border bg-card/95 p-0 shadow-2xl backdrop-blur-xl">
+            <div className="bg-gradient-to-br from-primary/15 via-transparent to-accent/10 px-6 pt-8 pb-6">
+              <DialogHeader className="items-center text-center">
+                <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/15 text-primary shadow-lg">
+                  <Cpu className="h-7 w-7" />
+                </div>
+                <DialogTitle>My hardware specs</DialogTitle>
+                <DialogDescription className="max-w-sm text-sm">
+                  Set your specs once and they'll be used automatically when checking game requirements.
+                </DialogDescription>
+              </DialogHeader>
+            </div>
+
+            <div className="space-y-4 px-6 py-6">
+              {/* OS */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Operating System
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {["Windows 10", "Windows 11", "macOS", "Linux"].map((os) => {
+                    const specs = playerSpecsById["self"] ?? DEFAULT_PLAYER_SPECS
+                    return (
+                      <button
+                        key={os}
+                        type="button"
+                        onClick={() => updatePlayerSpecs("self", "os", os)}
+                        className={`rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${
+                          specs.os === os
+                            ? "border-primary bg-primary/15 text-primary"
+                            : "border-border bg-secondary/30 text-muted-foreground hover:border-primary/40"
+                        }`}
+                      >
+                        {os}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* CPU */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Processor (CPU)
+                </label>
+                <div className="grid grid-cols-5 gap-2">
+                  {TIER_OPTIONS.map((tier) => {
+                    const specs = playerSpecsById["self"] ?? DEFAULT_PLAYER_SPECS
+                    const labels = ["Budget", "Entry", "Mid", "High", "Top"]
+                    return (
+                      <button
+                        key={tier.value}
+                        type="button"
+                        onClick={() => updatePlayerSpecs("self", "cpuTier", tier.value)}
+                        className={`flex flex-col items-center rounded-lg border px-2 py-2 text-xs transition-colors ${
+                          specs.cpuTier === tier.value
+                            ? "border-primary bg-primary/15 text-primary"
+                            : "border-border bg-secondary/30 text-muted-foreground hover:border-primary/40"
+                        }`}
+                      >
+                        <span className="font-semibold">{tier.value}</span>
+                        <span className="text-[9px] mt-0.5 opacity-70">{labels[tier.value - 1]}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+                <p className="text-[10px] text-muted-foreground">
+                  1 = old budget CPU (Pentium, FX-4) · 5 = flagship (i9, Ryzen 9)
+                </p>
+              </div>
+
+              {/* GPU */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Graphics Card (GPU)
+                </label>
+                <div className="grid grid-cols-5 gap-2">
+                  {TIER_OPTIONS.map((tier) => {
+                    const specs = playerSpecsById["self"] ?? DEFAULT_PLAYER_SPECS
+                    const labels = ["DX10", "DX11", "GTX 9xx", "RTX 20/30", "RTX 40+"]
+                    return (
+                      <button
+                        key={tier.value}
+                        type="button"
+                        onClick={() => updatePlayerSpecs("self", "gpuTier", tier.value)}
+                        className={`flex flex-col items-center rounded-lg border px-2 py-2 text-xs transition-colors ${
+                          specs.gpuTier === tier.value
+                            ? "border-primary bg-primary/15 text-primary"
+                            : "border-border bg-secondary/30 text-muted-foreground hover:border-primary/40"
+                        }`}
+                      >
+                        <span className="font-semibold">{tier.value}</span>
+                        <span className="text-[9px] mt-0.5 opacity-70">{labels[tier.value - 1]}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* RAM y VRAM */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    RAM (GB)
+                  </label>
+                  <div className="grid grid-cols-4 gap-1.5">
+                    {[4, 8, 16, 32].map((gb) => {
+                      const specs = playerSpecsById["self"] ?? DEFAULT_PLAYER_SPECS
+                      return (
+                        <button
+                          key={gb}
+                          type="button"
+                          onClick={() => updatePlayerSpecs("self", "ramGb", gb)}
+                          className={`rounded-lg border py-2 text-xs font-medium transition-colors ${
+                            specs.ramGb === gb
+                              ? "border-primary bg-primary/15 text-primary"
+                              : "border-border bg-secondary/30 text-muted-foreground hover:border-primary/40"
+                          }`}
+                        >
+                          {gb}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    VRAM (GB)
+                  </label>
+                  <div className="grid grid-cols-4 gap-1.5">
+                    {[2, 4, 8, 12].map((gb) => {
+                      const specs = playerSpecsById["self"] ?? DEFAULT_PLAYER_SPECS
+                      return (
+                        <button
+                          key={gb}
+                          type="button"
+                          onClick={() => updatePlayerSpecs("self", "vramGb", gb)}
+                          className={`rounded-lg border py-2 text-xs font-medium transition-colors ${
+                            specs.vramGb === gb
+                              ? "border-primary bg-primary/15 text-primary"
+                              : "border-border bg-secondary/30 text-muted-foreground hover:border-primary/40"
+                          }`}
+                        >
+                          {gb}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* Storage */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Available Storage (GB)
+                </label>
+                <div className="grid grid-cols-5 gap-2">
+                  {[10, 20, 50, 100, 500].map((gb) => {
+                    const specs = playerSpecsById["self"] ?? DEFAULT_PLAYER_SPECS
+                    return (
+                      <button
+                        key={gb}
+                        type="button"
+                        onClick={() => updatePlayerSpecs("self", "storageGb", gb)}
+                        className={`rounded-lg border py-2 text-xs font-medium transition-colors ${
+                          specs.storageGb === gb
+                            ? "border-primary bg-primary/15 text-primary"
+                            : "border-border bg-secondary/30 text-muted-foreground hover:border-primary/40"
+                        }`}
+                      >
+                        {gb}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* Resumen */}
+              <div className="rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 text-xs text-muted-foreground">
+                <p className="font-medium text-foreground mb-1">Current specs</p>
+                {(() => {
+                  const specs = playerSpecsById["self"] ?? DEFAULT_PLAYER_SPECS
+                  return (
+                    <p>
+                      {specs.os} · CPU Tier {specs.cpuTier} · GPU Tier {specs.gpuTier} · {specs.ramGb}GB RAM · {specs.vramGb}GB VRAM · {specs.storageGb}GB Storage
+                    </p>
+                  )
+                })()}
+                <p className="mt-1 text-[10px] text-primary/70">Changes are saved automatically.</p>
+              </div>
+
+              <Button
+                type="button"
+                className="w-full"
+                onClick={() => setIsSpecsModalOpen(false)}
+              >
+                Done
+              </Button>
             </div>
           </DialogContent>
         </Dialog>
