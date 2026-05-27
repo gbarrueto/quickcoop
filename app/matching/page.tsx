@@ -30,7 +30,7 @@ import {
   type MockUser,
 } from "@/lib/mock-auth"
 
-type Platform = "steam" | "epic" | "xbox" | "import"
+type Platform = "steam" | "epic" | "xbox" | "import" | "qcoop"
 type CategoryFilterMode = "or" | "and"
 
 type SteamOwnedGame = {
@@ -109,8 +109,18 @@ type IdentityRef = {
 type FriendProfile = {
   profileId: string
   identities: IdentityRef[]
+  connections: {
+    steamId: string | null
+    epicAccountId: string | null
+    hasGamePass: boolean
+  }
   selected: boolean
   expanded: boolean
+}
+
+type FriendLibrarySnapshot = {
+  appIds: Set<number>
+  nameKeys: Set<string>
 }
 
 type GameRequirementsPayload = {
@@ -160,6 +170,37 @@ const TIER_OPTIONS = [
 
 function identityKey(identity: IdentityRef): string {
   return `${identity.platform}:${identity.accountId}`
+}
+
+function normalizeGameName(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim().replace(/\s+/g, " ")
+}
+
+function gameMatchKey(game: Pick<GameCard, "name">): string {
+  return normalizeGameName(game.name)
+}
+
+function toLibrarySnapshot(games: { appId: number; name: string }[]): FriendLibrarySnapshot {
+  return {
+    appIds: new Set(games.map((game) => game.appId)),
+    nameKeys: new Set(games.map((game) => gameMatchKey(game))),
+  }
+}
+
+function mergeLibrarySnapshots(...snapshots: Array<FriendLibrarySnapshot | undefined>): FriendLibrarySnapshot {
+  const appIds = new Set<number>()
+  const nameKeys = new Set<string>()
+
+  snapshots.forEach((snapshot) => {
+    if (!snapshot) {
+      return
+    }
+
+    snapshot.appIds.forEach((appId) => appIds.add(appId))
+    snapshot.nameKeys.forEach((nameKey) => nameKeys.add(nameKey))
+  })
+
+  return { appIds, nameKeys }
 }
 
 function stableNumberFromId(id: number): number {
@@ -271,6 +312,7 @@ function toFriendProfile(profile: StoredFriendProfile): FriendProfile {
   return {
     profileId: profile.profileId,
     identities: profile.identities,
+    connections: profile.connections,
     selected: profile.selected,
     expanded: profile.expanded,
   }
@@ -300,6 +342,13 @@ function mergeFriendProfiles(existing: FriendProfile[], incoming: FriendProfile[
   })
 
   return next
+}
+
+function snapshotFromStoredFriend(profile: StoredFriendProfile): FriendLibrarySnapshot {
+  return {
+    appIds: new Set(profile.libraryAppIds),
+    nameKeys: new Set((profile.libraryTitles ?? []).map(normalizeGameName).filter(Boolean)),
+  }
 }
 
 const recommendedGames: RecommendedGame[] = [
@@ -396,7 +445,7 @@ export default function MatchingPage() {
   const [draggingProfileId, setDraggingProfileId] = useState<string | null>(null)
   const [mergeNotice, setMergeNotice] = useState<string | null>(null)
 
-  const [identityLibraries, setIdentityLibraries] = useState<Record<string, Set<number>>>({})
+  const [identityLibraries, setIdentityLibraries] = useState<Record<string, FriendLibrarySnapshot>>({})
   const [loadingIdentities, setLoadingIdentities] = useState<Record<string, boolean>>({})
   const [identityErrors, setIdentityErrors] = useState<Record<string, string | null>>({})
   const [categoriesByApp, setCategoriesByApp] = useState<Record<number, string[]>>({})
@@ -439,11 +488,6 @@ export default function MatchingPage() {
       setCurrentUser(loggedInUser)
       const profile = ensureStoredUserProfile()
 
-      // if (!storedSteamId) {
-      //   router.push("/")
-      //   return
-      // }
-
       const platforms: Platform[] = []
       if (profile.connections.steamId) platforms.push("steam")
       if (profile.connections.epicAccountId) platforms.push("epic")
@@ -456,9 +500,13 @@ export default function MatchingPage() {
       setUserGames(profile.importedGames.map(toImportedGameCard))
       setFriendProfiles(profile.friends.map(toFriendProfile))
       setIdentityLibraries(
-        profile.friends.reduce<Record<string, Set<number>>>((acc, friend) => {
+        profile.friends.reduce<Record<string, FriendLibrarySnapshot>>((acc, friend) => {
+          const nameKeys = new Set((friend.libraryTitles ?? []).map(normalizeGameName).filter(Boolean))
           friend.identities.forEach((identity) => {
-            acc[identityKey(identity)] = new Set(friend.libraryAppIds)
+            acc[identityKey(identity)] = {
+              appIds: new Set(friend.libraryAppIds),
+              nameKeys,
+            }
           })
           return acc
         }, {}),
@@ -492,6 +540,11 @@ export default function MatchingPage() {
               displayName: friend.name,
               avatar: friend.avatar ?? null,
             }],
+              connections: {
+                steamId: friend.steamId,
+                epicAccountId: null,
+                hasGamePass: false,
+              },
             selected: false,
             expanded: false,
           }))
@@ -530,6 +583,11 @@ export default function MatchingPage() {
                 displayName: friend.displayName,
                 avatar: null,
               }],
+              connections: {
+                steamId: null,
+                epicAccountId: friend.accountId,
+                hasGamePass: false,
+              },
               selected: false,
               expanded: false,
             }))
@@ -538,7 +596,8 @@ export default function MatchingPage() {
         }
 
         // GamePass: catálogo público
-        if (profile.connections.hasGamePass) {
+        const hasGamePassFriend = profile.friends.some((friend) => friend.connections.hasGamePass)
+        if (profile.connections.hasGamePass || hasGamePassFriend) {
           const gpRes = await fetch("/api/gamepass")
           if (gpRes.ok) {
             const gpJson = (await gpRes.json()) as GamePassPayload
@@ -551,6 +610,29 @@ export default function MatchingPage() {
               platform: "xbox" as const,
             }))
             setGamePassGames((prev) => [...prev, ...mapped])
+
+            const gamePassSnapshot = toLibrarySnapshot(mapped)
+            if (hasGamePassFriend) {
+              setIdentityLibraries((prev) => {
+                const next = { ...prev }
+
+                profile.friends.forEach((friend) => {
+                  if (!friend.connections.hasGamePass) {
+                    return
+                  }
+
+                  friend.identities.forEach((identity) => {
+                    next[identityKey(identity)] = mergeLibrarySnapshots(
+                      next[identityKey(identity)],
+                      snapshotFromStoredFriend(friend),
+                      gamePassSnapshot,
+                    )
+                  })
+                })
+
+                return next
+              })
+            }
           }
         }
 
@@ -587,12 +669,24 @@ export default function MatchingPage() {
       }
 
       const appIds = (payload.data?.response?.games ?? []).map((game) => game.appid)
-      setIdentityLibraries((prev) => ({ ...prev, [key]: new Set(appIds) }))
+      const nameKeys = new Set(
+        (payload.data?.response?.games ?? [])
+          .map((game) => normalizeGameName(game.name ?? `Steam App ${game.appid}`))
+          .filter(Boolean),
+      )
+
+      setIdentityLibraries((prev) => ({ ...prev, [key]: { appIds: new Set(appIds), nameKeys } }))
       updateStoredUserProfile((profile) => ({
         ...profile,
         friends: profile.friends.map((friend) =>
           friend.identities.some((current) => identityKey(current) === key)
-            ? { ...friend, libraryAppIds: appIds }
+            ? {
+                ...friend,
+                libraryAppIds: appIds,
+                libraryTitles: (payload.data?.response?.games ?? []).map(
+                  (game) => game.name ?? `Steam App ${game.appid}`,
+                ),
+              }
             : friend,
         ),
       }))
@@ -744,14 +838,31 @@ export default function MatchingPage() {
 
     const selectedSets = selectedProfiles.map((profile) => {
       const mergedSet = new Set<number>()
+      const mergedNameKeys = new Set<string>()
       profile.identities.forEach((identity) => {
         const library = identityLibraries[identityKey(identity)]
-        if (library) library.forEach((appId) => mergedSet.add(appId))
+        if (!library) {
+          return
+        }
+
+        library.appIds.forEach((appId) => mergedSet.add(appId))
+        library.nameKeys.forEach((nameKey) => mergedNameKeys.add(nameKey))
       })
-      return mergedSet
+
+      if (profile.connections.hasGamePass) {
+        gamePassGames.forEach((game) => {
+          mergedSet.add(game.appId)
+          mergedNameKeys.add(gameMatchKey(game))
+        })
+      }
+
+      return { appIds: mergedSet, nameKeys: mergedNameKeys }
     })
 
-    return allUserGames.filter((game) => selectedSets.every((set) => set.has(game.appId)))
+    return allUserGames.filter((game) => {
+      const key = gameMatchKey(game)
+      return selectedSets.every((set) => set.appIds.has(game.appId) || set.nameKeys.has(key))
+    })
   }, [allFriendProfiles, identityLibraries, allUserGames])
 
   useEffect(() => {
@@ -1304,10 +1415,15 @@ export default function MatchingPage() {
                                 ? "bg-[#1b2838] text-[#66c0f4] border border-[#66c0f4]/30"
                                 : identity.platform === "epic"
                                 ? "bg-[#313131] text-white border border-white/20"
-                                : "bg-[#107c10] text-white border border-white/20"
+                                : identity.platform === "xbox"
+                                ? "bg-[#107c10] text-white border border-white/20"
+                                : "bg-[#7c5c10] text-white border border-white/20"
                             }`}
                           >
-                            {identity.platform === "steam" ? "Steam" : identity.platform === "epic" ? "Epic" : "Game Pass"}
+                            { identity.platform === "steam" ? "Steam" 
+                            : identity.platform === "epic" ? "Epic" 
+                            : identity.platform === "xbox" ? "Game Pass" 
+                            : "QCoop"}
                           </span>
                         ))}
                         <Button
@@ -1333,6 +1449,28 @@ export default function MatchingPage() {
                   Select friends to filter games. Drag-and-drop to merge identities.
                 </p>
               </div>
+
+              <div className="mt-4 rounded-lg border border-primary/30 bg-primary/10 p-3 text-xs text-primary">
+                <p className="font-medium">Merge tip</p>
+                <p className="mt-1">
+                  Drag one friend row onto another to merge identities. This feature activates only when 2+ platforms are connected.
+                </p>
+                <p className="mt-2 inline-flex items-center gap-1">
+                  <UserRoundPlus className="h-3.5 w-3.5" />
+                  Merging between users of the same platform is blocked.
+                </p>
+              </div>
+
+              {mergeNotice && (
+                <p className="mt-3 text-xs text-amber-500">{mergeNotice}</p>
+              )}
+
+              {selectedCount > 0 && (
+                <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-emerald-500/15 px-3 py-1 text-xs text-emerald-600">
+                  <CheckCircle2 className="h-4 w-4" />
+                  Filtering with {selectedCount} selected {selectedCount === 1 ? "friend" : "friends"}
+                </div>
+              )}
 
               <div className="max-h-[calc(100vh-20rem)] overflow-y-auto pr-1">
               <div className="space-y-3">
@@ -1403,10 +1541,15 @@ export default function MatchingPage() {
                                 ? "bg-[#1b2838] text-[#66c0f4] border border-[#66c0f4]/30"
                                 : identity.platform === "epic"
                                 ? "bg-[#313131] text-white border border-white/20"
-                                : "bg-[#107c10] text-white border border-white/20"
+                                : identity.platform === "xbox"
+                                ? "bg-[#107c10] text-white border border-white/20"
+                                : "bg-[#7c5c10] text-white border border-white/20"
                             }`}
                           >
-                            {identity.platform === "steam" ? "Steam" : identity.platform === "epic" ? "Epic" : "Game Pass"}
+                            { identity.platform === "steam" ? "Steam" 
+                            : identity.platform === "epic" ? "Epic" 
+                            : identity.platform === "xbox" ? "Game Pass"
+                            : "Qcoop"}
                           </span>
                         ))}
                       </div>
@@ -1442,27 +1585,6 @@ export default function MatchingPage() {
               )}
               </div>
 
-              <div className="mt-4 rounded-lg border border-primary/30 bg-primary/10 p-3 text-xs text-primary">
-                <p className="font-medium">Merge tip</p>
-                <p className="mt-1">
-                  Drag one friend row onto another to merge identities. This feature activates only when 2+ platforms are connected.
-                </p>
-                <p className="mt-2 inline-flex items-center gap-1">
-                  <UserRoundPlus className="h-3.5 w-3.5" />
-                  Merging between users of the same platform is blocked.
-                </p>
-              </div>
-
-              {mergeNotice && (
-                <p className="mt-3 text-xs text-amber-500">{mergeNotice}</p>
-              )}
-
-              {selectedCount > 0 && (
-                <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-emerald-500/15 px-3 py-1 text-xs text-emerald-600">
-                  <CheckCircle2 className="h-4 w-4" />
-                  Filtering with {selectedCount} selected {selectedCount === 1 ? "friend" : "friends"}
-                </div>
-              )}
               </div>
             </section>
           </aside>

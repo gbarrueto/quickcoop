@@ -5,7 +5,7 @@ export type ConnectedAccounts = {
 }
 
 export type FriendIdentity = {
-  platform: "steam" | "epic" | "xbox"
+  platform: "steam" | "epic" | "xbox" | "qcoop"
   accountId: string
   displayName: string
   avatar?: string | null
@@ -14,9 +14,11 @@ export type FriendIdentity = {
 export type StoredFriendProfile = {
   profileId: string
   identities: FriendIdentity[]
+  connections: ConnectedAccounts
   selected: boolean
   expanded: boolean
   libraryAppIds: number[]
+  libraryTitles?: string[]
 }
 
 export type StoredUserProfile = {
@@ -49,12 +51,18 @@ function createDefaultFriends(): StoredFriendProfile[] {
       selected: false,
       expanded: false,
       libraryAppIds: [730, 553850, 252950, 1091500, 413150],
+      libraryTitles: ["Counter-Strike 2", "Helldivers 2", "Rocket League", "Cyberpunk 2077", "Stardew Valley"],
+      connections: {
+        steamId: null,
+        epicAccountId: null,
+        hasGamePass: false,
+      },
     },
     {
       profileId: "profile:epic:default-maya",
       identities: [
         {
-          platform: "epic",
+          platform: "qcoop",
           accountId: "default-maya",
           displayName: "Maya (Epic)",
           avatar: null,
@@ -63,6 +71,12 @@ function createDefaultFriends(): StoredFriendProfile[] {
       selected: false,
       expanded: false,
       libraryAppIds: [252950, 1091500, 322330, 413150],
+      libraryTitles: ["Rocket League", "Cyberpunk 2077", "Don't Starve Together", "Stardew Valley"],
+      connections: {
+        steamId: null,
+        epicAccountId: null,
+        hasGamePass: false,
+      },
     },
     {
       profileId: "profile:xbox:default-noah",
@@ -77,6 +91,12 @@ function createDefaultFriends(): StoredFriendProfile[] {
       selected: false,
       expanded: false,
       libraryAppIds: [1172470, 381210, 1091500, 252950],
+      libraryTitles: ["Apex Legends", "Dead by Daylight", "Cyberpunk 2077"],
+      connections: {
+        steamId: null,
+        epicAccountId: null,
+        hasGamePass: true,
+      },
     },
   ]
 }
@@ -90,7 +110,7 @@ export function createDefaultUserProfile(): StoredUserProfile {
       epicAccountId: null,
       hasGamePass: false,
     },
-    importedGames: ["Hades", "Deep Rock Galactic", "Baldur's Gate 3"],
+    importedGames: ["Hades", "Deep Rock Galactic", "Baldur's Gate 3", "Cyberpunk 2077", "Rocket League"],
     friends: createDefaultFriends(),
     updatedAt: Date.now(),
   }
