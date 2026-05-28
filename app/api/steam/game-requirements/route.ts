@@ -105,25 +105,43 @@ function parseMinimumRequirements(rawMinimumHtml: string): { minimumText: string
 }
 
 export async function GET(request: NextRequest) {
-  const appIdParam = request.nextUrl.searchParams.get("appId")
-  if (!appIdParam) {
-    return NextResponse.json({ error: "Missing appId query parameter" }, { status: 400 })
+  const { searchParams } = new URL(request.url)
+  const appId = searchParams.get("appId")
+  const searchName = searchParams.get("searchName")
+  
+  let resolvedAppId = appId
+  
+  // Si viene de Game Pass o import, busca el appId en Steam por nombre
+  if (searchName && (!appId || Number(appId) > 1000000)) {
+    try {
+      const searchRes = await fetch(
+        `https://store.steampowered.com/api/storesearch/?term=${encodeURIComponent(searchName)}&l=english&cc=US`
+      )
+      const searchData = await searchRes.json() as {
+        items?: { id: number; name: string }[]
+      }
+      const match = searchData.items?.[0]
+      if (match) {
+        resolvedAppId = String(match.id)
+      }
+    } catch {
+      // Si falla la búsqueda, continúa con el appId original
+    }
   }
 
-  const appId = Number(appIdParam)
-  if (!Number.isFinite(appId)) {
-    return NextResponse.json({ error: "Invalid appId query parameter" }, { status: 400 })
+  if (!resolvedAppId) {
+    return NextResponse.json({ error: "appId is required" }, { status: 400 })
   }
 
   const now = Date.now()
-  const cached = requirementsCache.get(appId)
+  const cached = requirementsCache.get(resolvedAppId)
   if (cached && now < cached.expiresAt) {
     return NextResponse.json({ ...cached.payload, cached: true })
   }
 
   try {
     const detailsUrl = new URL("https://store.steampowered.com/api/appdetails")
-    detailsUrl.searchParams.set("appids", String(appId))
+    detailsUrl.searchParams.set("appids", String(resolvedAppId))
     detailsUrl.searchParams.set("l", "english")
 
     const response = await fetch(detailsUrl.toString(), {
@@ -142,7 +160,7 @@ export async function GET(request: NextRequest) {
     }
 
     const payload = (await response.json()) as SteamAppDetailsRequirementsResponse
-    const appPayload = payload[String(appId)]
+    const appPayload = payload[String(resolvedAppId)]
 
     if (!appPayload?.success || !appPayload.data) {
       return NextResponse.json({ error: "Steam appdetails payload is not available for this appId" }, { status: 404 })
@@ -154,11 +172,11 @@ export async function GET(request: NextRequest) {
     }
 
     const parsedPayload = {
-      appId,
+      appId: resolvedAppId,
       ...parseMinimumRequirements(minimumRaw),
     }
 
-    requirementsCache.set(appId, {
+    requirementsCache.set(resolvedAppId, {
       expiresAt: now + REQUIREMENTS_CACHE_TTL_MS,
       payload: parsedPayload,
     })
