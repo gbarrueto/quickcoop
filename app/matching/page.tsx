@@ -61,6 +61,7 @@ type EpicLibraryPayload = {
 type GamePassGame = {
   id: string
   title: string
+  imageUrl: string
 }
 
 type GamePassPayload = {
@@ -75,6 +76,7 @@ type GameCard = {
   rating: number
   players: string
   platform: Platform
+  tags?: string[]
 }
 
 type RecommendedGame = {
@@ -507,7 +509,32 @@ export default function MatchingPage() {
       if (profile.connections.steamId) setSteamId(profile.connections.steamId)
       if (profile.connections.epicAccountId) setEpicAccountId(profile.connections.epicAccountId)
       setHasGamePass(profile.connections.hasGamePass)
-      setUserGames(profile.importedGames.map(toImportedGameCard))
+      const initialManualCards = profile.importedGames.map(toImportedGameCard)
+      setUserGames(initialManualCards)
+
+      // Enriquece imágenes de juegos importados en segundo plano
+      profile.importedGames.forEach(async (name) => {
+        try {
+          const res = await fetch(`/api/steam/search?term=${encodeURIComponent(name)}`)
+          if (!res.ok) return
+          const data = await res.json() as {
+            appId: number | null
+            imageUrl: string | null
+            tags?: string[]
+          }
+          if (!data.imageUrl) return
+
+          setUserGames((prev) =>
+            prev.map((game) =>
+              game.platform === "import" && game.name === name
+                ? { ...game, imageUrl: data.imageUrl!, tags: data.tags ?? [] }
+                : game
+            )
+          )
+        } catch {
+          // Silencioso
+        }
+      })
       setFriendProfiles(profile.friends.map(toFriendProfile))
       setIdentityLibraries(
         profile.friends.reduce<Record<string, FriendLibrarySnapshot>>((acc, friend) => {
@@ -614,12 +641,36 @@ export default function MatchingPage() {
             const mapped: GameCard[] = (gpJson.games ?? []).map((game) => ({
               appId: Math.abs(game.id.split("").reduce((acc, c) => acc * 31 + c.charCodeAt(0), 0)) % 9999999,
               name: game.title,
-              imageUrl: "",
+              imageUrl: game.imageUrl ?? "",
               rating: 0,
               players: "1+",
               platform: "xbox" as const,
             }))
             setGamePassGames((prev) => [...prev, ...mapped])
+
+            // Enriquece tags de Game Pass en segundo plano
+            mapped.forEach(async (card) => {
+              try {
+                const res = await fetch(`/api/steam/search?term=${encodeURIComponent(card.name)}`)
+                if (!res.ok) return
+                const data = await res.json() as {
+                  appId: number | null
+                  imageUrl: string | null
+                  tags?: string[]
+                }
+                if (!data.tags?.length) return
+
+                setGamePassGames((prev) =>
+                  prev.map((game) =>
+                    game.platform === "xbox" && game.name === card.name
+                      ? { ...game, tags: data.tags! }
+                      : game
+                  )
+                )
+              } catch {
+                // Silencioso
+              }
+            })
 
             const gamePassSnapshot = toLibrarySnapshot(mapped)
             if (hasGamePassFriend) {
@@ -645,6 +696,8 @@ export default function MatchingPage() {
             }
           }
         }
+
+
 
       } catch (error) {
         setPageError(error instanceof Error ? error.message : "Failed to initialize matching view")
@@ -1011,20 +1064,23 @@ export default function MatchingPage() {
     setSelectedGameForRequirements(game)
     setIsRequirementsModalOpen(true)
 
-    if (requirementsByApp[game.appId] || requirementsLoadingByApp[game.appId]) {
-      return
-    }
+    if (requirementsByApp[game.appId] || requirementsLoadingByApp[game.appId]) return
 
     setRequirementsLoadingByApp((prev) => ({ ...prev, [game.appId]: true }))
     setRequirementsErrorByApp((prev) => ({ ...prev, [game.appId]: null }))
 
     try {
-      const response = await fetch(`/api/steam/game-requirements?appId=${game.appId}`)
+      let url = `/api/steam/game-requirements?appId=${game.appId}`
+
+      // Para juegos de Game Pass e Import, busca por nombre en Steam
+      if (game.platform === "xbox" || game.platform === "import") {
+        url = `/api/steam/game-requirements?appId=${game.appId}&searchName=${encodeURIComponent(game.name)}`
+      }
+
+      const response = await fetch(url)
       const payload = (await response.json()) as GameRequirementsPayload
 
-      if (!response.ok) {
-        throw new Error(payload.error || "Failed to load game requirements")
-      }
+      if (!response.ok) throw new Error(payload.error || "Failed to load game requirements")
 
       setRequirementsByApp((prev) => ({ ...prev, [game.appId]: payload }))
     } catch (error) {
@@ -1295,15 +1351,19 @@ export default function MatchingPage() {
                       <span>{game.rating > 0 ? `Rating ${game.rating}` : ""}</span>
                     </div>
                     <div className="flex flex-wrap gap-1 pt-1">
-                      {(categoriesByApp[game.appId] ?? []).slice(0, 2).map((category) => (
-                        <span
-                          key={`${game.appId}-${category}`}
-                          className="rounded-full border border-border/80 bg-background/70 px-1.5 py-0.5 text-[9px] uppercase tracking-wide text-muted-foreground"
-                        >
-                          {category}
-                        </span>
-                      ))}
-                    </div>
+                    {(
+                      game.platform === "steam"
+                        ? categoriesByApp[game.appId] ?? []
+                        : game.tags ?? []
+                    ).slice(0, 2).map((category) => (
+                      <span
+                        key={`${game.appId}-${category}`}
+                        className="rounded-full border border-border/80 bg-background/70 px-1.5 py-0.5 text-[9px] uppercase tracking-wide text-muted-foreground"
+                      >
+                        {category}
+                      </span>
+                    ))}
+                  </div>
                   </div>
                 </button>
               ))}
