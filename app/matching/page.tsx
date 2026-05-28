@@ -76,6 +76,7 @@ type GameCard = {
   rating: number
   players: string
   platform: Platform
+  tags?: string[]
 }
 
 type RecommendedGame = {
@@ -516,13 +517,17 @@ export default function MatchingPage() {
         try {
           const res = await fetch(`/api/steam/search?term=${encodeURIComponent(name)}`)
           if (!res.ok) return
-          const data = await res.json() as { appId: number | null; imageUrl: string | null }
+          const data = await res.json() as {
+            appId: number | null
+            imageUrl: string | null
+            tags?: string[]
+          }
           if (!data.imageUrl) return
 
           setUserGames((prev) =>
             prev.map((game) =>
               game.platform === "import" && game.name === name
-                ? { ...game, imageUrl: data.imageUrl! }
+                ? { ...game, imageUrl: data.imageUrl!, tags: data.tags ?? [] }
                 : game
             )
           )
@@ -642,6 +647,30 @@ export default function MatchingPage() {
               platform: "xbox" as const,
             }))
             setGamePassGames((prev) => [...prev, ...mapped])
+
+            // Enriquece tags de Game Pass en segundo plano
+            mapped.forEach(async (card) => {
+              try {
+                const res = await fetch(`/api/steam/search?term=${encodeURIComponent(card.name)}`)
+                if (!res.ok) return
+                const data = await res.json() as {
+                  appId: number | null
+                  imageUrl: string | null
+                  tags?: string[]
+                }
+                if (!data.tags?.length) return
+
+                setGamePassGames((prev) =>
+                  prev.map((game) =>
+                    game.platform === "xbox" && game.name === card.name
+                      ? { ...game, tags: data.tags! }
+                      : game
+                  )
+                )
+              } catch {
+                // Silencioso
+              }
+            })
 
             const gamePassSnapshot = toLibrarySnapshot(mapped)
             if (hasGamePassFriend) {
@@ -1322,15 +1351,19 @@ export default function MatchingPage() {
                       <span>{game.rating > 0 ? `Rating ${game.rating}` : ""}</span>
                     </div>
                     <div className="flex flex-wrap gap-1 pt-1">
-                      {(categoriesByApp[game.appId] ?? []).slice(0, 2).map((category) => (
-                        <span
-                          key={`${game.appId}-${category}`}
-                          className="rounded-full border border-border/80 bg-background/70 px-1.5 py-0.5 text-[9px] uppercase tracking-wide text-muted-foreground"
-                        >
-                          {category}
-                        </span>
-                      ))}
-                    </div>
+                    {(
+                      game.platform === "steam"
+                        ? categoriesByApp[game.appId] ?? []
+                        : game.tags ?? []
+                    ).slice(0, 2).map((category) => (
+                      <span
+                        key={`${game.appId}-${category}`}
+                        className="rounded-full border border-border/80 bg-background/70 px-1.5 py-0.5 text-[9px] uppercase tracking-wide text-muted-foreground"
+                      >
+                        {category}
+                      </span>
+                    ))}
+                  </div>
                   </div>
                 </button>
               ))}
