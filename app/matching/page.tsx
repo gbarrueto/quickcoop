@@ -508,7 +508,28 @@ export default function MatchingPage() {
       if (profile.connections.steamId) setSteamId(profile.connections.steamId)
       if (profile.connections.epicAccountId) setEpicAccountId(profile.connections.epicAccountId)
       setHasGamePass(profile.connections.hasGamePass)
-      setUserGames(profile.importedGames.map(toImportedGameCard))
+      const initialManualCards = profile.importedGames.map(toImportedGameCard)
+      setUserGames(initialManualCards)
+
+      // Enriquece imágenes de juegos importados en segundo plano
+      profile.importedGames.forEach(async (name) => {
+        try {
+          const res = await fetch(`/api/steam/search?term=${encodeURIComponent(name)}`)
+          if (!res.ok) return
+          const data = await res.json() as { appId: number | null; imageUrl: string | null }
+          if (!data.imageUrl) return
+
+          setUserGames((prev) =>
+            prev.map((game) =>
+              game.platform === "import" && game.name === name
+                ? { ...game, imageUrl: data.imageUrl! }
+                : game
+            )
+          )
+        } catch {
+          // Silencioso
+        }
+      })
       setFriendProfiles(profile.friends.map(toFriendProfile))
       setIdentityLibraries(
         profile.friends.reduce<Record<string, FriendLibrarySnapshot>>((acc, friend) => {
@@ -646,6 +667,8 @@ export default function MatchingPage() {
             }
           }
         }
+
+
 
       } catch (error) {
         setPageError(error instanceof Error ? error.message : "Failed to initialize matching view")
