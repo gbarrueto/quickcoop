@@ -1,0 +1,91 @@
+import type { PlayerSystemSpecs, RecommendedGame } from "@/types"
+
+export const DEFAULT_PLAYER_SPECS: PlayerSystemSpecs = {
+  os: "Windows 10",
+  cpuTier: 3,
+  gpuTier: 3,
+  ramGb: 8,
+  vramGb: 4,
+  storageGb: 40,
+}
+
+export const TIER_OPTIONS = [
+  { value: 1, label: "Tier 1" },
+  { value: 2, label: "Tier 2" },
+  { value: 3, label: "Tier 3" },
+  { value: 4, label: "Tier 4" },
+  { value: 5, label: "Tier 5" },
+] as const
+
+export const RECOMMENDED_GAMES: RecommendedGame[] = [
+  {
+    appId: 730,
+    name: "Counter-Strike 2",
+    imageUrl: "https://cdn.akamai.steamstatic.com/steam/apps/730/header.jpg",
+    categories: ["FPS", "Competitive"],
+    rating: 4.8,
+  },
+  {
+    appId: 553850,
+    name: "Helldivers 2",
+    imageUrl: "https://cdn.akamai.steamstatic.com/steam/apps/553850/header.jpg",
+    categories: ["Co-op", "Shooter"],
+    rating: 4.7,
+  },
+  {
+    appId: 1172470,
+    name: "Apex Legends",
+    imageUrl: "https://cdn.akamai.steamstatic.com/steam/apps/1172470/header.jpg",
+    categories: ["Battle Royale", "Hero Shooter"],
+    rating: 4.5,
+  },
+  {
+    appId: 252950,
+    name: "Rocket League",
+    imageUrl: "https://cdn.akamai.steamstatic.com/steam/apps/252950/header.jpg",
+    categories: ["Sports", "Arcade"],
+    rating: 4.8,
+  },
+  {
+    appId: 1091500,
+    name: "Cyberpunk 2077",
+    imageUrl: "https://cdn.akamai.steamstatic.com/steam/apps/1091500/header.jpg",
+    categories: ["RPG", "Open World"],
+    rating: 4.6,
+  },
+  {
+    appId: 271590,
+    name: "Grand Theft Auto V",
+    imageUrl: "https://cdn.akamai.steamstatic.com/steam/apps/271590/header.jpg",
+    categories: ["Action", "Open World"],
+    rating: 4.9,
+  },
+  {
+    appId: 413150,
+    name: "Stardew Valley",
+    imageUrl: "https://cdn.akamai.steamstatic.com/steam/apps/413150/header.jpg",
+    categories: ["Farming", "Co-op"],
+    rating: 4.9,
+  },
+  {
+    appId: 322330,
+    name: "Don't Starve Together",
+    imageUrl: "https://cdn.akamai.steamstatic.com/steam/apps/322330/header.jpg",
+    categories: ["Survival", "Co-op"],
+    rating: 4.6,
+  },
+  {
+    appId: 381210,
+    name: "Dead by Daylight",
+    imageUrl: "https://cdn.akamai.steamstatic.com/steam/apps/381210/header.jpg",
+    categories: ["Horror", "Multiplayer"],
+    rating: 4.4,
+  },
+  {
+    appId: 1174180,
+    name: "Red Dead Redemption 2",
+    imageUrl: "https://cdn.akamai.steamstatic.com/steam/apps/1174180/header.jpg",
+    categories: ["Adventure", "Open World"],
+    rating: 4.9,
+  },
+]

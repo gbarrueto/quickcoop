@@ -1,50 +1,25 @@
-export type ConnectedAccounts = {
-  steamId: string | null
-  epicAccountId: string | null
-  hasGamePass: boolean
-}
+import { STORAGE_KEYS } from "@/lib/storage"
+import type {
+  ConnectedAccounts,
+  FriendIdentity,
+  StoredFriendProfile,
+  StoredPlayerSpecs,
+  StoredUserProfile,
+} from "@/types"
 
-export type FriendIdentity = {
-  platform: "steam" | "epic" | "xbox" | "qcoop"
-  accountId: string
-  displayName: string
-  avatar?: string | null
-}
+export type {
+  ConnectedAccounts,
+  FriendIdentity,
+  StoredFriendProfile,
+  StoredPlayerSpecs,
+  StoredUserProfile,
+} from "@/types"
 
-export type StoredFriendProfile = {
-  profileId: string
-  identities: FriendIdentity[]
-  connections: ConnectedAccounts
-  selected: boolean
-  expanded: boolean
-  libraryAppIds: number[]
-  libraryTitles?: string[]
-}
-
-export type StoredPlayerSpecs = {
-  os: string
-  cpuTier: number
-  gpuTier: number
-  ramGb: number
-  vramGb: number
-  storageGb: number
-}
-
-export type StoredUserProfile = {
-  userId: string
-  displayName: string
-  connections: ConnectedAccounts
-  importedGames: string[]
-  friends: StoredFriendProfile[]
-  playerSpecs?: StoredPlayerSpecs
-  updatedAt: number
-}
-
-const USER_PROFILE_KEY = "qcoop-user-profile"
-const STEAM_SESSION_KEY = "qcoop-steam-id"
-const EPIC_SESSION_KEY = "qcoop-epic-id"
-const XBOX_SESSION_KEY = "qcoop-xbox-gamepass"
-const MANUAL_GAMES_KEY = "qcoop-manual-games"
+const USER_PROFILE_KEY = STORAGE_KEYS.userProfile
+const STEAM_SESSION_KEY = STORAGE_KEYS.steamSession
+const EPIC_SESSION_KEY = STORAGE_KEYS.epicSession
+const XBOX_SESSION_KEY = STORAGE_KEYS.xboxSession
+const MANUAL_GAMES_KEY = STORAGE_KEYS.manualGames
 
 function createDefaultFriends(): StoredFriendProfile[] {
   return [

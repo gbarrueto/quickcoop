@@ -1,12 +1,10 @@
-export type MockUser = {
-  id: string
-  name: string
-  email: string
-  password: string
-}
+import { STORAGE_KEYS } from "@/lib/storage"
+import type { MockUser } from "@/types"
 
-const USERS_KEY = "qcoop-mock-users"
-const SESSION_KEY = "qcoop-mock-session"
+export type { MockUser } from "@/types"
+
+const USERS_KEY = STORAGE_KEYS.mockUsers
+const SESSION_KEY = STORAGE_KEYS.mockSession
 
 const SEEDED_USERS: MockUser[] = [
   {
