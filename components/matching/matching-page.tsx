@@ -29,7 +29,6 @@ import type {
   PlayerSystemSpecs,
   RequirementsParticipant,
 } from "@/types"
-import { MatchingFriendGroupPanel } from "./matching-friend-group-panel"
 import { MatchingFriendsPanel } from "./matching-friends-panel"
 import { MatchingHeader } from "./matching-header"
 import { MatchingLibraryPanel } from "./matching-library-panel"
@@ -306,6 +305,8 @@ export function MatchingPage() {
             allUserGames={allUserGames}
             categoryFilteredGames={categoryFilteredGames}
             selectedCount={selectedCount}
+            selectedProfiles={selectedProfiles}
+            identityLibraries={identityLibraries}
             availableCategories={availableCategories}
             selectedCategories={selectedCategories}
             categoryFilterMode={categoryFilterMode}
@@ -320,12 +321,11 @@ export function MatchingPage() {
             onSetCategoryFilterMode={setCategoryFilterMode}
             onClearFilters={() => setSelectedCategories([])}
             onOpenRequirements={openRequirementsModal}
+            onToggleSelection={toggleFriendSelection}
           />
 
           <aside className="flex flex-col gap-4 lg:h-full lg:overflow-y-auto">
             <MatchingRecommendationsPanel recommendationsRef={recommendationsRef} recommendedGames={RECOMMENDED_GAMES} onScroll={scrollRecommendations} />
-
-            <MatchingFriendGroupPanel selectedProfiles={selectedProfiles} onRemove={toggleFriendSelection} />
 
             <MatchingFriendsPanel
               allFriendProfiles={allFriendProfiles}
