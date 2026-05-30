@@ -20,6 +20,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   ensureStoredUserProfile,
   type FriendIdentity,
@@ -464,6 +465,7 @@ export default function MatchingPage() {
   const [playerSpecsById, setPlayerSpecsById] = useState<Record<string, PlayerSystemSpecs>>({})
 
   const [isSpecsModalOpen, setIsSpecsModalOpen] = useState(false)
+  const pendingCategoryAppIdsRef = useRef<Set<number>>(new Set())
 
   const allFriendProfiles = useMemo(
     () => [...friendProfiles, ...epicFriends],
@@ -933,16 +935,23 @@ export default function MatchingPage() {
       return
     }
 
-    const missingAppIds = filteredGames
-      .map((game) => game.appId)
-      .filter((appId) => !(appId in categoriesByApp))
-      .slice(0, 80)
+    const missingAppIds = Array.from(
+      new Set(
+        filteredGames
+          .map((game) => game.appId)
+          .filter((appId) => !(appId in categoriesByApp) && !pendingCategoryAppIdsRef.current.has(appId)),
+      ),
+    ).slice(0, 80)
 
     if (missingAppIds.length === 0) {
       return
     }
 
     let isCancelled = false
+
+    missingAppIds.forEach((appId) => {
+      pendingCategoryAppIdsRef.current.add(appId)
+    })
 
     const loadCategories = async () => {
       setIsLoadingCategories(true)
@@ -971,6 +980,10 @@ export default function MatchingPage() {
           setCategoryFilterError(error instanceof Error ? error.message : "Failed to load categories")
         }
       } finally {
+        missingAppIds.forEach((appId) => {
+          pendingCategoryAppIdsRef.current.delete(appId)
+        })
+
         if (!isCancelled) {
           setIsLoadingCategories(false)
         }
@@ -1597,11 +1610,9 @@ export default function MatchingPage() {
                     }`}
                   >
                     <div className="flex items-center gap-3">
-                      <input
-                        type="checkbox"
+                      <Checkbox
                         checked={profile.selected}
-                        onChange={() => toggleFriendSelection(profile.profileId)}
-                        className="h-4 w-4 accent-primary"
+                        onCheckedChange={() => toggleFriendSelection(profile.profileId)}
                       />
 
                       <div className="min-w-0 flex-1">
@@ -2103,7 +2114,7 @@ export default function MatchingPage() {
                   Available Storage (GB)
                 </label>
                 <div className="grid grid-cols-5 gap-2">
-                  {[10, 20, 50, 100, 500].map((gb) => {
+                  {[50, 100, 200, 500, 1000].map((gb) => {
                     const specs = playerSpecsById["self"] ?? DEFAULT_PLAYER_SPECS
                     return (
                       <button

@@ -196,6 +196,33 @@
   * {
     @apply border-border outline-ring/50;
   }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--primary) transparent;
+  }
+
+  *::-webkit-scrollbar {
+    width: 0.7rem;
+    height: 0.7rem;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    border: 2px solid transparent;
+    border-radius: 9999px;
+    background: linear-gradient(180deg, color-mix(in oklch, var(--primary) 85%, white), color-mix(in oklch, var(--accent) 70%, black));
+    background-clip: padding-box;
+    box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--primary) 25%, transparent);
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, color-mix(in oklch, var(--primary) 95%, white), color-mix(in oklch, var(--accent) 85%, black));
+  }
+
   body {
     @apply bg-background text-foreground;
   }

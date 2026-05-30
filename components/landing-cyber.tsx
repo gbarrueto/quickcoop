@@ -521,9 +521,7 @@ export function LandingCyber() {
                           : "bg-[#171a21] hover:bg-[#2a475e]"
                       }`}
                     >
-                      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M11.979 0C5.678 0 .511 4.86.022 11.037l6.432 2.658c.545-.371 1.203-.59 1.912-.59.063 0 .125.004.188.006l2.861-4.142V8.91c0-2.495 2.028-4.524 4.524-4.524 2.494 0 4.524 2.031 4.524 4.527s-2.03 4.525-4.524 4.525h-.105l-4.076 2.911c0 .052.004.105.004.159 0 1.875-1.515 3.396-3.39 3.396-1.635 0-3.016-1.173-3.331-2.727L.436 15.27C1.862 20.307 6.486 24 11.979 24c6.627 0 11.999-5.373 11.999-12S18.605 0 11.979 0z" />
-                      </svg>
+                      <img className="w-5 h-5" src="\steam-svgrepo-com.svg"/>
                       Connect Steam
                       {steamId && (
                         <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-white/15 px-2 py-1 text-xs">
@@ -577,9 +575,7 @@ export function LandingCyber() {
                       }`}
                     >
                       <div className="flex items-center gap-3">
-                        <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-white/35 text-xs font-semibold">
-                          X
-                        </span>
+                        <img className="w-5 h-5" src="\xbox-fill-svgrepo-com.svg"/>
                         <span>{hasGamePass ? "Connected Game Pass" : "Connect Xbox / Game Pass"}</span>
                         {hasGamePass && (
                           <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-2 py-1 text-xs">
@@ -1151,7 +1147,7 @@ export function LandingCyber() {
             <span className="font-semibold">QCoop</span>
           </div>
           <p className="text-sm text-muted-foreground">
-            Built for UI/UX Course • 2026
+            Computines • 2026
           </p>
           <Link
             href="/privacy"
