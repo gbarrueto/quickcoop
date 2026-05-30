@@ -1,5 +1,5 @@
-import { LandingCyber } from "@/components/landing-cyber"
+import { LandingPage } from "@/components/landing"
 
 export default function Home() {
-  return <LandingCyber />
+  return <LandingPage />
 }

@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import {
   CheckCircle2,
@@ -21,440 +20,62 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Checkbox } from "@/components/ui/checkbox"
+import { fetchGameRequirements } from "@/lib/api"
 import {
-  ensureStoredUserProfile,
-  type FriendIdentity,
-  type StoredFriendProfile,
-  updateStoredUserProfile,
-} from "@/lib/user-profile"
-import {
-  getCurrentMockUser,
-  type MockUser,
-} from "@/lib/mock-auth"
-
-type Platform = "steam" | "epic" | "xbox" | "import" | "qcoop"
-type CategoryFilterMode = "or" | "and"
-
-type SteamOwnedGame = {
-  appid: number
-  name?: string
-}
-
-type OwnedGamesPayload = {
-  data?: {
-    response?: {
-      games?: SteamOwnedGame[]
-    }
-  }
-}
-
-type EpicGame = {
-  id: string
-  title: string
-  keyImages?: { type: string; url: string }[]
-}
-
-type EpicLibraryPayload = {
-  games?: EpicGame[]
-  error?: string
-}
-
-type GamePassGame = {
-  id: string
-  title: string
-  imageUrl: string
-}
-
-type GamePassPayload = {
-  games?: GamePassGame[]
-  error?: string
-}
-
-type GameCard = {
-  appId: number
-  name: string
-  imageUrl: string
-  rating: number
-  players: string
-  platform: Platform
-  tags?: string[]
-}
-
-type RecommendedGame = {
-  appId: number
-  name: string
-  imageUrl: string
-  categories: [string, string]
-  rating: number
-}
-
-type GameCategoriesPayload = {
-  categoriesByApp?: Record<string, string[]>
-  error?: string
-}
-
-type FriendFromApi = {
-  steamId: string
-  name: string
-  avatar?: string | null
-}
-
-type FriendsPayload = {
-  friends?: FriendFromApi[]
-}
-
-type IdentityRef = {
-  platform: Platform
-  accountId: string
-  displayName: string
-  avatar?: string | null
-}
-
-type FriendProfile = {
-  profileId: string
-  identities: IdentityRef[]
-  connections: {
-    steamId: string | null
-    epicAccountId: string | null
-    hasGamePass: boolean
-  }
-  selected: boolean
-  expanded: boolean
-}
-
-type FriendLibrarySnapshot = {
-  appIds: Set<number>
-  nameKeys: Set<string>
-}
-
-type GameRequirementsPayload = {
-  appId: number
-  minimumText: string
-  parsed: {
-    os?: string
-    processor?: string
-    graphics?: string
-    memoryGb?: number
-    storageGb?: number
-    vramGb?: number
-  }
-  error?: string
-}
-
-type PlayerSystemSpecs = {
-  os: string
-  cpuTier: number
-  gpuTier: number
-  ramGb: number
-  vramGb: number
-  storageGb: number
-}
-
-type RequirementsParticipant = {
-  id: string
-  name: string
-}
-
-const DEFAULT_PLAYER_SPECS: PlayerSystemSpecs = {
-  os: "Windows 10",
-  cpuTier: 3,
-  gpuTier: 3,
-  ramGb: 8,
-  vramGb: 4,
-  storageGb: 40,
-}
-
-const TIER_OPTIONS = [
-  { value: 1, label: "Tier 1" },
-  { value: 2, label: "Tier 2" },
-  { value: 3, label: "Tier 3" },
-  { value: 4, label: "Tier 4" },
-  { value: 5, label: "Tier 5" },
-]
-
-function identityKey(identity: IdentityRef): string {
-  return `${identity.platform}:${identity.accountId}`
-}
-
-function normalizeGameName(value: string): string {
-  return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim().replace(/\s+/g, " ")
-}
-
-function gameMatchKey(game: Pick<GameCard, "name">): string {
-  return normalizeGameName(game.name)
-}
-
-function toLibrarySnapshot(games: { appId: number; name: string }[]): FriendLibrarySnapshot {
-  return {
-    appIds: new Set(games.map((game) => game.appId)),
-    nameKeys: new Set(games.map((game) => gameMatchKey(game))),
-  }
-}
-
-function mergeLibrarySnapshots(...snapshots: Array<FriendLibrarySnapshot | undefined>): FriendLibrarySnapshot {
-  const appIds = new Set<number>()
-  const nameKeys = new Set<string>()
-
-  snapshots.forEach((snapshot) => {
-    if (!snapshot) {
-      return
-    }
-
-    snapshot.appIds.forEach((appId) => appIds.add(appId))
-    snapshot.nameKeys.forEach((nameKey) => nameKeys.add(nameKey))
-  })
-
-  return { appIds, nameKeys }
-}
-
-function stableNumberFromId(id: number): number {
-  const seed = String(id)
-  let hash = 0
-  for (let i = 0; i < seed.length; i += 1) {
-    hash = (hash * 31 + seed.charCodeAt(i)) % 100000
-  }
-  return hash
-}
-
-function deriveRating(appId: number): number {
-  const base = 32 + (stableNumberFromId(appId) % 18)
-  return Number((base / 10).toFixed(1))
-}
-
-function derivePlayers(appId: number): string {
-  const ranges = ["1-2", "1-4", "2-6", "2-8", "1-10", "1-16"]
-  return ranges[stableNumberFromId(appId) % ranges.length]
-}
-
-function toGameCards(games: SteamOwnedGame[], platform: Platform = "steam"): GameCard[] {
-  return games.map((game) => ({
-    appId: game.appid,
-    name: game.name ?? `Steam App ${game.appid}`,
-    imageUrl: `https://cdn.akamai.steamstatic.com/steam/apps/${game.appid}/header.jpg`,
-    rating: deriveRating(game.appid),
-    players: derivePlayers(game.appid),
-    platform,
-  }))
-}
-
-function inferCpuTier(text?: string): number | null {
-  if (!text) {
-    return null
-  }
-
-  const normalized = text.toLowerCase()
-
-  if (/i9|ryzen\s*9/.test(normalized)) {
-    return 5
-  }
-
-  if (/i7|ryzen\s*7|8\s*core|octa/.test(normalized)) {
-    return 4
-  }
-
-  if (/i5|ryzen\s*5|6\s*core|quad|fx-6/.test(normalized)) {
-    return 3
-  }
-
-  if (/i3|ryzen\s*3|dual|2\s*core|fx-4/.test(normalized)) {
-    return 2
-  }
-
-  return 1
-}
-
-function inferGpuTier(text?: string): number | null {
-  if (!text) {
-    return null
-  }
-
-  const normalized = text.toLowerCase()
-
-  if (/rtx\s*40|rx\s*7|arc\s*a7/.test(normalized)) {
-    return 5
-  }
-
-  if (/rtx\s*30|rtx\s*20|gtx\s*10|rx\s*6|vulkan/.test(normalized)) {
-    return 4
-  }
-
-  if (/gtx\s*9|r9|rx\s*5|dx11|directx\s*11/.test(normalized)) {
-    return 3
-  }
-
-  if (/gtx\s*7|gt\s*7|hd\s*5|dx10/.test(normalized)) {
-    return 2
-  }
-
-  return 1
-}
-
-function osMatchesPlayer(requiredOs: string | undefined, playerOs: string): boolean {
-  if (!requiredOs) {
-    return true
-  }
-
-  const normalizedRequired = requiredOs.toLowerCase()
-  const normalizedPlayer = playerOs.toLowerCase()
-
-  if (normalizedRequired.includes("windows")) {
-    return normalizedPlayer.includes("windows")
-  }
-
-  if (normalizedRequired.includes("linux") || normalizedRequired.includes("steamos")) {
-    return normalizedPlayer.includes("linux") || normalizedPlayer.includes("steamos")
-  }
-
-  if (normalizedRequired.includes("mac") || normalizedRequired.includes("os x")) {
-    return normalizedPlayer.includes("mac") || normalizedPlayer.includes("os x")
-  }
-
-  return normalizedPlayer.includes(normalizedRequired.slice(0, 8))
-}
-
-function toFriendProfile(profile: StoredFriendProfile): FriendProfile {
-  return {
-    profileId: profile.profileId,
-    identities: profile.identities,
-    connections: profile.connections,
-    selected: profile.selected,
-    expanded: profile.expanded,
-  }
-}
-
-function toImportedGameCard(name: string): GameCard {
-  return {
-    appId: Math.abs(
-      name.toLowerCase().trim().split("").reduce((acc, c) => acc * 31 + c.charCodeAt(0), 0),
-    ) % 9999999,
-    name,
-    imageUrl: "",
-    rating: 0,
-    players: "??",
-    platform: "import",
-  }
-}
-
-function mergeFriendProfiles(existing: FriendProfile[], incoming: FriendProfile[]): FriendProfile[] {
-  const next = [...existing]
-
-  incoming.forEach((profile) => {
-    const duplicate = next.some((current) => current.profileId === profile.profileId)
-    if (!duplicate) {
-      next.push(profile)
-    }
-  })
-
-  return next
-}
-
-function snapshotFromStoredFriend(profile: StoredFriendProfile): FriendLibrarySnapshot {
-  return {
-    appIds: new Set(profile.libraryAppIds),
-    nameKeys: new Set((profile.libraryTitles ?? []).map(normalizeGameName).filter(Boolean)),
-  }
-}
-
-const recommendedGames: RecommendedGame[] = [
-  {
-    appId: 730,
-    name: "Counter-Strike 2",
-    imageUrl: "https://cdn.akamai.steamstatic.com/steam/apps/730/header.jpg",
-    categories: ["FPS", "Competitive"],
-    rating: 4.8,
-  },
-  {
-    appId: 553850,
-    name: "Helldivers 2",
-    imageUrl: "https://cdn.akamai.steamstatic.com/steam/apps/553850/header.jpg",
-    categories: ["Co-op", "Shooter"],
-    rating: 4.7,
-  },
-  {
-    appId: 1172470,
-    name: "Apex Legends",
-    imageUrl: "https://cdn.akamai.steamstatic.com/steam/apps/1172470/header.jpg",
-    categories: ["Battle Royale", "Hero Shooter"],
-    rating: 4.5,
-  },
-  {
-    appId: 252950,
-    name: "Rocket League",
-    imageUrl: "https://cdn.akamai.steamstatic.com/steam/apps/252950/header.jpg",
-    categories: ["Sports", "Arcade"],
-    rating: 4.8,
-  },
-  {
-    appId: 1091500,
-    name: "Cyberpunk 2077",
-    imageUrl: "https://cdn.akamai.steamstatic.com/steam/apps/1091500/header.jpg",
-    categories: ["RPG", "Open World"],
-    rating: 4.6,
-  },
-  {
-    appId: 271590,
-    name: "Grand Theft Auto V",
-    imageUrl: "https://cdn.akamai.steamstatic.com/steam/apps/271590/header.jpg",
-    categories: ["Action", "Open World"],
-    rating: 4.9,
-  },
-  {
-    appId: 413150,
-    name: "Stardew Valley",
-    imageUrl: "https://cdn.akamai.steamstatic.com/steam/apps/413150/header.jpg",
-    categories: ["Farming", "Co-op"],
-    rating: 4.9,
-  },
-  {
-    appId: 322330,
-    name: "Don't Starve Together",
-    imageUrl: "https://cdn.akamai.steamstatic.com/steam/apps/322330/header.jpg",
-    categories: ["Survival", "Co-op"],
-    rating: 4.6,
-  },
-  {
-    appId: 381210,
-    name: "Dead by Daylight",
-    imageUrl: "https://cdn.akamai.steamstatic.com/steam/apps/381210/header.jpg",
-    categories: ["Horror", "Multiplayer"],
-    rating: 4.4,
-  },
-  {
-    appId: 1174180,
-    name: "Red Dead Redemption 2",
-    imageUrl: "https://cdn.akamai.steamstatic.com/steam/apps/1174180/header.jpg",
-    categories: ["Adventure", "Open World"],
-    rating: 4.9,
-  },
-]
+  DEFAULT_PLAYER_SPECS,
+  RECOMMENDED_GAMES,
+  TIER_OPTIONS,
+  buildSelectedLibrarySets,
+  canMergeProfiles,
+  dedupeGameCards,
+  evaluateParticipantCompatibility,
+  filterGamesByCategories,
+  filterSharedGames,
+  getAvailableCategories,
+  identityKey,
+  inferCpuTier,
+  inferGpuTier,
+  mergeProfileIdentities,
+  osMatchesPlayer,
+  toStoredIdentities,
+} from "@/lib/matching"
+import { updateStoredUserProfile } from "@/lib/user-profile"
+import { useGameCategories } from "@/hooks/use-game-categories"
+import { useIdentityLibrary } from "@/hooks/use-identity-library"
+import { useMatchingInit } from "@/hooks/use-matching-init"
+import type {
+  CategoryFilterMode,
+  GameCard,
+  GameRequirementsPayload,
+  PlayerSystemSpecs,
+  RequirementsParticipant,
+} from "@/types"
 
 export default function MatchingPage() {
-  const router = useRouter()
   const recommendationsRef = useRef<HTMLDivElement | null>(null)
-  const [currentUser, setCurrentUser] = useState<MockUser | null>(null)
 
-  const [steamId, setSteamId] = useState<string | null>(null)
-  const [availablePlatforms, setAvailablePlatforms] = useState<Platform[]>([])
-  const [loading, setLoading] = useState(true)
-  const [pageError, setPageError] = useState<string | null>(null)
-
-  const [userGames, setUserGames] = useState<GameCard[]>([])
-  const [epicGames, setEpicGames] = useState<GameCard[]>([])
-  const [gamePassGames, setGamePassGames] = useState<GameCard[]>([])
-  const [epicFriends, setEpicFriends] = useState<FriendProfile[]>([])
-  const [epicAccountId, setEpicAccountId] = useState<string | null>(null)
-  const [hasGamePass, setHasGamePass] = useState(false)
-  const [friendProfiles, setFriendProfiles] = useState<FriendProfile[]>([])
+  const {
+    currentUser,
+    loading,
+    pageError,
+    steamId,
+    availablePlatforms,
+    userGames,
+    epicGames,
+    gamePassGames,
+    friendProfiles,
+    epicFriends,
+    identityLibraries,
+    playerSpecsById,
+    setFriendProfiles,
+    setEpicFriends,
+    setIdentityLibraries,
+    setPlayerSpecsById,
+  } = useMatchingInit()
 
   const [draggingProfileId, setDraggingProfileId] = useState<string | null>(null)
   const [mergeNotice, setMergeNotice] = useState<string | null>(null)
 
-  const [identityLibraries, setIdentityLibraries] = useState<Record<string, FriendLibrarySnapshot>>({})
-  const [loadingIdentities, setLoadingIdentities] = useState<Record<string, boolean>>({})
-  const [identityErrors, setIdentityErrors] = useState<Record<string, string | null>>({})
-  const [categoriesByApp, setCategoriesByApp] = useState<Record<number, string[]>>({})
-  const [isLoadingCategories, setIsLoadingCategories] = useState(false)
-  const [categoryFilterError, setCategoryFilterError] = useState<string | null>(null)
   const [selectedCategories, setSelectedCategories] = useState<string[]>([])
   const [categoryFilterMode, setCategoryFilterMode] = useState<CategoryFilterMode>("or")
   const [requirementsByApp, setRequirementsByApp] = useState<Record<number, GameRequirementsPayload>>({})
@@ -462,14 +83,17 @@ export default function MatchingPage() {
   const [requirementsErrorByApp, setRequirementsErrorByApp] = useState<Record<number, string | null>>({})
   const [selectedGameForRequirements, setSelectedGameForRequirements] = useState<GameCard | null>(null)
   const [isRequirementsModalOpen, setIsRequirementsModalOpen] = useState(false)
-  const [playerSpecsById, setPlayerSpecsById] = useState<Record<string, PlayerSystemSpecs>>({})
-
   const [isSpecsModalOpen, setIsSpecsModalOpen] = useState(false)
-  const pendingCategoryAppIdsRef = useRef<Set<number>>(new Set())
+
+  const { loadingIdentities, identityErrors } = useIdentityLibrary(
+    friendProfiles,
+    identityLibraries,
+    setIdentityLibraries,
+  )
 
   const allFriendProfiles = useMemo(
     () => [...friendProfiles, ...epicFriends],
-    [friendProfiles, epicFriends]
+    [friendProfiles, epicFriends],
   )
 
   const scrollRecommendations = (direction: -1 | 1) => {
@@ -483,297 +107,6 @@ export default function MatchingPage() {
       behavior: "smooth",
     })
   }
-
-  useEffect(() => {
-    const initialize = async () => {
-      const loggedInUser = getCurrentMockUser()
-      if (!loggedInUser) {
-        router.push("/")
-        return
-      }
-
-      setCurrentUser(loggedInUser)
-      const profile = ensureStoredUserProfile()
-      // Precarga specs guardadas del usuario
-      if (profile.playerSpecs) {
-        setPlayerSpecsById((prev) => ({
-          ...prev,
-          self: profile.playerSpecs!,
-        }))
-      }
-
-      const platforms: Platform[] = []
-      if (profile.connections.steamId) platforms.push("steam")
-      if (profile.connections.epicAccountId) platforms.push("epic")
-      if (profile.connections.hasGamePass) platforms.push("xbox")
-
-      setAvailablePlatforms(platforms)
-      if (profile.connections.steamId) setSteamId(profile.connections.steamId)
-      if (profile.connections.epicAccountId) setEpicAccountId(profile.connections.epicAccountId)
-      setHasGamePass(profile.connections.hasGamePass)
-      const initialManualCards = profile.importedGames.map(toImportedGameCard)
-      setUserGames(initialManualCards)
-
-      // Enriquece imágenes de juegos importados en segundo plano
-      profile.importedGames.forEach(async (name) => {
-        try {
-          const res = await fetch(`/api/steam/search?term=${encodeURIComponent(name)}`)
-          if (!res.ok) return
-          const data = await res.json() as {
-            appId: number | null
-            imageUrl: string | null
-            tags?: string[]
-          }
-          if (!data.imageUrl) return
-
-          setUserGames((prev) =>
-            prev.map((game) =>
-              game.platform === "import" && game.name === name
-                ? { ...game, imageUrl: data.imageUrl!, tags: data.tags ?? [] }
-                : game
-            )
-          )
-        } catch {
-          // Silencioso
-        }
-      })
-      setFriendProfiles(profile.friends.map(toFriendProfile))
-      setIdentityLibraries(
-        profile.friends.reduce<Record<string, FriendLibrarySnapshot>>((acc, friend) => {
-          const nameKeys = new Set((friend.libraryTitles ?? []).map(normalizeGameName).filter(Boolean))
-          friend.identities.forEach((identity) => {
-            acc[identityKey(identity)] = {
-              appIds: new Set(friend.libraryAppIds),
-              nameKeys,
-            }
-          })
-          return acc
-        }, {}),
-      )
-
-      setLoading(true)
-      setPageError(null)
-
-      try {
-        // Steam: juegos + amigos (optional enrichment)
-        if (profile.connections.steamId) {
-          const [gamesRes, friendsRes] = await Promise.all([
-            fetch(`/api/steam/owned-games?steamId=${profile.connections.steamId}`),
-            fetch(`/api/steam/friends?steamId=${profile.connections.steamId}`),
-          ])
-  
-          const gamesJson = (await gamesRes.json()) as OwnedGamesPayload & { error?: string }
-          const friendsJson = (await friendsRes.json()) as FriendsPayload & { error?: string }
-  
-          if (!gamesRes.ok) throw new Error(gamesJson.error || "Failed to fetch your Steam library")
-          if (!friendsRes.ok) throw new Error(friendsJson.error || "Failed to fetch your Steam friends")
-  
-          const ownedGames = gamesJson.data?.response?.games ?? []
-            setUserGames((prev) => [...prev, ...toGameCards(ownedGames, "steam")])
-  
-          const steamProfiles = (friendsJson.friends ?? []).map((friend) => ({
-            profileId: `profile:steam:${friend.steamId}`,
-            identities: [{
-              platform: "steam" as const,
-              accountId: friend.steamId,
-              displayName: friend.name,
-              avatar: friend.avatar ?? null,
-            }],
-              connections: {
-                steamId: friend.steamId,
-                epicAccountId: null,
-                hasGamePass: false,
-              },
-            selected: false,
-            expanded: false,
-          }))
-          setFriendProfiles((prev) => mergeFriendProfiles(prev, steamProfiles))
-        }
-
-        // Epic: juegos + amigos
-        if (profile.connections.epicAccountId) {
-          const [epicLibRes, epicFriendsRes] = await Promise.all([
-            fetch(`/api/epic/library?accountId=${profile.connections.epicAccountId}`),
-            fetch(`/api/epic/friends?accountId=${profile.connections.epicAccountId}`),
-          ])
-
-          if (epicLibRes.ok) {
-            const epicLibJson = (await epicLibRes.json()) as EpicLibraryPayload
-            const mapped: GameCard[] = (epicLibJson.games ?? []).map((game) => ({
-              appId: Math.abs(game.id.split("").reduce((acc, c) => acc * 31 + c.charCodeAt(0), 0)) % 9999999,
-              name: game.title,
-              imageUrl: game.keyImages?.find((img) => img.type === "DieselGameBoxTall")?.url
-                ?? game.keyImages?.[0]?.url
-                ?? "",
-              rating: 0,
-              players: "1+",
-              platform: "epic" as const,
-            }))
-            setEpicGames((prev) => [...prev, ...mapped])
-          }
-
-          if (epicFriendsRes.ok) {
-            const epicFriendsJson = (await epicFriendsRes.json()) as { friends?: { accountId: string; displayName: string }[] }
-            const epicProfiles: FriendProfile[] = (epicFriendsJson.friends ?? []).map((friend) => ({
-              profileId: `profile:epic:${friend.accountId}`,
-              identities: [{
-                platform: "epic" as const,
-                accountId: friend.accountId,
-                displayName: friend.displayName,
-                avatar: null,
-              }],
-              connections: {
-                steamId: null,
-                epicAccountId: friend.accountId,
-                hasGamePass: false,
-              },
-              selected: false,
-              expanded: false,
-            }))
-            setEpicFriends((prev) => mergeFriendProfiles(prev, epicProfiles))
-          }
-        }
-
-        // GamePass: catálogo público
-        const hasGamePassFriend = profile.friends.some((friend) => friend.connections.hasGamePass)
-        if (profile.connections.hasGamePass || hasGamePassFriend) {
-          const gpRes = await fetch("/api/gamepass")
-          if (gpRes.ok) {
-            const gpJson = (await gpRes.json()) as GamePassPayload
-            const mapped: GameCard[] = (gpJson.games ?? []).map((game) => ({
-              appId: Math.abs(game.id.split("").reduce((acc, c) => acc * 31 + c.charCodeAt(0), 0)) % 9999999,
-              name: game.title,
-              imageUrl: game.imageUrl ?? "",
-              rating: 0,
-              players: "1+",
-              platform: "xbox" as const,
-            }))
-            setGamePassGames((prev) => [...prev, ...mapped])
-
-            // Enriquece tags de Game Pass en segundo plano
-            mapped.forEach(async (card) => {
-              try {
-                const res = await fetch(`/api/steam/search?term=${encodeURIComponent(card.name)}`)
-                if (!res.ok) return
-                const data = await res.json() as {
-                  appId: number | null
-                  imageUrl: string | null
-                  tags?: string[]
-                }
-                if (!data.tags?.length) return
-
-                setGamePassGames((prev) =>
-                  prev.map((game) =>
-                    game.platform === "xbox" && game.name === card.name
-                      ? { ...game, tags: data.tags! }
-                      : game
-                  )
-                )
-              } catch {
-                // Silencioso
-              }
-            })
-
-            const gamePassSnapshot = toLibrarySnapshot(mapped)
-            if (hasGamePassFriend) {
-              setIdentityLibraries((prev) => {
-                const next = { ...prev }
-
-                profile.friends.forEach((friend) => {
-                  if (!friend.connections.hasGamePass) {
-                    return
-                  }
-
-                  friend.identities.forEach((identity) => {
-                    next[identityKey(identity)] = mergeLibrarySnapshots(
-                      next[identityKey(identity)],
-                      snapshotFromStoredFriend(friend),
-                      gamePassSnapshot,
-                    )
-                  })
-                })
-
-                return next
-              })
-            }
-          }
-        }
-
-
-
-      } catch (error) {
-        setPageError(error instanceof Error ? error.message : "Failed to initialize matching view")
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    initialize()
-  }, [router])
-
-  const loadIdentityLibrary = async (identity: IdentityRef) => {
-    const key = identityKey(identity)
-
-    if (identityLibraries[key] || loadingIdentities[key]) {
-      return
-    }
-
-    if (identity.platform !== "steam") {
-      return
-    }
-
-    setLoadingIdentities((prev) => ({ ...prev, [key]: true }))
-    setIdentityErrors((prev) => ({ ...prev, [key]: null }))
-
-    try {
-      const response = await fetch(`/api/steam/owned-games?steamId=${identity.accountId}`)
-      const payload = (await response.json()) as OwnedGamesPayload & { error?: string }
-
-      if (!response.ok) {
-        throw new Error(payload.error || `Failed to load ${identity.displayName} library`)
-      }
-
-      const appIds = (payload.data?.response?.games ?? []).map((game) => game.appid)
-      const nameKeys = new Set(
-        (payload.data?.response?.games ?? [])
-          .map((game) => normalizeGameName(game.name ?? `Steam App ${game.appid}`))
-          .filter(Boolean),
-      )
-
-      setIdentityLibraries((prev) => ({ ...prev, [key]: { appIds: new Set(appIds), nameKeys } }))
-      updateStoredUserProfile((profile) => ({
-        ...profile,
-        friends: profile.friends.map((friend) =>
-          friend.identities.some((current) => identityKey(current) === key)
-            ? {
-                ...friend,
-                libraryAppIds: appIds,
-                libraryTitles: (payload.data?.response?.games ?? []).map(
-                  (game) => game.name ?? `Steam App ${game.appid}`,
-                ),
-              }
-            : friend,
-        ),
-      }))
-    } catch (error) {
-      setIdentityErrors((prev) => ({
-        ...prev,
-        [key]: error instanceof Error ? error.message : "Failed to load friend library",
-      }))
-    } finally {
-      setLoadingIdentities((prev) => ({ ...prev, [key]: false }))
-    }
-  }
-
-  useEffect(() => {
-    friendProfiles
-      .filter((profile) => profile.selected)
-      .forEach((profile) => {
-        profile.identities.forEach((identity) => {
-          void loadIdentityLibrary(identity)
-        })
-      })
-  }, [friendProfiles])
 
   const toggleFriendSelection = (profileId: string) => {
     setFriendProfiles((prev) =>
@@ -798,11 +131,6 @@ export default function MatchingPage() {
       return
     }
 
-    if (availablePlatforms.length < 2) {
-      setMergeNotice("Merging is enabled only when 2 or more platforms are connected.")
-      return
-    }
-
     const source = friendProfiles.find((profile) => profile.profileId === sourceId)
     const target = friendProfiles.find((profile) => profile.profileId === targetId)
 
@@ -810,12 +138,9 @@ export default function MatchingPage() {
       return
     }
 
-    const sourcePlatforms = new Set(source.identities.map((identity) => identity.platform))
-    const targetPlatforms = new Set(target.identities.map((identity) => identity.platform))
-    const hasPlatformOverlap = [...sourcePlatforms].some((platform) => targetPlatforms.has(platform))
-
-    if (hasPlatformOverlap) {
-      setMergeNotice("Merging between users from the same platform is not allowed.")
+    const mergeCheck = canMergeProfiles(source, target, availablePlatforms.length)
+    if (!mergeCheck.ok) {
+      setMergeNotice(mergeCheck.reason)
       return
     }
 
@@ -829,17 +154,7 @@ export default function MatchingPage() {
         return prev
       }
 
-      const mergedIdentities = [...targetProfile.identities]
-      sourceProfile.identities.forEach((identity) => {
-        const exists = mergedIdentities.some(
-          (current) =>
-            current.platform === identity.platform && current.accountId === identity.accountId,
-        )
-
-        if (!exists) {
-          mergedIdentities.push(identity)
-        }
-      })
+      const mergedIdentities = mergeProfileIdentities(sourceProfile, targetProfile)
 
       const nextProfiles = prev
         .filter((profile) => profile.profileId !== sourceProfile.profileId)
@@ -859,9 +174,6 @@ export default function MatchingPage() {
         const mergedLibraryAppIds = Array.from(
           new Set([...(targetStored?.libraryAppIds ?? []), ...(sourceStored?.libraryAppIds ?? [])]),
         )
-        const storedIdentities = mergedIdentities.filter(
-          (identity): identity is FriendIdentity => identity.platform !== "import",
-        )
 
         return {
           ...profile,
@@ -871,7 +183,7 @@ export default function MatchingPage() {
               friend.profileId === targetProfile.profileId
                 ? {
                     ...friend,
-                    identities: storedIdentities,
+                    identities: toStoredIdentities(mergedIdentities),
                     selected: friend.selected || sourceStored?.selected || false,
                     expanded: friend.expanded || sourceStored?.expanded || false,
                     libraryAppIds: mergedLibraryAppIds,
@@ -887,139 +199,33 @@ export default function MatchingPage() {
 
   const canDragMerge = availablePlatforms.length >= 2
 
-  const allUserGames = useMemo(() => {
-    const seen = new Set<string>()
-    return [...userGames, ...epicGames, ...gamePassGames].filter((game) => {
-      const key = `${game.platform}-${game.appId}`
-      if (seen.has(key)) return false
-      seen.add(key)
-      return true
-    })
-  }, [userGames, epicGames, gamePassGames])
+  const allUserGames = useMemo(
+    () => dedupeGameCards([...userGames, ...epicGames, ...gamePassGames]),
+    [userGames, epicGames, gamePassGames],
+  )
 
   const filteredGames = useMemo(() => {
-    const selectedProfiles = allFriendProfiles.filter((p) => p.selected)
-    if (selectedProfiles.length === 0) return allUserGames
+    const selectedProfiles = allFriendProfiles.filter((profile) => profile.selected)
+    const librarySets = buildSelectedLibrarySets(
+      selectedProfiles,
+      identityLibraries,
+      gamePassGames,
+      identityKey,
+    )
+    return filterSharedGames(allUserGames, librarySets)
+  }, [allFriendProfiles, identityLibraries, allUserGames, gamePassGames])
 
-    const selectedSets = selectedProfiles.map((profile) => {
-      const mergedSet = new Set<number>()
-      const mergedNameKeys = new Set<string>()
-      profile.identities.forEach((identity) => {
-        const library = identityLibraries[identityKey(identity)]
-        if (!library) {
-          return
-        }
+  const { categoriesByApp, isLoadingCategories, categoryFilterError } = useGameCategories(filteredGames)
 
-        library.appIds.forEach((appId) => mergedSet.add(appId))
-        library.nameKeys.forEach((nameKey) => mergedNameKeys.add(nameKey))
-      })
+  const availableCategories = useMemo(
+    () => getAvailableCategories(filteredGames, categoriesByApp),
+    [filteredGames, categoriesByApp],
+  )
 
-      if (profile.connections.hasGamePass) {
-        gamePassGames.forEach((game) => {
-          mergedSet.add(game.appId)
-          mergedNameKeys.add(gameMatchKey(game))
-        })
-      }
-
-      return { appIds: mergedSet, nameKeys: mergedNameKeys }
-    })
-
-    return allUserGames.filter((game) => {
-      const key = gameMatchKey(game)
-      return selectedSets.every((set) => set.appIds.has(game.appId) || set.nameKeys.has(key))
-    })
-  }, [allFriendProfiles, identityLibraries, allUserGames])
-
-  useEffect(() => {
-    if (filteredGames.length === 0) {
-      return
-    }
-
-    const missingAppIds = Array.from(
-      new Set(
-        filteredGames
-          .map((game) => game.appId)
-          .filter((appId) => !(appId in categoriesByApp) && !pendingCategoryAppIdsRef.current.has(appId)),
-      ),
-    ).slice(0, 80)
-
-    if (missingAppIds.length === 0) {
-      return
-    }
-
-    let isCancelled = false
-
-    missingAppIds.forEach((appId) => {
-      pendingCategoryAppIdsRef.current.add(appId)
-    })
-
-    const loadCategories = async () => {
-      setIsLoadingCategories(true)
-      setCategoryFilterError(null)
-
-      try {
-        const response = await fetch(`/api/steam/game-categories?appIds=${missingAppIds.join(",")}`)
-        const payload = (await response.json()) as GameCategoriesPayload
-
-        if (!response.ok) {
-          throw new Error(payload.error || "Failed to load game categories")
-        }
-
-        const incoming = payload.categoriesByApp ?? {}
-        if (!isCancelled) {
-          setCategoriesByApp((prev) => {
-            const next = { ...prev }
-            Object.entries(incoming).forEach(([appId, categories]) => {
-              next[Number(appId)] = categories
-            })
-            return next
-          })
-        }
-      } catch (error) {
-        if (!isCancelled) {
-          setCategoryFilterError(error instanceof Error ? error.message : "Failed to load categories")
-        }
-      } finally {
-        missingAppIds.forEach((appId) => {
-          pendingCategoryAppIdsRef.current.delete(appId)
-        })
-
-        if (!isCancelled) {
-          setIsLoadingCategories(false)
-        }
-      }
-    }
-
-    void loadCategories()
-
-    return () => {
-      isCancelled = true
-    }
-  }, [filteredGames, categoriesByApp])
-
-  const availableCategories = useMemo(() => {
-    const unique = new Set<string>()
-    filteredGames.forEach((game) => {
-      ;(categoriesByApp[game.appId] ?? []).forEach((category) => unique.add(category))
-    })
-
-    return [...unique].sort((a, b) => a.localeCompare(b))
-  }, [filteredGames, categoriesByApp])
-
-  const categoryFilteredGames = useMemo(() => {
-    if (selectedCategories.length === 0) {
-      return filteredGames
-    }
-
-    return filteredGames.filter((game) => {
-      const gameCategories = categoriesByApp[game.appId] ?? []
-      if (categoryFilterMode === "and") {
-        return selectedCategories.every((selectedCategory) => gameCategories.includes(selectedCategory))
-      }
-
-      return selectedCategories.some((selectedCategory) => gameCategories.includes(selectedCategory))
-    })
-  }, [filteredGames, categoriesByApp, selectedCategories, categoryFilterMode])
+  const categoryFilteredGames = useMemo(
+    () => filterGamesByCategories(filteredGames, categoriesByApp, selectedCategories, categoryFilterMode),
+    [filteredGames, categoriesByApp, selectedCategories, categoryFilterMode],
+  )
 
   const toggleCategoryFilter = (category: string) => {
     setSelectedCategories((prev) =>
@@ -1083,18 +289,9 @@ export default function MatchingPage() {
     setRequirementsErrorByApp((prev) => ({ ...prev, [game.appId]: null }))
 
     try {
-      let url = `/api/steam/game-requirements?appId=${game.appId}`
-
-      // Para juegos de Game Pass e Import, busca por nombre en Steam
-      if (game.platform === "xbox" || game.platform === "import") {
-        url = `/api/steam/game-requirements?appId=${game.appId}&searchName=${encodeURIComponent(game.name)}`
-      }
-
-      const response = await fetch(url)
-      const payload = (await response.json()) as GameRequirementsPayload
-
-      if (!response.ok) throw new Error(payload.error || "Failed to load game requirements")
-
+      const searchName =
+        game.platform === "xbox" || game.platform === "import" ? game.name : undefined
+      const payload = await fetchGameRequirements(game.appId, searchName)
       setRequirementsByApp((prev) => ({ ...prev, [game.appId]: payload }))
     } catch (error) {
       setRequirementsErrorByApp((prev) => ({
@@ -1106,60 +303,12 @@ export default function MatchingPage() {
     }
   }
 
-  const evaluateParticipantCompatibility = (
+  const getParticipantCompatibility = (
     participantId: string,
     requirements: GameRequirementsPayload,
   ) => {
     const specs = playerSpecsById[participantId] ?? DEFAULT_PLAYER_SPECS
-    const requiredCpuTier = inferCpuTier(requirements.parsed.processor)
-    const requiredGpuTier = inferGpuTier(requirements.parsed.graphics)
-
-    const checks = [
-      {
-        key: "os",
-        label: "Operating system",
-        pass: osMatchesPlayer(requirements.parsed.os, specs.os),
-      },
-      {
-        key: "cpu",
-        label: "Processor",
-        pass: requiredCpuTier === null ? true : specs.cpuTier >= requiredCpuTier,
-      },
-      {
-        key: "gpu",
-        label: "Graphics card",
-        pass: requiredGpuTier === null ? true : specs.gpuTier >= requiredGpuTier,
-      },
-      {
-        key: "ram",
-        label: "Memory (RAM)",
-        pass:
-          requirements.parsed.memoryGb === undefined
-            ? true
-            : specs.ramGb >= requirements.parsed.memoryGb,
-      },
-      {
-        key: "vram",
-        label: "Video memory (VRAM)",
-        pass:
-          requirements.parsed.vramGb === undefined
-            ? true
-            : specs.vramGb >= requirements.parsed.vramGb,
-      },
-      {
-        key: "storage",
-        label: "Available storage",
-        pass:
-          requirements.parsed.storageGb === undefined
-            ? true
-            : specs.storageGb >= requirements.parsed.storageGb,
-      },
-    ]
-
-    return {
-      allChecksPass: checks.every((check) => check.pass),
-      failedLabels: checks.filter((check) => !check.pass).map((check) => check.label),
-    }
+    return evaluateParticipantCompatibility(specs, requirements)
   }
 
   const selectedCount = allFriendProfiles.filter((p) => p.selected).length
@@ -1432,7 +581,7 @@ export default function MatchingPage() {
                 style={{ scrollbarWidth: "none" }}
               >
                 <div className="grid grid-flow-col auto-cols-[calc((100%-0.75rem)/2)] gap-3 px-1">
-                  {recommendedGames.map((game) => (
+                  {RECOMMENDED_GAMES.map((game) => (
                     <article
                       key={game.appId}
                       className="overflow-hidden rounded-xl border border-border bg-secondary/20"
@@ -1721,7 +870,7 @@ export default function MatchingPage() {
                   {(() => {
                     const requirements = requirementsByApp[selectedGameForRequirements.appId]
                     const failedParticipants = requirementsParticipants.filter((participant) => {
-                      const summary = evaluateParticipantCompatibility(participant.id, requirements)
+                      const summary = getParticipantCompatibility(participant.id, requirements)
                       return !summary.allChecksPass
                     })
 
@@ -1885,7 +1034,7 @@ export default function MatchingPage() {
                       },
                     ]
 
-                    const compatibilitySummary = evaluateParticipantCompatibility(participant.id, requirements)
+                    const compatibilitySummary = getParticipantCompatibility(participant.id, requirements)
                     const allChecksPass = compatibilitySummary.allChecksPass
 
                     return (
