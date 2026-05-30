@@ -1,9 +1,12 @@
+"use client"
+
+import { useState } from "react"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { UserRoundPlus } from "lucide-react"
+import { GitMerge, UserRoundPlus, X } from "lucide-react"
 import { identityKey } from "@/lib/matching"
 import type { FriendProfile } from "@/types"
 import { PlatformBadge } from "./platform-badge"
@@ -21,6 +24,7 @@ type MatchingFriendsPanelProps = {
   onDragStart: (profileId: string) => void
   onDragEnd: () => void
   onDrop: (targetProfileId: string) => void
+  onUnmerge: (profileId: string) => void
 }
 
 function getInitials(value: string) {
@@ -45,7 +49,10 @@ export function MatchingFriendsPanel({
   onDragStart,
   onDragEnd,
   onDrop,
+  onUnmerge,
 }: MatchingFriendsPanelProps) {
+  const [tipVisible, setTipVisible] = useState(true)
+
   return (
     <Card className="flex flex-col border-border/70 bg-card/50">
       <CardHeader className="space-y-1 border-b border-border/70 px-5 pb-4 pt-5">
@@ -54,14 +61,24 @@ export function MatchingFriendsPanel({
       </CardHeader>
 
       <CardContent className="space-y-4 p-5">
-        <div className="rounded-lg border border-primary/30 bg-primary/10 p-3 text-xs text-primary">
-          <p className="font-medium">Merge tip</p>
-          <p className="mt-1">Drag one friend row onto another to merge identities. This feature activates only when 2+ platforms are connected.</p>
-          <p className="mt-2 inline-flex items-center gap-1">
-            <UserRoundPlus className="h-3.5 w-3.5" />
-            Merging between users of the same platform is blocked.
-          </p>
-        </div>
+        {tipVisible && (
+          <div className="relative rounded-lg border border-primary/30 bg-primary/10 p-3 text-xs text-primary">
+            <button
+              type="button"
+              onClick={() => setTipVisible(false)}
+              className="absolute right-2 top-2 rounded p-0.5 text-primary/60 transition-colors hover:text-primary"
+              aria-label="Dismiss tip"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+            <p className="font-medium">Merge tip</p>
+            <p className="mt-1">Drag one friend row onto another to merge identities. This feature activates only when 2+ platforms are connected.</p>
+            <p className="mt-2 inline-flex items-center gap-1">
+              <UserRoundPlus className="h-3.5 w-3.5" />
+              Merging between users of the same platform is blocked.
+            </p>
+          </div>
+        )}
 
         {mergeNotice && <p className="text-xs text-amber-500">{mergeNotice}</p>}
 
@@ -115,9 +132,19 @@ export function MatchingFriendsPanel({
 
                   {hasMultipleIdentities && (
                     <div className="mt-2 border-t border-border/70 pt-2">
-                      <button type="button" onClick={() => onToggleExpanded(profile.profileId)} className="text-xs text-muted-foreground transition-colors hover:text-foreground">
-                        {profile.expanded ? "Hide merged identities" : "Show merged identities"}
-                      </button>
+                      <div className="flex items-center justify-between gap-2">
+                        <button type="button" onClick={() => onToggleExpanded(profile.profileId)} className="text-xs text-muted-foreground transition-colors hover:text-foreground">
+                          {profile.expanded ? "Hide merged identities" : "Show merged identities"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onUnmerge(profile.profileId)}
+                          className="inline-flex items-center gap-1 text-xs text-amber-500/80 transition-colors hover:text-amber-500"
+                        >
+                          <GitMerge className="h-3 w-3" />
+                          Un-merge
+                        </button>
+                      </div>
 
                       {profile.expanded && (
                         <ul className="mt-2 space-y-1 text-xs text-muted-foreground">

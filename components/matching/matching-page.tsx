@@ -181,6 +181,43 @@ export function MatchingPage() {
     })
   }
 
+  const unmergeProfile = (profileId: string) => {
+    setFriendProfiles((prev) => {
+      const profile = prev.find((p) => p.profileId === profileId)
+      if (!profile || profile.identities.length <= 1) return prev
+
+      const splitProfiles = profile.identities.map((identity) => ({
+        profileId: `profile:${identity.platform}:${identity.accountId}`,
+        identities: [identity],
+        connections: { steamId: null, epicAccountId: null, hasGamePass: false },
+        selected: false,
+        expanded: false,
+      }))
+
+      updateStoredUserProfile((stored) => {
+        const storedProfile = stored.friends.find((f) => f.profileId === profileId)
+        if (!storedProfile || storedProfile.identities.length <= 1) return stored
+
+        const splitStored = toStoredIdentities(profile.identities).map((identity) => ({
+          profileId: `profile:${identity.platform}:${identity.accountId}`,
+          identities: [identity],
+          connections: { steamId: null, epicAccountId: null, hasGamePass: false } as const,
+          selected: false,
+          expanded: false,
+          libraryAppIds: storedProfile.libraryAppIds,
+          libraryTitles: storedProfile.libraryTitles,
+        }))
+
+        return {
+          ...stored,
+          friends: [...stored.friends.filter((f) => f.profileId !== profileId), ...splitStored],
+        }
+      })
+
+      return [...prev.filter((p) => p.profileId !== profileId), ...splitProfiles]
+    })
+  }
+
   const canDragMerge = availablePlatforms.length >= 2
   const selectedProfiles = allFriendProfiles.filter((profile) => profile.selected)
   const selectedCount = selectedProfiles.length
@@ -308,6 +345,7 @@ export function MatchingPage() {
                 }
                 setDraggingProfileId(null)
               }}
+              onUnmerge={unmergeProfile}
             />
           </aside>
         </section>
