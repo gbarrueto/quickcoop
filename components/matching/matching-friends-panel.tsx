@@ -4,9 +4,8 @@ import { useState } from "react"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Checkbox } from "@/components/ui/checkbox"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { GitMerge, UserRoundPlus, X } from "lucide-react"
+import { GitMerge, GripVertical, UserRoundPlus, X } from "lucide-react"
 import { identityKey } from "@/lib/matching"
 import type { FriendProfile } from "@/types"
 import { PlatformBadge } from "./platform-badge"
@@ -52,12 +51,13 @@ export function MatchingFriendsPanel({
   onUnmerge,
 }: MatchingFriendsPanelProps) {
   const [tipVisible, setTipVisible] = useState(true)
+  const [dragOverProfileId, setDragOverProfileId] = useState<string | null>(null)
 
   return (
     <Card className="flex flex-col border-border/70 bg-card/50">
       <CardHeader className="space-y-1 border-b border-border/70 px-5 pb-4 pt-5">
         <CardTitle className="text-xl">Friends</CardTitle>
-        <CardDescription>Select friends to filter games. Drag-and-drop to merge identities.</CardDescription>
+        <CardDescription>Click a card to select. Drag the handle to merge identities.</CardDescription>
       </CardHeader>
 
       <CardContent className="space-y-4 p-5">
@@ -72,7 +72,7 @@ export function MatchingFriendsPanel({
               <X className="h-3.5 w-3.5" />
             </button>
             <p className="font-medium">Merge tip</p>
-            <p className="mt-1">Drag one friend row onto another to merge identities. This feature activates only when 2+ platforms are connected.</p>
+            <p className="mt-1">Hold and drag the grip handle onto another friend to merge identities across platforms.</p>
             <p className="mt-2 inline-flex items-center gap-1">
               <UserRoundPlus className="h-3.5 w-3.5" />
               Merging between users of the same platform is blocked.
@@ -97,21 +97,77 @@ export function MatchingFriendsPanel({
               const hasLoadingIdentity = profile.identities.some((identity) => loadingIdentities[identityKey(identity)])
               const firstIdentityError = profile.identities.map((identity) => identityErrors[identityKey(identity)]).find((message) => Boolean(message))
 
+              const isDragSource = draggingProfileId === profile.profileId
+              const isDragTarget = dragOverProfileId === profile.profileId && draggingProfileId !== profile.profileId
+
+              const articleClass = [
+                "select-none cursor-pointer rounded-xl border p-3 transition-all duration-150",
+                isDragSource
+                  ? "opacity-40 border-dashed border-primary/30 bg-secondary/10"
+                  : isDragTarget
+                    ? "border-primary/60 bg-primary/15 ring-2 ring-primary/25 shadow-md shadow-primary/10"
+                    : profile.selected
+                      ? "border-primary/50 bg-primary/10"
+                      : "border-border bg-secondary/20 hover:bg-secondary/30",
+              ].join(" ")
+
               return (
                 <article
                   key={profile.profileId}
-                  draggable={canDragMerge}
-                  onDragStart={() => onDragStart(profile.profileId)}
                   onDragOver={(event) => {
                     if (!canDragMerge) return
                     event.preventDefault()
+                    if (dragOverProfileId !== profile.profileId) {
+                      setDragOverProfileId(profile.profileId)
+                    }
                   }}
-                  onDrop={() => onDrop(profile.profileId)}
-                  onDragEnd={onDragEnd}
-                  className={`rounded-xl border border-border bg-secondary/20 p-3 ${canDragMerge ? "cursor-grab" : "cursor-default"} ${draggingProfileId === profile.profileId ? "ring-1 ring-primary/40" : ""}`}
+                  onDrop={() => {
+                    setDragOverProfileId(null)
+                    onDrop(profile.profileId)
+                  }}
+                  onClick={() => onToggleSelection(profile.profileId)}
+                  className={articleClass}
                 >
                   <div className="flex items-center gap-3">
-                    <Checkbox checked={profile.selected} onCheckedChange={() => onToggleSelection(profile.profileId)} />
+                    <div
+                      draggable={canDragMerge}
+                      onDragStart={(e) => {
+                        e.stopPropagation()
+
+                        // Use the whole card as the drag image with a lifted look
+                        const card = e.currentTarget.closest("article")
+                        if (card) {
+                          const clone = card.cloneNode(true) as HTMLElement
+                          clone.style.position = "fixed"
+                          clone.style.top = "-1000px"
+                          clone.style.left = "0"
+                          clone.style.width = `${card.offsetWidth}px`
+                          clone.style.transform = "rotate(2deg) scale(1.03)"
+                          clone.style.boxShadow = "0 24px 48px -8px rgba(0,0,0,0.6), 0 8px 16px -4px rgba(0,0,0,0.3)"
+                          clone.style.borderRadius = "12px"
+                          clone.style.opacity = "0.95"
+                          document.body.appendChild(clone)
+                          e.dataTransfer.setDragImage(clone, card.offsetWidth / 2, 36)
+                          requestAnimationFrame(() => document.body.removeChild(clone))
+                        }
+
+                        onDragStart(profile.profileId)
+                      }}
+                      onDragEnd={(e) => {
+                        e.stopPropagation()
+                        setDragOverProfileId(null)
+                        onDragEnd()
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                      className={[
+                        "shrink-0 rounded p-0.5 transition-colors",
+                        canDragMerge
+                          ? "cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground"
+                          : "cursor-default text-muted-foreground/25",
+                      ].join(" ")}
+                    >
+                      <GripVertical className="h-4 w-4" />
+                    </div>
 
                     <Avatar className="h-9 w-9">
                       <AvatarFallback className="text-[11px]">{getInitials(primaryIdentity?.displayName ?? "P")}</AvatarFallback>
@@ -133,12 +189,16 @@ export function MatchingFriendsPanel({
                   {hasMultipleIdentities && (
                     <div className="mt-2 border-t border-border/70 pt-2">
                       <div className="flex items-center justify-between gap-2">
-                        <button type="button" onClick={() => onToggleExpanded(profile.profileId)} className="text-xs text-muted-foreground transition-colors hover:text-foreground">
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); onToggleExpanded(profile.profileId) }}
+                          className="text-xs text-muted-foreground transition-colors hover:text-foreground"
+                        >
                           {profile.expanded ? "Hide merged identities" : "Show merged identities"}
                         </button>
                         <button
                           type="button"
-                          onClick={() => onUnmerge(profile.profileId)}
+                          onClick={(e) => { e.stopPropagation(); onUnmerge(profile.profileId) }}
                           className="inline-flex items-center gap-1 text-xs text-amber-500/80 transition-colors hover:text-amber-500"
                         >
                           <GitMerge className="h-3 w-3" />
