@@ -38,18 +38,18 @@ function ScrollBar({
       data-slot="scroll-area-scrollbar"
       orientation={orientation}
       className={cn(
-        'flex touch-none p-px transition-colors select-none',
+        'flex touch-none select-none p-0.5 transition-colors',
         orientation === 'vertical' &&
-          'h-full w-2.5 border-l border-l-transparent',
+          'h-full w-2.5 border-l border-l-transparent bg-transparent',
         orientation === 'horizontal' &&
-          'h-2.5 flex-col border-t border-t-transparent',
+          'h-2.5 flex-col border-t border-t-transparent bg-transparent',
         className,
       )}
       {...props}
     >
       <ScrollAreaPrimitive.ScrollAreaThumb
         data-slot="scroll-area-thumb"
-        className="bg-border relative flex-1 rounded-full"
+        className="relative flex-1 rounded-full border border-transparent bg-gradient-to-b from-primary/75 to-accent/70 shadow-[0_0_0_1px_rgba(255,255,255,0.08),0_0_12px_rgba(0,0,0,0.12)]"
       />
     </ScrollAreaPrimitive.ScrollAreaScrollbar>
   )

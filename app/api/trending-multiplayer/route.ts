@@ -1,13 +1,5 @@
 import { NextResponse } from "next/server"
-
-type TrendingGame = {
-  name: string
-  category: string
-  playersNow: string
-  trendLabel: string
-  stores: string[]
-  imageUrl: string
-}
+import type { TrendingGame } from "@/types"
 
 type SteamMostPlayedResponse = {
   response?: {

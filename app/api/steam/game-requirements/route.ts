@@ -134,7 +134,7 @@ export async function GET(request: NextRequest) {
   }
 
   const now = Date.now()
-  const cached = requirementsCache.get(resolvedAppId)
+  const cached = requirementsCache.get(Number(resolvedAppId))
   if (cached && now < cached.expiresAt) {
     return NextResponse.json({ ...cached.payload, cached: true })
   }
@@ -172,11 +172,11 @@ export async function GET(request: NextRequest) {
     }
 
     const parsedPayload = {
-      appId: resolvedAppId,
+      appId: Number(resolvedAppId),
       ...parseMinimumRequirements(minimumRaw),
     }
 
-    requirementsCache.set(resolvedAppId, {
+    requirementsCache.set(Number(resolvedAppId), {
       expiresAt: now + REQUIREMENTS_CACHE_TTL_MS,
       payload: parsedPayload,
     })

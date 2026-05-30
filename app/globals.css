@@ -28,56 +28,6 @@
   --glow: oklch(0.7 0.25 180);
 }
 
-/* Design 2: Clean Minimal - Modern with subtle gaming elements */
-:root[data-theme="minimal"] {
-  --background: oklch(0.98 0 0);
-  --foreground: oklch(0.15 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.15 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.15 0 0);
-  --primary: oklch(0.45 0 0);
-  --primary-foreground: oklch(1 0 0);
-  --secondary: oklch(0.95 0 0);
-  --secondary-foreground: oklch(0.15 0 0);
-  --muted: oklch(0.94 0 0);
-  --muted-foreground: oklch(0.5 0 0);
-  --accent: oklch(0.55 0.15 250);
-  --accent-foreground: oklch(1 0 0);
-  --destructive: oklch(0.55 0.2 27);
-  --destructive-foreground: oklch(1 0 0);
-  --border: oklch(0.9 0 0);
-  --input: oklch(0.95 0 0);
-  --ring: oklch(0.45 0 0);
-  --radius: 0.75rem;
-  --glow: oklch(0.55 0.15 250);
-}
-
-/* Design 3: Glass Bold - Gradient-heavy with glassmorphism */
-:root[data-theme="glass"] {
-  --background: oklch(0.18 0.04 280);
-  --foreground: oklch(0.95 0 0);
-  --card: oklch(0.25 0.03 280 / 0.6);
-  --card-foreground: oklch(0.95 0 0);
-  --popover: oklch(0.2 0.03 280 / 0.8);
-  --popover-foreground: oklch(0.95 0 0);
-  --primary: oklch(0.7 0.2 200);
-  --primary-foreground: oklch(0.1 0.02 280);
-  --secondary: oklch(0.3 0.04 280);
-  --secondary-foreground: oklch(0.95 0 0);
-  --muted: oklch(0.28 0.03 280);
-  --muted-foreground: oklch(0.65 0 0);
-  --accent: oklch(0.75 0.18 340);
-  --accent-foreground: oklch(0.1 0.02 280);
-  --destructive: oklch(0.55 0.22 27);
-  --destructive-foreground: oklch(0.95 0 0);
-  --border: oklch(0.4 0.05 280 / 0.5);
-  --input: oklch(0.25 0.03 280 / 0.5);
-  --ring: oklch(0.7 0.2 200);
-  --radius: 1rem;
-  --glow: oklch(0.7 0.2 200);
-}
-
 /* Default theme */
 :root {
   --background: oklch(0.12 0.02 270);
@@ -152,8 +102,8 @@
 }
 
 @theme inline {
-  --font-sans: 'Geist', 'Geist Fallback';
-  --font-mono: 'Geist Mono', 'Geist Mono Fallback';
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -196,6 +146,33 @@
   * {
     @apply border-border outline-ring/50;
   }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--primary) transparent;
+  }
+
+  *::-webkit-scrollbar {
+    width: 0.7rem;
+    height: 0.7rem;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    border: 2px solid transparent;
+    border-radius: 9999px;
+    background: linear-gradient(180deg, color-mix(in oklch, var(--primary) 85%, white), color-mix(in oklch, var(--accent) 70%, black));
+    background-clip: padding-box;
+    box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--primary) 25%, transparent);
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, color-mix(in oklch, var(--primary) 95%, white), color-mix(in oklch, var(--accent) 85%, black));
+  }
+
   body {
     @apply bg-background text-foreground;
   }
