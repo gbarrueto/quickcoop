@@ -264,7 +264,7 @@ export function MatchingPage() {
       <div className="mx-auto max-w-7xl space-y-8">
         <MatchingHeader currentUser={currentUser} steamId={steamId} onOpenSpecs={() => setIsSpecsModalOpen(true)} />
 
-        <section className="grid gap-6 lg:grid-cols-[2.2fr_1fr]">
+        <section className="grid gap-6 lg:grid-cols-[2.2fr_1fr] lg:h-[calc(100vh-10rem)] lg:grid-rows-1">
           <MatchingLibraryPanel
             allUserGames={allUserGames}
             categoryFilteredGames={categoryFilteredGames}
@@ -285,7 +285,7 @@ export function MatchingPage() {
             onOpenRequirements={openRequirementsModal}
           />
 
-          <aside className="flex flex-col space-y-4">
+          <aside className="flex flex-col gap-4 lg:h-full lg:overflow-y-auto">
             <MatchingRecommendationsPanel recommendationsRef={recommendationsRef} recommendedGames={RECOMMENDED_GAMES} onScroll={scrollRecommendations} />
 
             <MatchingFriendGroupPanel selectedProfiles={selectedProfiles} onRemove={toggleFriendSelection} />

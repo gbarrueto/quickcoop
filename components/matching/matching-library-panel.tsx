@@ -77,7 +77,7 @@ export function MatchingLibraryPanel({
   onOpenRequirements,
 }: MatchingLibraryPanelProps) {
   return (
-    <Card className="flex flex-col border-border/70 bg-card/50">
+    <Card className="flex flex-col border-border/70 bg-card/50 lg:overflow-hidden">
       <CardHeader className="space-y-1 border-b border-border/70 px-5 pb-4 pt-5">
         <CardTitle className="text-xl">Your library</CardTitle>
         <CardDescription>
@@ -87,7 +87,7 @@ export function MatchingLibraryPanel({
         </CardDescription>
       </CardHeader>
 
-      <CardContent className="space-y-4 p-5">
+      <CardContent className="space-y-4 p-5 lg:flex lg:flex-col lg:flex-1 lg:min-h-0">
         <div className="rounded-xl border border-border/70 bg-background/40 p-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-xs font-medium">Category filters</p>
@@ -147,7 +147,7 @@ export function MatchingLibraryPanel({
           )}
         </div>
 
-        <ScrollArea className="h-[calc(100vh-20rem)] pr-1">
+        <ScrollArea className="h-[calc(100vh-20rem)] lg:h-auto lg:flex-1 lg:min-h-0 pr-1">
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
             {categoryFilteredGames.map((game, index) => (
               <GameTile
