@@ -39,6 +39,13 @@ export function QuickStartPanel({
     router.push("/matching")
   }
 
+  const handleGamePassKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault()
+      onGamePassToggle()
+    }
+  }
+
   return (
     <Card className="bg-card/50 backdrop-blur border-border rounded-xl py-0 gap-0">
       <CardContent className="p-6">
@@ -73,12 +80,13 @@ export function QuickStartPanel({
                 )}
               </Button>
 
-              <button
-                type="button"
+              <div
                 role="switch"
                 aria-checked={hasGamePass ?? false}
+                tabIndex={0}
                 onClick={onGamePassToggle}
-                className={`w-full flex items-center justify-between gap-3 px-4 py-2 rounded-md text-white text-sm font-medium transition-colors ${
+                onKeyDown={handleGamePassKeyDown}
+                className={`w-full flex items-center justify-between gap-3 px-4 py-2 rounded-md text-white text-sm font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring/60 ${
                   hasGamePass ? "bg-emerald-600 hover:bg-emerald-500" : "bg-[#107c10] hover:bg-[#0f6f0f]"
                 }`}
               >
@@ -98,7 +106,7 @@ export function QuickStartPanel({
                   tabIndex={-1}
                   aria-hidden="true"
                 />
-              </button>
+              </div>
 
               <Button type="button" className="w-full mt-2" disabled={!canBeginMatching} onClick={beginMatching}>
                 Begin matching

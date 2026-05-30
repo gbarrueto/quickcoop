@@ -1,1 +1,11 @@
-/** Matching page components — populated in Phase 3. */
+export { MatchingFriendGroupPanel } from "./matching-friend-group-panel"
+export { MatchingFriendsPanel } from "./matching-friends-panel"
+export { MatchingHeader } from "./matching-header"
+export { MatchingLibraryPanel } from "./matching-library-panel"
+export { MatchingPage } from "./matching-page"
+export { MatchingPage as default } from "./matching-page"
+export { MatchingRecommendationsPanel } from "./matching-recommendations-panel"
+export { MatchingRequirementsDialog } from "./matching-requirements-dialog"
+export { MatchingSpecsDialog } from "./matching-specs-dialog"
+export { PlatformBadge } from "./platform-badge"
+
