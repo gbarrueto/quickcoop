@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import { Users } from "lucide-react"
 import { identityKey } from "@/lib/matching"
 import type { CategoryFilterMode, FriendLibrarySnapshot, FriendProfile, GameCard } from "@/types"
 import { PlatformBadge } from "./platform-badge"
@@ -164,11 +165,17 @@ export function MatchingLibraryPanel({
           </div>
 
           {selectedProfiles.length > 0 && (
-            <FriendAvatarStack
-              profiles={selectedProfiles}
-              identityLibraries={identityLibraries}
-              onToggleSelection={onToggleSelection}
-            />
+            <div className="flex flex-col items-end gap-1.5">
+              <span className="inline-flex items-center gap-1 text-[9px] font-semibold uppercase tracking-widest text-primary/60">
+                <Users className="h-2.5 w-2.5" />
+                Playing with
+              </span>
+              <FriendAvatarStack
+                profiles={selectedProfiles}
+                identityLibraries={identityLibraries}
+                onToggleSelection={onToggleSelection}
+              />
+            </div>
           )}
         </div>
       </CardHeader>
