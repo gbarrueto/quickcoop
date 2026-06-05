@@ -11,9 +11,9 @@ type TrendingGamesPanelProps = {
 
 export function TrendingGamesPanel({ games, isLoading, loadError }: TrendingGamesPanelProps) {
   return (
-    <aside className="group absolute top-0 right-0 h-full content-center" aria-labelledby="matched-games-title">
+    <aside className="absolute top-0 right-0 h-full content-center" aria-labelledby="matched-games-title">
       <Card className="relative rounded-2xl border-border bg-card p-6 shadow-2xl gap-0
-                        transform translate-x-[70%] group-hover:translate-x-0
+                        transform translate-x-[70%] hover:translate-x-0
                         transition-transform duration-300 ease-in-out">
 
         <CardHeader className="px-0 pb-6 flex-row items-center justify-between space-y-0">
