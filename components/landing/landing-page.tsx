@@ -52,7 +52,7 @@ export function LandingPage() {
         onLogout={logout}
       />
 
-      <main className="relative z-10">
+      <main className="relative">
         <HeroSection
           currentUser={currentUser}
           steamId={steamId}
