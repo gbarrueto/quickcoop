@@ -33,7 +33,7 @@ export function HeroSection({
     <section className="relative px-6 py-20 lg:px-12 lg:py-32" aria-labelledby="hero-title">
       <div className="max-w-7xl mx-auto">
         <div className="grid lg:grid-cols-1 gap-12 items-center">
-          <article>
+          <article className="grid justify-items-center text-center">
             <h1 id="hero-title" className="text-4xl md:text-6xl font-bold leading-tight mb-6">
               Take your friends and
               <span className="block text-primary drop-shadow-[0_0_30px_rgba(0,255,200,0.5)]">
