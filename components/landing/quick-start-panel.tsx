@@ -16,6 +16,7 @@ type QuickStartPanelProps = {
   importedGames: string[]
   canBeginMatching: boolean
   onSteamConnectClick: () => void
+  onEpicConnectClick: () => void
   onGamePassToggle: () => void
   onImportClick: () => void
 }
@@ -27,6 +28,7 @@ export function QuickStartPanel({
   importedGames,
   canBeginMatching,
   onSteamConnectClick,
+  onEpicConnectClick,
   onGamePassToggle,
   onImportClick,
 }: QuickStartPanelProps) {
@@ -78,6 +80,15 @@ export function QuickStartPanel({
                     Connected
                   </Badge>
                 )}
+              </Button>
+
+              <Button
+                type="button"
+                onClick={onEpicConnectClick}
+                className="w-full justify-start gap-3 text-white bg-[#2a2a2a] hover:bg-[#3f3f3f]"
+              >
+                <img className="w-5 h-5" src="/epic-games-svgrepo-com.svg" alt="" />
+                Connect Epic Games
               </Button>
 
               <div
