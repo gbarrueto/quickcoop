@@ -11,17 +11,21 @@ type TrendingGamesPanelProps = {
 
 export function TrendingGamesPanel({ games, isLoading, loadError }: TrendingGamesPanelProps) {
   return (
-    <aside className="relative" aria-labelledby="matched-games-title">
-      <div className="absolute -inset-4 bg-primary/20 blur-3xl rounded-full" />
-      <Card className="relative rounded-2xl border-border bg-card p-6 shadow-2xl gap-0">
+    <aside className="group absolute top-0 right-0 h-full content-center" aria-labelledby="matched-games-title">
+      <Card className="relative rounded-2xl border-border bg-card p-6 shadow-2xl gap-0
+                        transform translate-x-[70%] group-hover:translate-x-0
+                        transition-transform duration-300 ease-in-out">
+
         <CardHeader className="px-0 pb-6 flex-row items-center justify-between space-y-0">
           <CardTitle id="matched-games-title" className="font-semibold text-base">
             Trending Multiplayer Games
           </CardTitle>
+          
           <Badge variant="secondary" className="text-xs text-primary bg-primary/10 border-transparent">
             {isLoading ? "Refreshing..." : "Live now"}
           </Badge>
         </CardHeader>
+
         <CardContent className="px-0">
           {loadError && (
             <p className="mb-4 rounded-md border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-xs text-amber-300">
@@ -52,27 +56,6 @@ export function TrendingGamesPanel({ games, isLoading, loadError }: TrendingGame
                     </div>
                     <div>
                       <p className="font-medium">{game.name}</p>
-                      <p className="text-sm text-muted-foreground">{game.category}</p>
-                      <div className="mt-1 flex items-center gap-2">
-                        {game.stores.map((store) => (
-                          <Badge
-                            key={store}
-                            variant="outline"
-                            className="text-[10px] uppercase tracking-wide px-2 py-0.5"
-                          >
-                            {store}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="text-right">
-                      <p className="text-sm font-medium">{game.playersNow} now</p>
-                      <div className="inline-flex items-center gap-1 text-xs text-emerald-500">
-                        <Star className="w-3 h-3" />
-                        {game.trendLabel}
-                      </div>
                     </div>
                   </div>
                 </article>
