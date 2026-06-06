@@ -13,11 +13,18 @@ type TrendingGamesPanelProps = {
 
 export function TrendingGamesPanel({ games, isLoading, loadError, activeIndex, onSelect }: TrendingGamesPanelProps) {
   return (
-    <aside className="absolute top-0 right-0 h-full content-center z-10" aria-labelledby="matched-games-title">
-      <Card className="relative rounded-2xl border-border bg-card p-6 shadow-2xl gap-0
-                        transform translate-x-[70%] hover:translate-x-0
-                        transition-transform duration-300 ease-in-out">
-        <CardHeader className="px-0 pb-6 flex-row items-center justify-between space-y-0">
+    <aside className="absolute top-0 right-0 h-full content-center z-2" aria-labelledby="matched-games-title">
+      <Card className="group relative rounded-2xl border-none shadow-none bg-card/0 p-6 gap-0
+                      transform translate-x-[80%] hover:translate-x-0
+                      transition-all duration-300 ease-in-out
+                      hover:bg-secondary/30
+                      "
+      >
+        <CardHeader className="opacity-0 px-0 pb-6 flex-row items-center justify-between space-y-0 
+                              group-hover:opacity-100
+                              transition-all duration-300 ease-in-out
+                              "
+        >
           <CardTitle id="matched-games-title" className="font-semibold text-base">
             Trending Multiplayer Games
           </CardTitle>
@@ -31,16 +38,17 @@ export function TrendingGamesPanel({ games, isLoading, loadError, activeIndex, o
               {loadError}
             </p>
           )}
-          <ul className="space-y-3">
+          <ul className="space-y-1">
             {games.map((game, index) => (
               <li
                 key={`${game.name}-${index}`}
-                onClick={() => onSelect(index)}  // ← dispara el cambio
-                className={`flex items-center justify-between p-4 rounded-xl transition-colors cursor-pointer group ${
-                  index === activeIndex
-                    ? "bg-primary/20 ring-1 ring-primary/40"  // ← estilo activo
-                    : "bg-secondary/50 hover:bg-secondary"
-                }`}
+                onClick={() => onSelect(index)}
+                className={`flex items-center justify-between p-2 rounded-xl transition-colors cursor-pointer group 
+                          hover:bg-primary
+                          ${ index === activeIndex ? "transform -translate-x-[10%]" : "" }
+                          transition-transform duration-300 ease-in-out 
+                          `
+                }
                 aria-current={index === activeIndex ? "true" : "false"}
                 aria-label={`Slide ${index + 1}`}
               >

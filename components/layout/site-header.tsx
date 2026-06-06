@@ -13,7 +13,7 @@ type SiteHeaderProps = {
 export function SiteHeader({ currentUser, onLoginClick, onLogout }: SiteHeaderProps) {
   return (
     <header className="relative z-10">
-      <nav className="fixed w-full bg-black/20 shadow-xl" aria-label="Primary">
+      <nav className="fixed w-full bg-black/30 shadow-xl" aria-label="Primary">
         <div className="flex items-center justify-between px-6 py-4 lg:px-12">
           <div className="flex items-center gap-2">
             <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center">
