@@ -30,16 +30,20 @@
 
 /* Default theme */
 :root {
-  --background: oklch(18.191% 0.07646 270.586);
+  --background: oklch(21.724% 0.0546 267.835);
   --foreground: oklch(0.95 0 0);
-  --card: oklch(54.617% 0.05649 270.933);
+  --card: oklch(21.724% 0.0546 267.835);
   --card-foreground: oklch(0.95 0 0);
   --popover: oklch(0.14 0.02 270);
   --popover-foreground: oklch(0.95 0 0);
   --primary: oklch(48.519% 0.20035 309.862);
   --primary-foreground: oklch(0.12 0.02 270);
-  --secondary: oklch(0.22 0.03 270);
+  --secondary: oklch(71.774% 0.13767 105.1);
   --secondary-foreground: oklch(0.95 0 0);
+  --tertiary: oklch(46.382% 0.16 265.519);
+  --tertiary-foreground: oklch(0.95 0 0);
+  --quaternary: oklch(58.832% 0.11838 56.262);
+  --quaternary-foreground: oklch(0.95 0 0);
   --muted: oklch(0.22 0.02 270);
   --muted-foreground: oklch(0.65 0 0);
   --accent: oklch(0.65 0.2 330);
@@ -114,6 +118,10 @@
   --color-primary-foreground: var(--primary-foreground);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
+  --color-tertiary: var(--tertiary);
+  --color-tertiary-foreground: var(--tertiary-foreground);
+  --color-quaternary: var(--quaternary);
+  --color-quaternary-foreground: var(--quaternary-foreground);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
   --color-accent: var(--accent);

@@ -73,17 +73,12 @@ export function AuthDialog({ open, onOpenChange, onAuthenticated }: AuthDialogPr
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md overflow-hidden border-border bg-card/95 p-0 shadow-2xl backdrop-blur-xl">
-        <div className="bg-gradient-to-br from-primary/15 via-transparent to-accent/10 px-6 pt-8 pb-6 text-center">
-          <DialogHeader className="items-center text-center">
-            <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/15 text-primary shadow-lg shadow-primary/15">
+        <div className="px-6 pt-6 pb-2 text-center">
+          <DialogHeader className="grid grid-cols-3 items-center">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/15 text-primary shadow-lg shadow-primary/15">
               <User className="h-7 w-7" />
             </div>
             <DialogTitle>{authMode === "login" ? "Login" : "Create account"}</DialogTitle>
-            <DialogDescription className="max-w-sm text-sm">
-              {authMode === "login"
-                ? "Use fixed mock credentials or your registered local user."
-                : "Create a local mock account without database."}
-            </DialogDescription>
           </DialogHeader>
         </div>
 
@@ -134,10 +129,23 @@ export function AuthDialog({ open, onOpenChange, onAuthenticated }: AuthDialogPr
           </div>
 
           <div className="flex gap-2">
-            <Button type="button" variant="outline" className="flex-1" onClick={toggleMode}>
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={toggleMode}
+              className="flex-1 bg-muted/80 hover:bg-muted-foreground/10" 
+            >
               {authMode === "login" ? "Need account" : "Have account"}
             </Button>
-            <Button type="button" className="flex-1" onClick={handleSubmit}>
+            <Button 
+              type="button" 
+              onClick={handleSubmit}
+              className={`flex-1 
+                          ${authMode === "login" 
+                            ? "bg-primary/80 hover:bg-primary" 
+                            : "bg-tertiary/80 hover:bg-tertiary"}
+              `} 
+            >
               {authMode === "login" ? "Login" : "Register"}
             </Button>
           </div>

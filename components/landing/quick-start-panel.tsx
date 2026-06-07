@@ -95,7 +95,7 @@ export function QuickStartPanel({
         <div 
           onClick={onImportClick}
           className={`flex items-center justify-between gap-3 px-6 py-2 rounded-3xl text-white text-sm font-medium 
-            transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring/60 bg-primary/80 hover:bg-primary }`
+            transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring/60 bg-tertiary/80 hover:bg-tertiary }`
           }
         >
           <Upload className="w-8 h-8" />
@@ -114,7 +114,7 @@ export function QuickStartPanel({
           disabled={!canBeginMatching || importedGames.length == 0} 
           onClick={beginMatching}
           className={`px-8 py-6 w-[50%] rounded-3xl text-white text-lg font-medium 
-            transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring/60 bg-primary/80 hover:bg-primary`
+            transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring/60 bg-quaternary/80 hover:bg-quaternary`
           }
         >
           BEGIN MATCHING

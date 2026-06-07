@@ -39,11 +39,11 @@ export function HeroSection({
             <section className="grid justify-items-center text-center">
               <h1 id="hero-title" className="text-4xl md:text-6xl font-bold leading-tight">
                 Take your friends and
-                <span className="block text-primary">
+                <span className="block text-quaternary">
                   Match Games
                 </span>
               </h1>
-              <p className="text-lg text-muted-foreground mb-8 max-w-lg">
+              <p className="text-lg text-foreground/80 mb-8 max-w-lg">
                 Connect your Steam account or import a list of games and match games with your friends.
               </p>
             </section>
