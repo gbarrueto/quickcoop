@@ -297,8 +297,8 @@ export function MatchingPage() {
   }
 
   return (
-    <main className="min-h-screen bg-background px-6 py-10 lg:px-12">
-      <div className="mx-auto max-w-7xl space-y-8">
+    <main className="h-screen bg-background px-4 lg:px-12">
+      <div className="mx-auto max-w-7xl">
         <MatchingHeader currentUser={currentUser} steamId={steamId} onOpenSpecs={() => setIsSpecsModalOpen(true)} />
 
         <section className="grid gap-6 lg:grid-cols-[2.2fr_1fr] lg:h-[calc(100vh-10rem)] lg:grid-rows-1">
@@ -326,8 +326,6 @@ export function MatchingPage() {
           />
 
           <aside className="flex flex-col gap-4 lg:h-full lg:overflow-y-auto">
-            <MatchingRecommendationsPanel recommendationsRef={recommendationsRef} recommendedGames={RECOMMENDED_GAMES} onScroll={scrollRecommendations} />
-
             <MatchingFriendsPanel
               allFriendProfiles={allFriendProfiles}
               canDragMerge={canDragMerge}
