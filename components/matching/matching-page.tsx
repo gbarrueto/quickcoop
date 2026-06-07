@@ -35,6 +35,7 @@ import { MatchingLibraryPanel } from "./matching-library-panel"
 import { MatchingRecommendationsPanel } from "./matching-recommendations-panel"
 import { MatchingRequirementsDialog } from "./matching-requirements-dialog"
 import { MatchingSpecsDialog } from "./matching-specs-dialog"
+import { Spinner } from "../ui/spinner"
 
 export function MatchingPage() {
   const recommendationsRef = useRef<HTMLDivElement | null>(null)
@@ -271,9 +272,9 @@ export function MatchingPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-background px-6 py-16 lg:px-12">
-        <div className="mx-auto max-w-7xl">
-          <p className="text-muted-foreground">Loading matching preparation...</p>
+      <main className="min-h-screen bg-background px-6 py-16 lg:px-12 flex">
+        <div className="mx-auto max-w-7xl flex-1 flex justify-center items-center">
+          <Spinner className="w-[10%] h-[10%] text-quaternary" />
         </div>
       </main>
     )

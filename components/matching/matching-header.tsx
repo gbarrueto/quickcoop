@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { ArrowLeft, Cpu, User } from "lucide-react"
+import { ArrowLeft, Cpu, LoaderCircle, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import type { MockUser } from "@/lib/mock-auth"
 

@@ -17,7 +17,7 @@ export function TrendingGamesPanel({ games, isLoading, loadError, activeIndex, o
       <Card className="group relative rounded-2xl border-none shadow-none bg-card/0 p-6 gap-0
                       transform translate-x-[80%] hover:translate-x-0
                       transition-all duration-300 ease-in-out
-                      hover:bg-secondary/30
+                      hover:bg-card/50
                       "
       >
         <CardHeader className="opacity-0 px-0 pb-6 flex-row items-center justify-between space-y-0 

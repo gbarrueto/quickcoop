@@ -49,14 +49,14 @@ export function QuickStartPanel({
   return (
     <div className="grid grid-rows-2 h-full">
 
-      <div className="flex justify-center gap-6 p-4">
+      <div className="flex justify-center gap-6 p-4 text-tertiary">
         <div
           onClick={onSteamConnectClick}
-          className={`flex items-center justify-between gap-3 px-6 py-2 rounded-3xl text-white text-sm font-medium 
+          className={`flex items-center justify-between gap-3 px-6 py-2 rounded-3xl text-sm font-medium 
             transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring/60 
             ${ steamId 
               ? "bg-emerald-600" 
-              : "bg-primary/80 hover:bg-primary" }`
+              : "bg-primary/80 hover:bg-primary text-secondary/60 hover:text-secondary/80" }`
           }
         >
           <img className="w-10 h-10" src="/steam-svgrepo-com.svg" alt="steam" />
@@ -72,9 +72,12 @@ export function QuickStartPanel({
           tabIndex={0}
           onClick={onGamePassToggle}
           onKeyDown={handleGamePassKeyDown}
-          className={`flex items-center justify-between gap-3 px-6 py-2 rounded-3xl text-white text-sm font-medium 
+          className={`flex items-center justify-between gap-3 px-6 py-2 rounded-3xl text-sm font-medium 
             transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring/60 
-            ${ hasGamePass ? "bg-emerald-600" : "bg-primary/80 hover:bg-primary" }`
+            ${ hasGamePass 
+              ? "bg-emerald-600" 
+              : "bg-primary/80 hover:bg-primary text-secondary/60 hover:text-secondary/80" 
+            }`
           }
         >
           <div className="flex items-center gap-3">
@@ -94,7 +97,7 @@ export function QuickStartPanel({
         
         <div 
           onClick={onImportClick}
-          className={`flex items-center justify-between gap-3 px-6 py-2 rounded-3xl text-white text-sm font-medium 
+          className={`flex items-center justify-between gap-3 px-6 py-2 rounded-3xl text-secondary/80 hover:text-secondary text-sm font-medium 
             transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring/60 bg-tertiary/80 hover:bg-tertiary }`
           }
         >
