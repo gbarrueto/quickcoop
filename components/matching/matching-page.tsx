@@ -109,6 +109,12 @@ export function MatchingPage() {
     })
   }, [requirementsParticipants, setPlayerSpecsById])
 
+  useEffect(() => {
+    if (!mergeNotice) return
+    const timer = setTimeout(() => setMergeNotice(null), 3500)
+    return () => clearTimeout(timer)
+  }, [mergeNotice])
+
   const toggleFriendSelection = (profileId: string) => {
     setFriendProfiles((prev) => prev.map((profile) => (profile.profileId === profileId ? { ...profile, selected: !profile.selected } : profile)))
     setEpicFriends((prev) => prev.map((profile) => (profile.profileId === profileId ? { ...profile, selected: !profile.selected } : profile)))

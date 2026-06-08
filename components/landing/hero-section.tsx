@@ -12,6 +12,7 @@ type HeroSectionProps = {
   isTrendingLoading: boolean
   trendingLoadError: string | null
   onSteamConnectClick: () => void
+  onEpicConnectClick: () => void
   onGamePassToggle: () => void
   onImportClick: () => void
 }
@@ -26,6 +27,7 @@ export function HeroSection({
   isTrendingLoading,
   trendingLoadError,
   onSteamConnectClick,
+  onEpicConnectClick,
   onGamePassToggle,
   onImportClick,
 }: HeroSectionProps) {
@@ -56,6 +58,7 @@ export function HeroSection({
                 importedGames={importedGames}
                 canBeginMatching={canBeginMatching}
                 onSteamConnectClick={onSteamConnectClick}
+                onEpicConnectClick={onEpicConnectClick}
                 onGamePassToggle={onGamePassToggle}
                 onImportClick={onImportClick}
               />
