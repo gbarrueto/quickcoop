@@ -152,10 +152,10 @@ export function MatchingLibraryPanel({
 }: MatchingLibraryPanelProps) {
   return (
     <Card className="flex flex-col border-border/70 bg-card/50 lg:overflow-hidden">
-      <CardHeader className="border-b border-border/70 px-5 pb-4 pt-5">
+      <CardHeader className="border-b border-border/70 px-5">
         <div className="flex items-start justify-between gap-4">
           <div className="space-y-1">
-            <CardTitle className="text-xl">Your library</CardTitle>
+            <CardTitle className="text-medium">Your library</CardTitle>
             <CardDescription>
               {selectedCount > 0
                 ? `${categoryFilteredGames.length} shared games with selected friends`
@@ -163,76 +163,17 @@ export function MatchingLibraryPanel({
             </CardDescription>
           </div>
 
-          {selectedProfiles.length > 0 && (
+          {/* {selectedProfiles.length > 0 && (
             <FriendAvatarStack
               profiles={selectedProfiles}
               identityLibraries={identityLibraries}
               onToggleSelection={onToggleSelection}
             />
-          )}
+          )} */}
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-4 p-5 lg:flex lg:flex-col lg:flex-1 lg:min-h-0">
-        <div className="rounded-xl border border-border/70 bg-background/40 p-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-xs font-medium">Category filters</p>
-            <div className="flex items-center gap-2">
-              {isLoadingCategories && <p className="text-[11px] text-primary">Loading categories...</p>}
-              <div className="inline-flex overflow-hidden rounded-md border border-border/80 bg-background/70 text-[10px] uppercase tracking-wide">
-                <button
-                  type="button"
-                  className={`px-2 py-1 transition-colors ${categoryFilterMode === "or" ? "bg-primary/15 text-primary" : "text-muted-foreground hover:text-foreground"}`}
-                  onClick={() => onSetCategoryFilterMode("or")}
-                >
-                  ANY
-                </button>
-                <button
-                  type="button"
-                  className={`border-l border-border/80 px-2 py-1 transition-colors ${categoryFilterMode === "and" ? "bg-primary/15 text-primary" : "text-muted-foreground hover:text-foreground"}`}
-                  onClick={() => onSetCategoryFilterMode("and")}
-                >
-                  ALL
-                </button>
-              </div>
-
-              {selectedCategories.length > 0 && (
-                <Button type="button" size="sm" variant="outline" className="h-6 px-2 text-[10px]" onClick={onClearFilters}>
-                  Clear filters
-                </Button>
-              )}
-            </div>
-          </div>
-
-          {categoryFilterError && <p className="mt-2 text-[11px] text-destructive">{categoryFilterError}</p>}
-
-          <div className="mt-2 flex flex-wrap gap-2">
-            {availableCategories.length > 0 ? (
-              availableCategories.map((category) => {
-                const selected = selectedCategories.includes(category)
-                return (
-                  <button
-                    key={category}
-                    type="button"
-                    onClick={() => onToggleCategory(category)}
-                    className={`rounded-full border px-2.5 py-1 text-[10px] uppercase tracking-wide transition-colors ${selected ? "border-primary bg-primary/15 text-primary" : "border-border bg-background/70 text-muted-foreground hover:text-foreground"}`}
-                  >
-                    {category}
-                  </button>
-                )
-              })
-            ) : (
-              <p className="text-[11px] text-muted-foreground">No category data available yet for the visible games.</p>
-            )}
-          </div>
-
-          {selectedCategories.length > 1 && (
-            <p className="mt-2 text-[11px] text-muted-foreground">
-              Current mode: {categoryFilterMode.toUpperCase()} ({categoryFilterMode === "or" ? "matches any selected category" : "must match all selected categories"})
-            </p>
-          )}
-        </div>
-
+      <CardContent className="px-5 py-0 lg:flex lg:flex-col lg:flex-1 lg:min-h-0">
         <ScrollArea className="h-[calc(100vh-20rem)] lg:h-auto lg:flex-1 lg:min-h-0 pr-1">
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
             {categoryFilteredGames.map((game, index) => (

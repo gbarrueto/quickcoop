@@ -36,6 +36,7 @@ import { MatchingRecommendationsPanel } from "./matching-recommendations-panel"
 import { MatchingRequirementsDialog } from "./matching-requirements-dialog"
 import { MatchingSpecsDialog } from "./matching-specs-dialog"
 import { Spinner } from "../ui/spinner"
+import { CategoryFiltersPanel } from "./matching-category-panel"
 
 export function MatchingPage() {
   const recommendationsRef = useRef<HTMLDivElement | null>(null)
@@ -298,10 +299,10 @@ export function MatchingPage() {
 
   return (
     <main className="h-screen bg-background px-4 lg:px-12">
-      <div className="mx-auto max-w-7xl">
+      <div className="mx-auto max-w-7xl h-full">
         <MatchingHeader currentUser={currentUser} steamId={steamId} onOpenSpecs={() => setIsSpecsModalOpen(true)} />
 
-        <section className="grid gap-6 lg:grid-cols-[2.2fr_1fr] lg:h-[calc(100vh-10rem)] lg:grid-rows-1">
+        <section className="grid gap-6 max-h-[90%] overflow-hidden lg:grid-rows-1">
           <MatchingLibraryPanel
             allUserGames={allUserGames}
             categoryFilteredGames={categoryFilteredGames}
@@ -325,7 +326,24 @@ export function MatchingPage() {
             onToggleSelection={toggleFriendSelection}
           />
 
-          <aside className="flex flex-col gap-4 lg:h-full lg:overflow-y-auto">
+          <aside className="absolute top-0 left-0 h-full bg-tertiary/60 transform -translate-x-[80%] hover:translate-x-0">
+            <CategoryFiltersPanel 
+              availableCategories={availableCategories}
+              selectedCategories={selectedCategories}
+              categoryFilterMode={categoryFilterMode}
+              isLoadingCategories={isLoadingCategories}
+              categoryFilterError={categoryFilterError}
+              onToggleCategory={(category) =>
+                setSelectedCategories((prev) =>
+                  prev.includes(category) ? prev.filter((value) => value !== category) : [...prev, category],
+                )
+              }
+              onSetCategoryFilterMode={setCategoryFilterMode}
+              onClearFilters={() => setSelectedCategories([])}
+            />
+          </aside>
+
+          <aside className="absolute top-0 right-0 flex flex-col gap-4 lg:h-full lg:overflow-y-auto transform translate-x-[90%] hover:translate-x-0">
             <MatchingFriendsPanel
               allFriendProfiles={allFriendProfiles}
               canDragMerge={canDragMerge}
