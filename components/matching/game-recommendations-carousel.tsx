@@ -9,7 +9,7 @@ type GameRecommendationsPanelProps = {
   onSelect: (index: number) => void 
 }
 
-export function GameRecommendationsPanel({ games, activeIndex, onSelect }: GameRecommendationsPanelProps) {
+export function GameRecommendationsCarousel({ games, activeIndex, onSelect }: GameRecommendationsPanelProps) {
   const itemRefs = useRef<(HTMLLIElement | null)[]>([])
 
   useEffect(() => {
@@ -22,33 +22,21 @@ export function GameRecommendationsPanel({ games, activeIndex, onSelect }: GameR
   return (
     <aside 
       aria-labelledby="matched-games-title"
-      className="absolute top-0 left-0 h-full overflow-scroll content-center z-2
-                transform -translate-x-[100%]
-                " 
+      className="absolute top-0 left-0 h-full w-full overflow-hidden content-center z-2 scrollbar-none" 
+      style={{scrollbarWidth: 'none'}}
     >
       <Card className="group relative rounded-2xl border-none shadow-none bg-card/0 gap-0
                       transition-all duration-300 ease-in-out
                       "
       >
-        <CardHeader className="px-0 pb-6 flex-row items-center justify-between space-y-0 
-                              group-hover:opacity-100
-                              transition-all duration-300 ease-in-out
-                              "
-        >
-          <CardTitle id="matched-games-title" className="font-semibold text-base">
-            Game recommendations
-          </CardTitle>
-        </CardHeader>
         <CardContent className="px-0">
-          <ul className="">
+          <ul className="grid justify-items-center">
             {games.map((game, index) => (
               <li
                 key={`${game.name}-${index}`}
                 ref={(el) => { itemRefs.current[index] = el }}
-                onClick={() => onSelect(index)}
                 className={`flex items-center justify-between px-2 py-1 rounded-xl transition-colors cursor-pointer group 
-                          hover:bg-primary
-                          ${ index === activeIndex ? "transform -translate-x-[10%]" : "" }
+                          ${ index === activeIndex ? "transform scale-125" : "" }
                           transition-transform duration-300 ease-in-out 
                           `
                 }
@@ -56,7 +44,7 @@ export function GameRecommendationsPanel({ games, activeIndex, onSelect }: GameR
                 aria-label={`Slide ${index + 1}`}
               >
                 <article className="flex items-center gap-4 w-full">
-                  <div className="relative h-8 w-12 overflow-hidden rounded-md border border-border bg-background/60">
+                  <div className="relative h-10 w-18 overflow-hidden rounded-md border border-border bg-background/60">
                     {game.imageUrl ? (
                       <img
                         src={game.imageUrl}
@@ -69,7 +57,13 @@ export function GameRecommendationsPanel({ games, activeIndex, onSelect }: GameR
                         <Gamepad2 className="h-5 w-5" />
                       </div>
                     )}
-                    <p className="absolute bottom-0 left-0 bg-background/50 text-[8px] truncate">{game.name}</p>
+                    <div className="absolute top-0 left-0 grid grid-rows-[20%_80%] items-center h-full w-full text-[8px] bg-background/80 opacity-0 hover:opacity-100">
+                      <div className="flex items-center gap-1 justify-self-end text-secondary pt-1 pr-1">
+                        <Star className="h-2 w-2" />
+                        {game.rating}
+                      </div>
+                      <div className="font-bold text-center">{game.name}</div>
+                    </div>
                   </div>
                 </article>
               </li>

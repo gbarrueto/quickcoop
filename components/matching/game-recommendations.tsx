@@ -1,16 +1,17 @@
 'use client'
 
 import type { RecommendedGame } from "@/types"
-import { GameRecommendationsPanel } from "./game-recommendations-panel"
+import { GameRecommendationsCarousel } from "./game-recommendations-carousel"
 import { BackgroundGames } from "./background-games"
 import { useCarousel } from "@/hooks/use-carousel"
 
 type GameRecommendationsPanelProps = {
   games: RecommendedGame[]
+  activeIndex: number
 }
 
-export function GameRecommendations({ games }: GameRecommendationsPanelProps) {
-  const { activeIndex, goTo } = useCarousel(games.length, 3000)
+export function GameRecommendations({ games, activeIndex }: GameRecommendationsPanelProps) {
+  
 
   return (
     <div className="absolute w-full h-full top-0 left-0">
@@ -18,11 +19,6 @@ export function GameRecommendations({ games }: GameRecommendationsPanelProps) {
         <BackgroundGames
           games={games}
           activeIndex={activeIndex}
-        />
-        <GameRecommendationsPanel
-          games={games}
-          activeIndex={activeIndex}
-          onSelect={goTo}
         />
       </div>
     </div>
