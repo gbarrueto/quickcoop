@@ -70,6 +70,8 @@ export function MatchingPage() {
   const [selectedGameForRequirements, setSelectedGameForRequirements] = useState<GameCard | null>(null)
   const [isRequirementsModalOpen, setIsRequirementsModalOpen] = useState(false)
   const [isSpecsModalOpen, setIsSpecsModalOpen] = useState(false)
+  const [isCategoryPanelOpen, setIsCategoryPanelOpen] = useState(false)
+  const [isFriendsPanelOpen, setIsFriendsPanelOpen] = useState(false)
 
   const { loadingIdentities, identityErrors } = useIdentityLibrary(friendProfiles, identityLibraries, setIdentityLibraries)
 
@@ -298,11 +300,11 @@ export function MatchingPage() {
   }
 
   return (
-    <main className="h-screen bg-background px-4 lg:px-12">
+    <main className="relative h-screen bg-background px-4 lg:px-12 overflow-x-hidden">
       <div className="mx-auto max-w-7xl h-full">
         <MatchingHeader currentUser={currentUser} steamId={steamId} onOpenSpecs={() => setIsSpecsModalOpen(true)} />
 
-        <section className="grid gap-6 max-h-[90%] overflow-hidden lg:grid-rows-1">
+        <section className="grid gap-6 max-h-[90%] overflow-hidden overflow-x-hidden lg:grid-rows-1">
           <MatchingLibraryPanel
             allUserGames={allUserGames}
             categoryFilteredGames={categoryFilteredGames}
@@ -315,6 +317,10 @@ export function MatchingPage() {
             isLoadingCategories={isLoadingCategories}
             categoryFilterError={categoryFilterError}
             categoriesByApp={categoriesByApp}
+            onOpenCategoryPanel={() => setIsCategoryPanelOpen(prev => !prev)}
+            onOpenFriendsPanel={() => setIsFriendsPanelOpen(prev => !prev)}
+            isCategoryPanelOpen={isCategoryPanelOpen}
+            isFriendsPanelOpen={isFriendsPanelOpen}
             onToggleCategory={(category) =>
               setSelectedCategories((prev) =>
                 prev.includes(category) ? prev.filter((value) => value !== category) : [...prev, category],
@@ -326,7 +332,11 @@ export function MatchingPage() {
             onToggleSelection={toggleFriendSelection}
           />
 
-          <aside className="absolute top-0 left-0 h-full bg-tertiary/60 transform -translate-x-[80%] hover:translate-x-0">
+          <aside className={`absolute top-0 left-0 h-full bg-tertiary/60 z-3 
+                            transition-transform duration-300 ease-in-out
+                            ${isCategoryPanelOpen ? "translate-x-0" : "-translate-x-[100%]"}
+                          `}
+          >
             <CategoryFiltersPanel 
               availableCategories={availableCategories}
               selectedCategories={selectedCategories}
@@ -343,7 +353,11 @@ export function MatchingPage() {
             />
           </aside>
 
-          <aside className="absolute top-0 right-0 flex flex-col gap-4 lg:h-full lg:overflow-y-auto transform translate-x-[90%] hover:translate-x-0">
+          <aside className={`absolute top-0 right-0 flex flex-col gap-4 lg:h-full lg:overflow-y-auto z-3
+                            transition-transform duration-300 ease-in-out
+                            ${isFriendsPanelOpen ? "translate-x-0" : "translate-x-[100%]"}
+                          `}
+          >
             <MatchingFriendsPanel
               allFriendProfiles={allFriendProfiles}
               canDragMerge={canDragMerge}
@@ -386,6 +400,19 @@ export function MatchingPage() {
           playerSpecsById={playerSpecsById}
           onUpdatePlayerSpecs={updatePlayerSpecs}
         />
+
+        <div 
+          onClick={() => {
+            setIsCategoryPanelOpen(false);
+            setIsFriendsPanelOpen(false);
+          }}
+          className={`absolute w-full h-full top-0 left-0 bg-background/40 z-2
+                    ${isCategoryPanelOpen || isFriendsPanelOpen
+                      ? ""
+                      : "hidden"
+                    }
+          `}
+        ></div>
       </div>
     </main>
   )

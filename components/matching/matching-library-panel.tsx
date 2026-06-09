@@ -19,6 +19,10 @@ type MatchingLibraryPanelProps = {
   isLoadingCategories: boolean
   categoryFilterError: string | null
   categoriesByApp: Record<number, string[]>
+  isCategoryPanelOpen: boolean
+  isFriendsPanelOpen: boolean
+  onOpenCategoryPanel: () => void
+  onOpenFriendsPanel: () => void
   onToggleCategory: (category: string) => void
   onSetCategoryFilterMode: (mode: CategoryFilterMode) => void
   onClearFilters: () => void
@@ -136,23 +140,16 @@ export function MatchingLibraryPanel({
   allUserGames,
   categoryFilteredGames,
   selectedCount,
-  selectedProfiles,
-  identityLibraries,
-  availableCategories,
-  selectedCategories,
-  categoryFilterMode,
-  isLoadingCategories,
-  categoryFilterError,
   categoriesByApp,
-  onToggleCategory,
-  onSetCategoryFilterMode,
-  onClearFilters,
+  isCategoryPanelOpen,
+  isFriendsPanelOpen,
+  onOpenCategoryPanel,
+  onOpenFriendsPanel,
   onOpenRequirements,
-  onToggleSelection,
 }: MatchingLibraryPanelProps) {
   return (
     <Card className="flex flex-col border-border/70 bg-card/50 lg:overflow-hidden">
-      <CardHeader className="border-b border-border/70 px-5">
+      <CardHeader className="border-border/70 px-5">
         <div className="flex items-start justify-between gap-4">
           <div className="space-y-1">
             <CardTitle className="text-medium">Your library</CardTitle>
@@ -163,13 +160,30 @@ export function MatchingLibraryPanel({
             </CardDescription>
           </div>
 
-          {/* {selectedProfiles.length > 0 && (
-            <FriendAvatarStack
-              profiles={selectedProfiles}
-              identityLibraries={identityLibraries}
-              onToggleSelection={onToggleSelection}
-            />
-          )} */}
+          <div className="flex gap-2">
+            <Button 
+              onClick={onOpenCategoryPanel}
+              className={`border border-primary/50 text-primary transition-colors
+                          ${isCategoryPanelOpen
+                            ? "bg-primary/60 text-secondary hover:bg-primary/60"
+                            : "bg-background hover:bg-primary/20"
+                          }
+              `}
+            >
+              Categories
+            </Button>
+            <Button 
+              onClick={onOpenFriendsPanel}
+              className={`border border-primary/50 text-primary transition-colors
+                          ${isFriendsPanelOpen
+                            ? "bg-primary/60 text-secondary hover:bg-primary/60"
+                            : "bg-background hover:bg-primary/20"
+                          }
+              `}
+            >
+              Friends
+            </Button>
+          </div>
         </div>
       </CardHeader>
 
