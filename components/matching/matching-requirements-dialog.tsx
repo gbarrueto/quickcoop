@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/dialog"
 import { DEFAULT_PLAYER_SPECS, inferCpuTier, inferGpuTier, osMatchesPlayer } from "@/lib/matching"
 import type { GameCard, GameRequirementsPayload, PlayerSystemSpecs, RequirementsParticipant } from "@/types"
+import { Spinner } from "../ui/spinner"
 
 type MatchingRequirementsDialogProps = {
   open: boolean
@@ -41,25 +42,26 @@ export function MatchingRequirementsDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto p-0">
-        <div className="border-b border-border/70 p-4 sm:p-6">
-          <DialogHeader className="gap-3">
-            <div className="overflow-hidden rounded-xl border border-border/70 bg-secondary/30">
+        <div className="border-border/70">
+          <DialogHeader className="relative gap-2 items-center py-3">
+            <div className="absolute top-0 left-0 w-full h-full overflow-hidden rounded-xl border border-border/70 bg-secondary/30">
               {selectedGame?.imageUrl ? (
-                <img src={selectedGame.imageUrl} alt={selectedGame.name} className="h-40 w-full object-cover" />
+                <img src={selectedGame.imageUrl} alt={selectedGame.name} className="h-15 w-full object-cover blur-xs" />
               ) : (
                 <div className="flex h-40 w-full items-center justify-center bg-secondary/40 text-sm text-muted-foreground">
                   No image available
                 </div>
               )}
             </div>
-            <DialogTitle>{selectedGame?.name ?? "Game requirements"}</DialogTitle>
-            <DialogDescription>Review quickly if every selected player can run this game.</DialogDescription>
+            <div className="absolute top-0 left-0 h-full w-full bg-background/50"></div>
+            <DialogTitle className="z-2">{selectedGame?.name ?? "Game requirements"}</DialogTitle>
+            <DialogDescription className="z-2">Review quickly if every selected player can run this game.</DialogDescription>
           </DialogHeader>
         </div>
 
-        <div className="space-y-4 p-4 sm:p-6">
+        <div className="space-y-4 px-5 pb-4 grid justify-items-center">
           {selectedGame && requirementsLoadingByApp[selectedGame.appId] && (
-            <p className="text-sm text-muted-foreground">Loading minimum requirements...</p>
+            <Spinner className="h-8 w-8 text-quaternary" />
           )}
 
           {selectedGame && requirementsErrorByApp[selectedGame.appId] && (
