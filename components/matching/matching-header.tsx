@@ -16,8 +16,8 @@ export function MatchingHeader({ currentUser, steamId, onOpenSpecs, activeIndex 
   return (
     <header className="relative flex flex-col gap-4 px-4 py-2 md:flex-row md:items-center md:justify-between">
       <div className="z-2">
-        <h1 className="text-3xl font-bold">Prepare matching</h1>
-        <p className="mt-1 text-muted-foreground">
+        <h1 className="text-3xl font-bold text-secondary">Prepare matching</h1>
+        <p className="mt-1 text-white/70">
           Select friends to filter games everyone owns. Drag one friend onto another to merge identities across platforms.
         </p>
       </div>

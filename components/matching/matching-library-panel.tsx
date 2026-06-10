@@ -6,6 +6,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { identityKey } from "@/lib/matching"
 import type { CategoryFilterMode, FriendLibrarySnapshot, FriendProfile, GameCard } from "@/types"
 import { PlatformBadge } from "./platform-badge"
+import { Star } from "lucide-react"
 
 type MatchingLibraryPanelProps = {
   allUserGames: GameCard[]
@@ -100,8 +101,23 @@ function GameTile({ game, categories, onOpenRequirements }: { game: GameCard; ca
     <button
       type="button"
       onClick={() => onOpenRequirements(game)}
-      className="overflow-hidden rounded-xl border border-border bg-secondary/20 text-left transition-colors hover:border-primary/40 hover:bg-secondary/30"
+      className="relative grid overflow-hidden rounded-xl border border-border bg-secondary/20 text-left transition-colors hover:border-primary/40 hover:bg-secondary/30"
     >
+      <div className="absolute top-1 right-1 flex bg-background/80 rounded-full items-center">
+        <span>
+          {game.rating > 0 
+            ? (
+              <div className="flex items-center gap-1 mx-2 text-xs text-secondary">
+                <Star className="h-3 w-3" />
+                {game.rating}
+              </div>
+            )
+            : ""
+          }
+        </span>
+        <PlatformBadge platform={game.platform} />
+      </div>
+
       <div className="h-20 w-full bg-secondary/40">
         {game.imageUrl ? (
           <img src={game.imageUrl} alt={game.name} className="h-full w-full object-cover" loading="lazy" />
@@ -114,11 +130,8 @@ function GameTile({ game, categories, onOpenRequirements }: { game: GameCard; ca
 
       <div className="space-y-1 p-2.5">
         <h3 className="line-clamp-2 text-sm leading-tight font-medium">{game.name}</h3>
-        <PlatformBadge platform={game.platform} />
 
         <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <span>{game.players} players</span>
-          <span>{game.rating > 0 ? `Rating ${game.rating}` : ""}</span>
         </div>
 
         <div className="flex flex-wrap gap-1 pt-1">

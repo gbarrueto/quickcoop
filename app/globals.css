@@ -30,7 +30,7 @@
 
 /* Default theme */
 :root {
-  --background: oklch(21.724% 0.0546 267.835);
+  --background: oklch(21.299% 0.05261 268.781);
   --foreground: oklch(0.95 0 0);
   --card: oklch(21.724% 0.0546 267.835);
   --card-foreground: oklch(0.95 0 0);
