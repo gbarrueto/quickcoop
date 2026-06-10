@@ -48,7 +48,6 @@ export function SiteHeader({ currentUser, onLoginClick, onLogout }: SiteHeaderPr
             <Button
               type="button"
               variant="outline"
-              className="border-primary/50 hover:bg-primary/10"
               onClick={onLoginClick}
             >
               Login

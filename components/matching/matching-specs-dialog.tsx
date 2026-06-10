@@ -29,20 +29,17 @@ export function MatchingSpecsDialog({ open, onOpenChange, playerSpecsById, onUpd
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg overflow-hidden border-border bg-card/95 p-0 shadow-2xl backdrop-blur-xl">
-        <div className="bg-gradient-to-br from-primary/15 via-transparent to-accent/10 px-6 pb-6 pt-8">
+      <DialogContent className="max-w-lg max-h-[95vh] overflow-hidden border-border bg-card/95 p-0 shadow-2xl backdrop-blur-xl">
+        <div className="px-6 pt-4">
           <DialogHeader className="items-center text-center">
-            <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/15 text-primary shadow-lg">
-              <Cpu className="h-7 w-7" />
-            </div>
             <DialogTitle>My hardware specs</DialogTitle>
-            <DialogDescription className="max-w-sm text-sm">
+            <DialogDescription className="max-w-sm text-sm text-center">
               Set your specs once and they'll be used automatically when checking game requirements.
             </DialogDescription>
           </DialogHeader>
         </div>
 
-        <div className="space-y-4 px-6 py-6">
+        <div className="space-y-4 px-6 pb-6">
           <div className="space-y-1.5">
             <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Operating System</label>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -51,7 +48,11 @@ export function MatchingSpecsDialog({ open, onOpenChange, playerSpecsById, onUpd
                   key={os}
                   type="button"
                   onClick={() => onUpdatePlayerSpecs("self", "os", os)}
-                  className={`rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${specs.os === os ? "border-primary bg-primary/15 text-primary" : "border-border bg-secondary/30 text-muted-foreground hover:border-primary/40"}`}
+                  className={`rounded-lg border px-3 py-2 text-xs font-medium transition-colors 
+                            ${specs.os === os 
+                              ? "border-secondary bg-secondary/70" 
+                              : "border-border bg-secondary/30 text-muted-foreground hover:border-secondary/40 hover:bg-secondary/40"}
+                  `}
                 >
                   {os}
                 </button>
@@ -67,7 +68,11 @@ export function MatchingSpecsDialog({ open, onOpenChange, playerSpecsById, onUpd
                   key={tier.value}
                   type="button"
                   onClick={() => onUpdatePlayerSpecs("self", "cpuTier", tier.value)}
-                  className={`flex flex-col items-center rounded-lg border px-2 py-2 text-xs transition-colors ${specs.cpuTier === tier.value ? "border-primary bg-primary/15 text-primary" : "border-border bg-secondary/30 text-muted-foreground hover:border-primary/40"}`}
+                  className={`flex flex-col items-center rounded-lg border px-2 py-2 text-xs transition-colors 
+                    ${specs.cpuTier === tier.value 
+                      ? "border-secondary bg-secondary/70" 
+                      : "border-border bg-secondary/30 text-muted-foreground hover:border-secondary/40 hover:bg-secondary/40"}
+                  `}
                 >
                   <span className="font-semibold">{tier.value}</span>
                   <span className="mt-0.5 text-[9px] opacity-70">{cpuLabels[index]}</span>
@@ -85,7 +90,11 @@ export function MatchingSpecsDialog({ open, onOpenChange, playerSpecsById, onUpd
                   key={tier.value}
                   type="button"
                   onClick={() => onUpdatePlayerSpecs("self", "gpuTier", tier.value)}
-                  className={`flex flex-col items-center rounded-lg border px-2 py-2 text-xs transition-colors ${specs.gpuTier === tier.value ? "border-primary bg-primary/15 text-primary" : "border-border bg-secondary/30 text-muted-foreground hover:border-primary/40"}`}
+                  className={`flex flex-col items-center rounded-lg border px-2 py-2 text-xs transition-colors 
+                    ${specs.gpuTier === tier.value 
+                      ? "border-secondary bg-secondary/70" 
+                      : "border-border bg-secondary/30 text-muted-foreground hover:border-secondary/40 hover:bg-secondary/40"}
+                  `}
                 >
                   <span className="font-semibold">{tier.value}</span>
                   <span className="mt-0.5 text-[9px] opacity-70">{gpuLabels[index]}</span>
@@ -103,7 +112,11 @@ export function MatchingSpecsDialog({ open, onOpenChange, playerSpecsById, onUpd
                     key={gb}
                     type="button"
                     onClick={() => onUpdatePlayerSpecs("self", "ramGb", gb)}
-                    className={`rounded-lg border py-2 text-xs font-medium transition-colors ${specs.ramGb === gb ? "border-primary bg-primary/15 text-primary" : "border-border bg-secondary/30 text-muted-foreground hover:border-primary/40"}`}
+                    className={`rounded-lg border py-2 text-xs font-medium transition-colors 
+                      ${specs.ramGb === gb 
+                        ? "border-secondary bg-secondary/70" 
+                        : "border-border bg-secondary/30 text-muted-foreground hover:border-secondary/40 hover:bg-secondary/40"}
+                    `}
                   >
                     {gb}
                   </button>
@@ -119,7 +132,11 @@ export function MatchingSpecsDialog({ open, onOpenChange, playerSpecsById, onUpd
                     key={gb}
                     type="button"
                     onClick={() => onUpdatePlayerSpecs("self", "vramGb", gb)}
-                    className={`rounded-lg border py-2 text-xs font-medium transition-colors ${specs.vramGb === gb ? "border-primary bg-primary/15 text-primary" : "border-border bg-secondary/30 text-muted-foreground hover:border-primary/40"}`}
+                    className={`rounded-lg border py-2 text-xs font-medium transition-colors 
+                      ${specs.vramGb === gb 
+                        ? "border-secondary bg-secondary/70" 
+                        : "border-border bg-secondary/30 text-muted-foreground hover:border-secondary/40 hover:bg-secondary/40"}
+                    `}
                   >
                     {gb}
                   </button>
@@ -136,7 +153,11 @@ export function MatchingSpecsDialog({ open, onOpenChange, playerSpecsById, onUpd
                   key={gb}
                   type="button"
                   onClick={() => onUpdatePlayerSpecs("self", "storageGb", gb)}
-                  className={`rounded-lg border py-2 text-xs font-medium transition-colors ${specs.storageGb === gb ? "border-primary bg-primary/15 text-primary" : "border-border bg-secondary/30 text-muted-foreground hover:border-primary/40"}`}
+                  className={`rounded-lg border py-2 text-xs font-medium transition-colors 
+                    ${specs.storageGb === gb 
+                      ? "border-secondary bg-secondary/70" 
+                      : "border-border bg-secondary/30 text-muted-foreground hover:border-secondary/40 hover:bg-secondary/40"}
+                  `}
                 >
                   {gb}
                 </button>
