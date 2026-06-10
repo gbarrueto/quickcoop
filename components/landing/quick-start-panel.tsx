@@ -16,6 +16,7 @@ type QuickStartPanelProps = {
   importedGames: string[]
   canBeginMatching: boolean
   onSteamConnectClick: () => void
+  onEpicConnectClick: () => void
   onGamePassToggle: () => void
   onImportClick: () => void
 }
@@ -27,6 +28,7 @@ export function QuickStartPanel({
   importedGames,
   canBeginMatching,
   onSteamConnectClick,
+  onEpicConnectClick,
   onGamePassToggle,
   onImportClick,
 }: QuickStartPanelProps) {
@@ -65,8 +67,18 @@ export function QuickStartPanel({
             : <Link2Off className="h-6 w-6" />
           }
         </div>
-
+        
         <div
+          onClick={onEpicConnectClick}
+          className={`flex items-center justify-between gap-3 px-6 py-2 rounded-3xl text-sm font-medium 
+            transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring/60`
+          }
+        >
+          <img className="w-10 h-10" src="/epic-games-svgrepo-com.sv" alt="epic" />
+          Connect Epic Games
+        </div>
+
+         <div
           role="switch"
           aria-checked={hasGamePass ?? false}
           tabIndex={0}
