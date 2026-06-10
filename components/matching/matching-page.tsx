@@ -341,9 +341,9 @@ export function MatchingPage() {
               onToggleSelection={toggleFriendSelection}
             />
 
-            <aside className={`absolute top-0 left-0 h-full bg-tertiary/60 z-3 
+            <aside className={`absolute top-0 left-0 h-full bg-background z-3 w-[20%]
                               transition-transform duration-300 ease-in-out
-                              ${isCategoryPanelOpen ? "translate-x-0" : "-translate-x-[100%]"}
+                              ${isCategoryPanelOpen ? "translate-x-0 shadow-lg shadow-tertiary" : "-translate-x-[100%]"}
                             `}
             >
               <CategoryFiltersPanel 
@@ -415,13 +415,15 @@ export function MatchingPage() {
               setIsCategoryPanelOpen(false);
               setIsFriendsPanelOpen(false);
             }}
-            className={`absolute w-full h-full top-0 left-0 bg-background/40 z-2
+            className={`absolute w-full h-full top-0 left-0 bg-tertiary/20 z-2
                       ${isCategoryPanelOpen || isFriendsPanelOpen
                         ? ""
                         : "hidden"
                       }
             `}
-          ></div>
+          >
+            <div className="h-full w-full bg-background/30"></div>
+          </div>
         </div>
       </div>
     </main>

@@ -54,8 +54,8 @@ export function MatchingFriendsPanel({
   const [dragOverProfileId, setDragOverProfileId] = useState<string | null>(null)
 
   return (
-    <Card className="flex flex-col border-border/70 bg-card/50">
-      <CardHeader className="space-y-1 border-b border-border/70 px-5 pb-4 pt-5">
+    <Card className="flex flex-col border-border/70 bg-background/80">
+      <CardHeader className="border-b border-border/70 px-5">
         <CardTitle className="text-xl">Friends</CardTitle>
         <CardDescription>Click a card to select. Drag the handle to merge identities.</CardDescription>
       </CardHeader>
