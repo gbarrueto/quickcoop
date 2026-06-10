@@ -66,9 +66,8 @@ export function LandingPage() {
           onGamePassToggle={toggleGamePass}
           onImportClick={() => setImportModalOpen(true)}
         />
-        <FeaturesSection />
-        <StatsSection />
-        <CtaSection />
+        {/* <FeaturesSection />
+        <StatsSection /> */}
       </main>
 
       <SteamConnectDialog

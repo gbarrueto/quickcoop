@@ -21,14 +21,14 @@ export function SiteHeader({ currentUser, onLoginClick, onLogout }: SiteHeaderPr
             </div>
             <span className="text-xl font-bold tracking-tight">QCoop</span>
           </div>
-          <div className="hidden md:flex items-center gap-8 text-sm">
+          {/* <div className="hidden md:flex items-center gap-8 text-sm">
             <a href="#features" className="text-foreground/80 hover:text-foreground transition-colors">
               Features
             </a>
             <a href="#how-it-works" className="text-foreground/80 hover:text-foreground transition-colors">
               How It Works
             </a>
-          </div>
+          </div> */}
           {currentUser ? (
             <div className="flex items-center gap-2 bg-primary/20 rounded-full">
               <Avatar className="h-9 w-9 border border-primary/40 bg-primary/50">
