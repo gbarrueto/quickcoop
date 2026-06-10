@@ -54,15 +54,15 @@ export function MatchingFriendsPanel({
   const [dragOverProfileId, setDragOverProfileId] = useState<string | null>(null)
 
   return (
-    <Card className="flex flex-col border-border/70 bg-background/80">
-      <CardHeader className="border-b border-border/70 px-5">
-        <CardTitle className="text-xl">Friends</CardTitle>
-        <CardDescription>Click a card to select. Drag the handle to merge identities.</CardDescription>
+    <Card className="flex flex-col border-border/70 bg-background/80 h-full gap-0 py-0 pt-2 overflow-hidden">
+      <CardHeader className="border-border/70 px-5 shrink-0">
+        <CardTitle className="text-xs">Friends</CardTitle>
+        <CardDescription className="text-xs">Click to select. Drag to merge.</CardDescription>
       </CardHeader>
 
-      <CardContent className="space-y-4 p-5">
+      <CardContent className="space-y-2 p-5 flex flex-col flex-1 min-h-0 gap-1.5">
         {tipVisible && (
-          <div className="relative rounded-lg border border-primary/30 bg-primary/10 p-3 text-xs text-primary">
+          <div className="relative shrink-0 rounded-lg border border-primary/30 bg-primary/10 p-3 text-xs text-primary">
             <button
               type="button"
               onClick={() => setTipVisible(false)}
@@ -73,23 +73,19 @@ export function MatchingFriendsPanel({
             </button>
             <p className="font-medium">Merge tip</p>
             <p className="mt-1">Hold and drag the grip handle onto another friend to merge identities across platforms.</p>
-            <p className="mt-2 inline-flex items-center gap-1">
-              <UserRoundPlus className="h-3.5 w-3.5" />
-              Merging between users of the same platform is blocked.
-            </p>
           </div>
         )}
 
-        {mergeNotice && <p className="text-xs text-amber-500">{mergeNotice}</p>}
+        {mergeNotice && <p className="shrink-0 text-xs text-secondary font-bold">{mergeNotice}</p>}
 
         {selectedCount > 0 && (
-          <Badge variant="secondary" className="inline-flex w-fit items-center gap-2 rounded-full px-3 py-1 text-xs text-emerald-700">
+          <Badge variant="secondary" className="inline-flex w-fit shrink-0 items-center gap-2 rounded-full px-3 py-1 text-xs text-emerald-700">
             <span className="h-2 w-2 rounded-full bg-emerald-500" />
             Filtering with {selectedCount} selected {selectedCount === 1 ? "friend" : "friends"}
           </Badge>
         )}
 
-        <ScrollArea className="h-[calc(100vh-20rem)] pr-1">
+        <ScrollArea className="flex-1 min-h-0 pr-1">
           <div className="space-y-3">
             {allFriendProfiles.map((profile) => {
               const primaryIdentity = profile.identities[0]
@@ -105,10 +101,10 @@ export function MatchingFriendsPanel({
                 isDragSource
                   ? "opacity-40 border-dashed border-primary/30 bg-secondary/10"
                   : isDragTarget
-                    ? "border-primary/60 bg-primary/15 ring-2 ring-primary/25 shadow-md shadow-primary/10"
+                    ? "border-primary/60 bg-primary/15 ring-2 ring-primary/25 shadow-md shadow-primary/10 text-secondary"
                     : profile.selected
-                      ? "border-primary/50 bg-primary/10"
-                      : "border-border bg-secondary/20 hover:bg-secondary/30",
+                      ? "border-tertiary/70 bg-tertiary/80"
+                      : "border-tertiary/50 bg-tertiary/10 hover:bg-tertiary/20 text-white/60 hover:text-white/90",
               ].join(" ")
 
               return (

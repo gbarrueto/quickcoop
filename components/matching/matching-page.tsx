@@ -362,9 +362,9 @@ export function MatchingPage() {
               />
             </aside>
 
-            <aside className={`absolute top-0 right-0 flex flex-col gap-4 lg:h-full lg:overflow-y-auto z-3
+            <aside className={`absolute top-0 right-0 flex flex-col gap-4 lg:h-screen lg:overflow-y-auto z-3 w-[30%] bg-background
                               transition-transform duration-300 ease-in-out
-                              ${isFriendsPanelOpen ? "translate-x-0" : "translate-x-[100%]"}
+                              ${isFriendsPanelOpen ? "translate-x-0 shadow-lg shadow-tertiary" : "translate-x-[100%]"}
                             `}
             >
               <MatchingFriendsPanel
