@@ -52,7 +52,7 @@ export function LandingPage() {
         onLogout={logout}
       />
 
-      <main className="relative z-10">
+      <main className="relative">
         <HeroSection
           currentUser={currentUser}
           steamId={steamId}
@@ -67,9 +67,8 @@ export function LandingPage() {
           onGamePassToggle={toggleGamePass}
           onImportClick={() => setImportModalOpen(true)}
         />
-        <FeaturesSection />
-        <StatsSection />
-        <CtaSection />
+        {/* <FeaturesSection />
+        <StatsSection /> */}
       </main>
 
       <SteamConnectDialog

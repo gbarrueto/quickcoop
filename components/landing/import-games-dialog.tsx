@@ -47,14 +47,14 @@ export function ImportGamesDialog({
         onPointerDownOutside={(event) => event.preventDefault()}
         onEscapeKeyDown={(event) => event.preventDefault()}
       >
-        <div className="bg-gradient-to-br from-primary/15 via-transparent to-accent/10 px-6 pt-8 pb-6">
+        <div className="pt-6 pb-2">
           <DialogHeader className="items-center text-center">
-            <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-secondary shadow-lg">
-              <Upload className="w-6 h-6 text-primary" />
+            <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-tertiary/20 shadow-lg">
+              <Upload className="w-6 h-6 text-secondary" />
             </div>
             <DialogTitle>Import game list</DialogTitle>
             <DialogDescription className="max-w-sm text-sm">
-              Paste your games one per line. Works with any platform — Epic, Xbox, GOG, or any other.
+              Paste your games one per line.
             </DialogDescription>
           </DialogHeader>
         </div>
@@ -62,7 +62,7 @@ export function ImportGamesDialog({
         <div className="space-y-5 px-6 py-6">
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label htmlFor="import-textarea">Your games</Label>
+              <Label htmlFor="import-textarea" className="text-muted-foreground">Your games</Label>
               {detectedGames.length > 0 && (
                 <span className="text-xs text-primary">{detectedGames.length} games detected</span>
               )}

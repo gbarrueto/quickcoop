@@ -186,7 +186,7 @@ export function PrivacyPolicy() {
 
       {/* Navigation */}
       <header className="relative z-10">
-        <nav className="flex items-center justify-between px-6 py-4 lg:px-12">
+        <nav className="flex items-center justify-between px-6 py-2 lg:px-12">
           <Link href="/" className="flex items-center gap-2 group">
             <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center">
               <Gamepad2 className="w-6 h-6 text-primary-foreground" />
@@ -203,15 +203,11 @@ export function PrivacyPolicy() {
         </nav>
       </header>
 
-      <main className="relative z-10 px-6 py-12 lg:px-12 lg:py-20">
+      <main className="relative z-10 px-6 py-2 lg:px-12">
         <div className="max-w-3xl mx-auto">
 
           {/* Header */}
           <div className="mb-12">
-            <div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-1.5 text-sm text-primary mb-6">
-              <Shield className="w-4 h-4" />
-              Legal
-            </div>
             <h1 className="text-4xl md:text-5xl font-bold leading-tight mb-4">
               Privacy Policy
             </h1>
