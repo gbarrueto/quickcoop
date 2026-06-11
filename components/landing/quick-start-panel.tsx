@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { Switch } from "@/components/ui/switch"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useState } from "react"
 
 type QuickStartPanelProps = {
   currentUser: MockUser | null
@@ -34,6 +35,8 @@ export function QuickStartPanel({
 }: QuickStartPanelProps) {
   const router = useRouter()
 
+  const [hasEpic, setHasEpic] = useState(false)
+
   const beginMatching = () => {
     if (!canBeginMatching) {
       return
@@ -58,7 +61,7 @@ export function QuickStartPanel({
             transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring/60 
             ${ steamId 
               ? "bg-emerald-600" 
-              : "bg-primary/80 hover:bg-primary text-secondary/60 hover:text-secondary/80" }`
+              : "bg-primary/60 hover:bg-primary/90 text-secondary/60 hover:text-secondary/80 shadow-sm shadow-background hover:inset-shadow-sm hover:inset-shadow-background" }`
           }
         >
           <img className="w-10 h-10" src="/steam-svgrepo-com.svg" alt="steam" />
@@ -71,11 +74,18 @@ export function QuickStartPanel({
         <div
           onClick={onEpicConnectClick}
           className={`flex items-center justify-between gap-3 px-6 py-2 rounded-3xl text-sm font-medium 
-            transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring/60`
-          }
+            transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring/60
+            ${ hasEpic 
+              ? "bg-emerald-600" 
+              : "bg-primary/60 hover:bg-primary/90 text-secondary/60 hover:text-secondary/80 shadow-sm shadow-background hover:inset-shadow-sm hover:inset-shadow-background" 
+            }
+          `}
         >
-          <img className="w-10 h-10" src="/epic-games-svgrepo-com.sv" alt="epic" />
-          Connect Epic Games
+          <img className="w-10 h-10" src="/epic-games-svgrepo-com.svg" alt="epic" />
+          {hasEpic 
+            ? <CircleCheckBig className="h-6 w-6" />
+            : <Link2Off className="h-6 w-6" />
+          }
         </div>
 
          <div
@@ -84,13 +94,13 @@ export function QuickStartPanel({
           tabIndex={0}
           onClick={onGamePassToggle}
           onKeyDown={handleGamePassKeyDown}
-          className={`flex items-center justify-between gap-3 px-6 py-2 rounded-3xl text-sm font-medium 
+          className={`flex items-center justify-between gap-3 px-6 py-2 rounded-3xl text-sm font-medium
             transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring/60 
             ${ hasGamePass 
               ? "bg-emerald-600" 
-              : "bg-primary/80 hover:bg-primary text-secondary/60 hover:text-secondary/80" 
-            }`
-          }
+              : "bg-primary/60 hover:bg-primary/90 text-secondary/60 hover:text-secondary/80 shadow-sm shadow-background hover:inset-shadow-sm hover:inset-shadow-background" 
+            }
+          `}
         >
           <div className="flex items-center gap-3">
             <img className="w-10 h-10" src="/xbox-fill-svgrepo-com.svg" alt="gamepass" />
@@ -110,8 +120,9 @@ export function QuickStartPanel({
         <div 
           onClick={onImportClick}
           className={`flex items-center justify-between gap-3 px-6 py-2 rounded-3xl text-secondary/80 hover:text-secondary text-sm font-medium 
-            transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring/60 bg-tertiary/80 hover:bg-tertiary }`
-          }
+            transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring/60 bg-tertiary/80 hover:bg-tertiary
+            shadow-sm shadow-background hover:inset-shadow-sm hover:inset-shadow-background
+          `}
         >
           <Upload className="w-8 h-8" />
           {importedGames.length > 0 ? "Edit" : "Import"}
@@ -128,9 +139,10 @@ export function QuickStartPanel({
           type="button" 
           disabled={!canBeginMatching || importedGames.length == 0} 
           onClick={beginMatching}
-          className={`px-8 py-6 w-[50%] rounded-3xl text-white text-lg font-medium 
-            transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring/60 bg-quaternary/80 hover:bg-quaternary`
-          }
+          className={`px-8 py-6 w-[50%] rounded-3xl text-white/80 text-lg font-medium 
+            transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring/60 bg-quaternary/80 hover:bg-quaternary
+            shadow-sm shadow-background hover:inset-shadow-sm hover:inset-shadow-background hover:text-white hover:scale-110
+          `}
         >
           BEGIN MATCHING
         </Button>
