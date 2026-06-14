@@ -15,7 +15,9 @@
   ],
   "host_permissions": [
     "https://*.epicgames.com/*",
-    "http://localhost:3000/*"
+    "http://localhost:3000/*",
+    "https://quickcoop-git-develop-gbarruetos-projects.vercel.app/*",
+    "https://www.quickcoop.me/*"
   ],
   "content_scripts": [
     {
@@ -24,7 +26,11 @@
       "run_at": "document_end"
     },
     {
-      "matches": ["http://localhost:3000/*"],
+      "matches": [
+        "http://localhost:3000/*",
+        "https://quickcoop-git-develop-gbarruetos-projects.vercel.app/*",
+        "https://www.quickcoop.me/*"
+      ],
       "js": ["content-app.js"],
       "run_at": "document_start"
     }
