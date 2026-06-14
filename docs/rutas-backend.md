@@ -18,7 +18,7 @@ y de todas las APIs externas que se consumen, con su clasificación.
 | `/api/epic/auth/token-exchange` | POST | body `{ authorizationCode }` | Intercambia el authCode por tokens, crea sesión server-side y setea cookie `epic-session-id` | Epic `account/api/oauth/token` |
 | `/api/epic/friends` | GET | — (usa sesión) | Lista de amigos del usuario (array de accountIds) | Epic `friends-public-service` |
 | `/api/epic/library` | GET | `cursor?` (usa sesión) | Biblioteca de juegos del usuario (paginada) | Epic `library-service` |
-| `/api/epic/debug` | GET | — (usa sesión) | **DEBUG — eliminar antes de prod.** Devuelve la sesión con tokens en claro | — |
+| `/api/epic/debug` | GET | — (usa sesión) | **DEBUG.** Devuelve el estado de la sesión (sin exponer los tokens) | — |
 
 Auth: dependen de la cookie de sesión creada en token-exchange (ver
 [integracion-epic-xbox.md](integracion-epic-xbox.md) y `lib/epic-session.ts`).
@@ -121,8 +121,8 @@ Hosting de imágenes de Steam usado para portadas:
 ---
 
 ## Notas / pendientes
-- `/api/epic/debug` es **solo para desarrollo** (expone tokens en claro) — eliminar antes de
-  producción.
+- `/api/epic/debug` es **solo para desarrollo** (expone el estado de la sesión, no los tokens) —
+  eliminar antes de producción.
 - Varias rutas de Steam/Trending/Game Pass usan **caché en memoria** (Map / variable de
   módulo) con TTL ~24h; se reinicia al reiniciar el server. Migrable a caché persistente.
 - Las APIs no documentadas (Storefront, Game Pass, Epic interno) pueden cambiar sin aviso;

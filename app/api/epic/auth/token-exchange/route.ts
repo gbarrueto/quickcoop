@@ -55,14 +55,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log("[epic/auth/token-exchange] exchanging code for token")
-
     const tokenResponse = await exchangeCodeForToken(authorizationCode)
     const payload = decodeJwtPayload(tokenResponse.access_token)
     const accountId = payload.sub
     const displayName = payload.dn
-
-    console.log("[epic/auth/token-exchange] authenticated user:", { accountId, displayName })
 
     // Epic eg1 access tokens are large JWTs (>4KB) and exceed the browser cookie
     // size limit, so we store them server-side and only set a small session cookie.

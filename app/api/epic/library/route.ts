@@ -15,8 +15,6 @@ export async function GET(request: NextRequest) {
   const { accessToken, accountId } = session
 
   try {
-    console.log("[epic/library] fetching library for account:", accountId)
-
     const params = new URLSearchParams({
       includeMetadata: "true",
       platform: "Windows",
@@ -42,7 +40,6 @@ export async function GET(request: NextRequest) {
     }
 
     const data = await response.json()
-    console.log("[epic/library] received items:", data.records?.length ?? 0, "items")
 
     return NextResponse.json({
       success: true,

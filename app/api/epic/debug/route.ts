@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
     accountId: session.accountId,
     displayName: session.displayName,
     expiresAt: new Date(session.expiresAt).toISOString(),
-    accessToken: session.accessToken,
-    refreshToken: session.refreshToken,
+    hasAccessToken: Boolean(session.accessToken),
+    hasRefreshToken: Boolean(session.refreshToken),
   })
 }

@@ -14,8 +14,6 @@ export async function GET(request: NextRequest) {
   const { accessToken, accountId } = session
 
   try {
-    console.log("[epic/friends] fetching friends for account:", accountId)
-
     const response = await fetch(
       `https://friends-public-service-prod.ol.epicgames.com/friends/api/public/friends/${accountId}`,
       {
@@ -36,13 +34,8 @@ export async function GET(request: NextRequest) {
 
     const data = await response.json()
 
-    // Log the raw shape to verify what Epic returns
-    console.log("[epic/friends] raw response type:", Array.isArray(data) ? "array" : typeof data)
-    console.log("[epic/friends] raw response:", JSON.stringify(data).slice(0, 500))
-
     // The public/friends/{accountId} endpoint returns a plain array of friends.
     const friends = Array.isArray(data) ? data : (data.friends ?? [])
-    console.log("[epic/friends] received friends:", friends.length, "friends")
 
     return NextResponse.json({
       success: true,
