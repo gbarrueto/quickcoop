@@ -29,7 +29,7 @@ export function LandingPage() {
   } = useLandingProfile()
   const { steamId, steamError, isWaiting: isWaitingSteamAuth, startAuth: startSteamOpenId } =
     useSteamAuth(initialSteamId)
-  const { epicId, startAuth: startEpicAuth } = useEpicAuth(initialEpicId)
+  const { epicId } = useEpicAuth(initialEpicId)
   const { games: trendingGames, isLoading: isTrendingLoading, loadError: trendingLoadError } =
     useTrendingGames()
 
@@ -63,7 +63,7 @@ export function LandingPage() {
           isTrendingLoading={isTrendingLoading}
           trendingLoadError={trendingLoadError}
           onSteamConnectClick={() => setSteamModalOpen(true)}
-          onEpicConnectClick={startEpicAuth}
+          onEpicConnectClick={() => setEpicModalOpen(true)}
           onGamePassToggle={toggleGamePass}
           onImportClick={() => setImportModalOpen(true)}
         />

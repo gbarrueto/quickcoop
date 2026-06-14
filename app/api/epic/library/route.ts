@@ -1,12 +1,60 @@
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
+import { EPIC_SESSION_COOKIE, getEpicSession } from "@/lib/epic-session"
 
-export async function GET() {
-  // Epic Games Store no expone la biblioteca personal a apps de terceros.
-  // La única API de entitlements disponible es para verificar ownership
-  // de productos registrados en tu propio sandbox de EOS.
-  return NextResponse.json({
-    games: [],
-    unavailable: true,
-    reason: "Epic Games does not expose user game libraries to third-party applications.",
-  })
+export async function GET(request: NextRequest) {
+  const session = getEpicSession(request.cookies.get(EPIC_SESSION_COOKIE)?.value)
+  const cursor = request.nextUrl.searchParams.get("cursor") || ""
+
+  if (!session) {
+    return NextResponse.json(
+      { error: "Not authenticated. Please connect your Epic Games account first." },
+      { status: 401 }
+    )
+  }
+
+  const { accessToken, accountId } = session
+
+  try {
+    console.log("[epic/library] fetching library for account:", accountId)
+
+    const params = new URLSearchParams({
+      includeMetadata: "true",
+      platform: "Windows",
+      ...(cursor && { cursor }),
+    })
+
+    const response = await fetch(
+      `https://library-service.live.use1a.on.epicgames.com/library/api/public/items?${params}`,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      }
+    )
+
+    if (!response.ok) {
+      const err = await response.text()
+      console.error("[epic/library] error:", err)
+      return NextResponse.json(
+        { error: `Epic API error: ${response.status} ${err}` },
+        { status: response.status }
+      )
+    }
+
+    const data = await response.json()
+    console.log("[epic/library] received items:", data.records?.length ?? 0, "items")
+
+    return NextResponse.json({
+      success: true,
+      accountId,
+      itemsCount: data.records?.length ?? 0,
+      items: data.records ?? [],
+      cursor: data.pageNumerator || data.pageNumber || null,
+      hasMore: data.hasMore || false,
+    })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error"
+    console.error("[epic/library] error:", message)
+    return NextResponse.json({ error: message }, { status: 500 })
+  }
 }
