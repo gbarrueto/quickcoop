@@ -1,17 +1,32 @@
 {
   "manifest_version": 3,
-  "name": "QuickCoop Hello World",
-  "version": "0.1.0",
-  "description": "Extensión local de prueba para QuickCoop.",
+  "name": "QuickCoop Epic Connector",
+  "version": "0.2.0",
+  "description": "Automatiza la conexión de Epic Games para QuickCoop capturando el authorization code.",
   "action": {
     "default_popup": "popup.html",
     "default_title": "QuickCoop"
   },
+  "background": {
+    "service_worker": "background.js"
+  },
   "permissions": [
-    "activeTab",
-    "scripting"
+    "tabs"
   ],
   "host_permissions": [
-    "https://*.epicgames.com/*"
+    "https://*.epicgames.com/*",
+    "http://localhost:3000/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["https://www.epicgames.com/id/api/redirect*"],
+      "js": ["content-epic.js"],
+      "run_at": "document_end"
+    },
+    {
+      "matches": ["http://localhost:3000/*"],
+      "js": ["content-app.js"],
+      "run_at": "document_start"
+    }
   ]
 }
