@@ -7,14 +7,24 @@ type TrendingGamesPanelProps = {
   games: TrendingGame[]
   isLoading: boolean
   loadError: string | null
+  activeIndex: number
+  onSelect: (index: number) => void 
 }
 
-export function TrendingGamesPanel({ games, isLoading, loadError }: TrendingGamesPanelProps) {
+export function TrendingGamesPanel({ games, isLoading, loadError, activeIndex, onSelect }: TrendingGamesPanelProps) {
   return (
-    <aside className="relative" aria-labelledby="matched-games-title">
-      <div className="absolute -inset-4 bg-primary/20 blur-3xl rounded-full" />
-      <Card className="relative rounded-2xl border-border bg-card p-6 shadow-2xl gap-0">
-        <CardHeader className="px-0 pb-6 flex-row items-center justify-between space-y-0">
+    <aside className="absolute top-0 right-0 h-full content-center z-2" aria-labelledby="matched-games-title">
+      <Card className="group relative rounded-2xl border-none shadow-none bg-card/0 p-6 gap-0
+                      transform translate-x-[80%] hover:translate-x-0
+                      transition-all duration-300 ease-in-out
+                      hover:bg-card/50
+                      "
+      >
+        <CardHeader className="opacity-0 px-0 pb-6 flex-row items-center justify-between space-y-0 
+                              group-hover:opacity-100
+                              transition-all duration-300 ease-in-out
+                              "
+        >
           <CardTitle id="matched-games-title" className="font-semibold text-base">
             Trending Multiplayer Games
           </CardTitle>
@@ -28,53 +38,36 @@ export function TrendingGamesPanel({ games, isLoading, loadError }: TrendingGame
               {loadError}
             </p>
           )}
-          <ul className="space-y-3">
+          <ul className="space-y-1">
             {games.map((game, index) => (
               <li
                 key={`${game.name}-${index}`}
-                className="flex items-center justify-between p-4 bg-secondary/50 rounded-xl hover:bg-secondary transition-colors cursor-pointer group"
+                onClick={() => onSelect(index)}
+                className={`flex items-center justify-between p-2 rounded-xl transition-colors cursor-pointer group 
+                          hover:bg-primary
+                          ${ index === activeIndex ? "transform -translate-x-[10%]" : "" }
+                          transition-transform duration-300 ease-in-out 
+                          `
+                }
+                aria-current={index === activeIndex ? "true" : "false"}
+                aria-label={`Slide ${index + 1}`}
               >
-                <article className="flex items-center justify-between gap-4 w-full">
-                  <div className="flex items-center gap-4">
-                    <div className="h-12 w-20 overflow-hidden rounded-md border border-border bg-background/60">
-                      {game.imageUrl ? (
-                        <img
-                          src={game.imageUrl}
-                          alt={`${game.name} cover`}
-                          className="h-full w-full object-cover"
-                          loading="lazy"
-                        />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center text-primary/70">
-                          <Gamepad2 className="h-5 w-5" />
-                        </div>
-                      )}
-                    </div>
-                    <div>
-                      <p className="font-medium">{game.name}</p>
-                      <p className="text-sm text-muted-foreground">{game.category}</p>
-                      <div className="mt-1 flex items-center gap-2">
-                        {game.stores.map((store) => (
-                          <Badge
-                            key={store}
-                            variant="outline"
-                            className="text-[10px] uppercase tracking-wide px-2 py-0.5"
-                          >
-                            {store}
-                          </Badge>
-                        ))}
+                <article className="flex items-center gap-4 w-full">
+                  <div className="h-12 w-20 overflow-hidden rounded-md border border-border bg-background/60">
+                    {game.imageUrl ? (
+                      <img
+                        src={game.imageUrl}
+                        alt={`${game.name} cover`}
+                        className="h-full w-full object-cover"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center text-primary/70">
+                        <Gamepad2 className="h-5 w-5" />
                       </div>
-                    </div>
+                    )}
                   </div>
-                  <div className="flex items-center gap-3">
-                    <div className="text-right">
-                      <p className="text-sm font-medium">{game.playersNow} now</p>
-                      <div className="inline-flex items-center gap-1 text-xs text-emerald-500">
-                        <Star className="w-3 h-3" />
-                        {game.trendLabel}
-                      </div>
-                    </div>
-                  </div>
+                  <p className="font-medium">{game.name}</p>
                 </article>
               </li>
             ))}

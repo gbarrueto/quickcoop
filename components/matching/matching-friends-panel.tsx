@@ -114,15 +114,15 @@ export function MatchingFriendsPanel({
   const ghostWidth = draggingRef.current?.cardWidth ?? 280
 
   return (
-    <Card className="flex flex-col border-border/70 bg-card/50">
-      <CardHeader className="space-y-1 border-b border-border/70 px-5 pb-4 pt-5">
-        <CardTitle className="text-xl">Friends</CardTitle>
-        <CardDescription>Click a card to select. Drag the handle to merge identities.</CardDescription>
+    <Card className="flex flex-col border-border/70 bg-background/80 h-full gap-0 py-0 pt-2 overflow-hidden">
+      <CardHeader className="border-border/70 px-5 shrink-0">
+        <CardTitle className="text-xs">Friends</CardTitle>
+        <CardDescription className="text-xs">Click to select. Drag to merge.</CardDescription>
       </CardHeader>
 
-      <CardContent className="space-y-4 p-5">
+      <CardContent className="space-y-2 p-5 flex flex-col flex-1 min-h-0 gap-1.5">
         {tipVisible && (
-          <div className="relative rounded-lg border border-primary/30 bg-primary/10 p-3 text-xs text-primary">
+          <div className="relative shrink-0 rounded-lg border border-primary/30 bg-primary/10 p-3 text-xs text-primary">
             <button
               type="button"
               onClick={() => setTipVisible(false)}
@@ -133,27 +133,19 @@ export function MatchingFriendsPanel({
             </button>
             <p className="font-medium">Merge tip</p>
             <p className="mt-1">Hold and drag the grip handle onto another friend to merge identities across platforms.</p>
-            <p className="mt-2 inline-flex items-center gap-1">
-              <UserRoundPlus className="h-3.5 w-3.5" />
-              Merging between users of the same platform is blocked.
-            </p>
           </div>
         )}
 
-        {/* Fixed-height status row — never shifts the list below */}
-        <div className="flex h-3 items-center gap-2 overflow-hidden">
-          {selectedCount > 0 && (
-            <Badge variant="secondary" className="inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs text-emerald-700">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-              {selectedCount} {selectedCount === 1 ? "friend" : "friends"} selected
-            </Badge>
-          )}
-          {mergeNotice && (
-            <p className="truncate text-xs text-amber-500">{mergeNotice}</p>
-          )}
-        </div>
+        {mergeNotice && <p className="shrink-0 text-xs text-secondary font-bold">{mergeNotice}</p>}
 
-        <ScrollArea className="h-[calc(100vh-20rem)] pr-3">
+        {selectedCount > 0 && (
+          <Badge variant="secondary" className="inline-flex w-fit shrink-0 items-center gap-2 rounded-full px-3 py-1 text-xs text-emerald-700">
+            <span className="h-2 w-2 rounded-full bg-emerald-500" />
+            Filtering with {selectedCount} selected {selectedCount === 1 ? "friend" : "friends"}
+          </Badge>
+        )}
+
+        <ScrollArea className="flex-1 min-h-0 pr-1">
           <div className="space-y-3">
             {allFriendProfiles.map((profile) => {
               const primaryIdentity = profile.identities[0]
@@ -169,10 +161,10 @@ export function MatchingFriendsPanel({
                 isDragSource
                   ? "opacity-40 border-dashed border-primary/30 bg-secondary/10"
                   : isDragTarget
-                    ? "border-primary/60 bg-primary/15 ring-2 ring-primary/25 shadow-md shadow-primary/10"
+                    ? "border-primary/60 bg-primary/15 ring-2 ring-primary/25 shadow-md shadow-primary/10 text-secondary"
                     : profile.selected
-                      ? "border-primary/50 bg-primary/10"
-                      : "border-border bg-secondary/20 hover:border-primary/30 hover:bg-secondary/40 hover:-translate-y-px hover:shadow-sm hover:shadow-primary/5",
+                      ? "border-tertiary/70 bg-tertiary/80"
+                      : "border-tertiary/50 bg-tertiary/10 hover:bg-tertiary/20 text-white/60 hover:text-white/90",
               ].join(" ")
 
               return (
