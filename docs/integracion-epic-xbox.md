@@ -131,6 +131,55 @@ Todas son **GET** con header `Authorization: <token_type> <access_token>`
 - Guarda `access_token`/`refresh_token` por usuario en tu backend y refresca con
   `grant_type=refresh_token` cuando expire (`expires_in`).
 
+#### Lo que implementamos en QuickCoop (estado actual)
+
+1. **Login en un solo popup**: el front abre directamente
+   `https://www.epicgames.com/id/login?redirect_uri=<...id/api/redirect?clientId=...&responseType=code>`.
+   Tras el login, Epic redirige **dentro de ese mismo popup** al JSON con el
+   `authorizationCode` (Epic acepta `redirect_uri` aunque tiene whitelist; ese destino
+   sí está permitido).
+2. **Token exchange en el backend**: el `authorizationCode` se manda a
+   `/api/epic/auth/token-exchange`, que hace el POST a `account/api/oauth/token` con
+   Basic Auth (credenciales públicas del launcher) y `token_type=eg1`.
+3. **Almacenamiento de tokens server-side**: el access token `eg1` mide **~4261 bytes**,
+   supera el límite de **4096 bytes por cookie** del navegador. Por eso NO cabe en cookie:
+   se guarda en memoria del servidor (`lib/epic-session.ts`) y al navegador solo va un
+   `epic-session-id` pequeño (httpOnly). Migrable a BDD con la misma interfaz.
+
+#### Automatizar la captura del code: el bloqueo cross-origin y la extensión
+
+El paso 1 deja un punto manual: el usuario debe **copiar el `authorizationCode`** del JSON
+y pegarlo. No se puede automatizar desde una web pura porque el popup está en el origen
+`epicgames.com` y, por **cross-origin**, la app no puede leer su contenido (ni `fetch`ear
+el endpoint desde el navegador: Epic no envía CORS).
+
+**Playnite lo logra porque es app de escritorio**: controla una WebView y puede monitorear
+la navegación y leer la página. El equivalente en navegador es una **extensión**:
+
+- Un **content script corre en el contexto de la página de Epic**, así que SÍ puede leer el
+  JSON (`document.body.innerText`) sin chocar con cross-origin.
+- QuickCoop usa un addon Manifest V3 (carpeta `addon/`):
+  `content-epic.js` (lee el code en `/id/api/redirect`) → `background.js` (relay, porque
+  dos content scripts no se hablan directo) → `content-app.js` (lo entrega a la página con
+  `window.postMessage`). El hook recibe el code, cierra el popup y dispara el token-exchange.
+- **El token-exchange lo sigue haciendo la app, no la extensión**: así es mismo-origen
+  (cookie de sesión `SameSite=Lax` se setea bien, sin CORS) y React actualiza su estado en
+  un único lugar. La extensión solo **captura y entrega** el code.
+- **Degradación elegante**: `content-app.js` emite `epic-ext-ready`; si la app lo recibe,
+  activa el modo automático; si no, cae al **paste manual**. Nadie queda bloqueado.
+
+> Descartado: hacer que la extensión POSTee el code directo al backend. Aunque parece más
+> corto, choca con CORS, con cookies `SameSite` cross-site, y **igual** habría que avisar a
+> la app para que actualice UI/perfil. El relay a la app es más simple y de una sola
+> responsabilidad.
+
+#### Otras vías evaluadas y descartadas
+
+- **Login por credenciales / scraping en backend** (pedir usuario y contraseña): bloqueado
+  en la práctica por captchas (hCaptcha/Arkose), 2FA, riesgo de bloqueo de cuenta y mala
+  práctica de seguridad/ToS. Ni con Selenium/Playwright vale la pena.
+- **Client-side `fetch` al endpoint de Epic**: bloqueado por CORS.
+
 ---
 
 ## 2. Xbox
