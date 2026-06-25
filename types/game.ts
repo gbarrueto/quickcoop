@@ -8,6 +8,7 @@ export type GameCard = {
   players: string
   platform: Platform
   tags?: string[]
+  playtimeMinutes?: number
 }
 
 export type RecommendedGame = {
@@ -30,6 +31,7 @@ export type TrendingGame = {
 export type SteamOwnedGame = {
   appid: number
   name?: string
+  playtime_forever?: number
 }
 
 export type EpicGame = {

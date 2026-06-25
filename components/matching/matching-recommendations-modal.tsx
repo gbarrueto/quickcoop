@@ -2,6 +2,7 @@ import { useState } from "react"
 import { ChevronLeft, ChevronRight, Gamepad2 } from "lucide-react"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
 import type { RecommendedGame } from "@/types"
+import { DialogTitle } from "@radix-ui/react-dialog"
 
 type RecommendationsModalProps = {
   open: boolean
@@ -23,9 +24,9 @@ export function RecommendationsModal({ open, onOpenChange, games }: Recommendati
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-screen lg:max-w-[70vw] max-h-[90vh] h-full w-screen p-0 overflow-hidden bg-card gap-0">
 
-        <div className="px-5 py-4">
+        <DialogTitle className="px-5 py-4">
           <p className="text-xs font-medium">Recommended games for you</p>
-        </div>
+        </DialogTitle>
 
         <div className="flex items-stretch">
           <button
