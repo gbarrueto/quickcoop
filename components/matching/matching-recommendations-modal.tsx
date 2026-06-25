@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { ChevronLeft, ChevronRight, Gamepad2 } from "lucide-react"
+import { ChevronLeft, ChevronRight, Gamepad2, Star } from "lucide-react"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
 import type { RecommendedGame } from "@/types"
 import { DialogTitle } from "@radix-ui/react-dialog"
@@ -59,6 +59,10 @@ export function RecommendationsModal({ open, onOpenChange, games }: Recommendati
             <div className="absolute top-0 right-0 h-full w-[20%] text-center bg-background/60 py-4 px-4">
               <div className="space-y-2">
                 <h2 className="text-base font-medium">{game.name}</h2>
+                <div className="flex items-center gap-1 justify-center text-secondary text-sm">
+                  <Star className="h-4 w-4" />
+                  {game.rating}
+                </div>
                 {game.categories && (
                   <div className="flex flex-wrap gap-2 justify-center">
                     {game.categories.map(tag => (
