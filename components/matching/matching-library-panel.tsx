@@ -24,6 +24,7 @@ type MatchingLibraryPanelProps = {
   isCategoryPanelOpen: boolean
   isFriendsPanelOpen: boolean
   onOpenCategoryPanel: () => void
+  onOpenRecommendationsModal: () => void
   onOpenFriendsPanel: () => void
   onToggleCategory: (category: string) => void
   onSetCategoryFilterMode: (mode: CategoryFilterMode) => void
@@ -158,6 +159,7 @@ export function MatchingLibraryPanel({
   isCategoryPanelOpen,
   isFriendsPanelOpen,
   onOpenCategoryPanel,
+  onOpenRecommendationsModal,
   onOpenFriendsPanel,
   onOpenRequirements,
 }: MatchingLibraryPanelProps) {
@@ -175,6 +177,17 @@ export function MatchingLibraryPanel({
           </div>
 
           <div className="flex gap-2">
+            <Button 
+              onClick={onOpenRecommendationsModal}
+              className={`border border-primary/50 text-primary transition-colors
+                          ${isCategoryPanelOpen
+                            ? "bg-primary/60 text-secondary hover:bg-primary/60"
+                            : "bg-background hover:bg-primary/20"
+                          }
+              `}
+            >
+              Recommendations
+            </Button>
             <Button 
               onClick={onOpenCategoryPanel}
               className={`border border-primary/50 text-primary transition-colors

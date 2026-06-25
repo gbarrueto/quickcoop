@@ -39,6 +39,7 @@ import { Spinner } from "../ui/spinner"
 import { CategoryFiltersPanel } from "./matching-category-panel"
 import { useCarousel } from "@/hooks/use-carousel"
 import { GameRecommendationsCarousel } from "./game-recommendations-carousel"
+import { RecommendationsModal } from "./matching-recommendations-modal"
 
 export function MatchingPage() {
   const recommendationsRef = useRef<HTMLDivElement | null>(null)
@@ -75,6 +76,7 @@ export function MatchingPage() {
   const [isRequirementsModalOpen, setIsRequirementsModalOpen] = useState(false)
   const [isSpecsModalOpen, setIsSpecsModalOpen] = useState(false)
   const [isCategoryPanelOpen, setIsCategoryPanelOpen] = useState(false)
+  const [isRecommendationsModalOpen, setIsRecommendationsModalOpen] = useState(false)
   const [isFriendsPanelOpen, setIsFriendsPanelOpen] = useState(false)
 
   const { loadingIdentities, identityErrors } = useIdentityLibrary(friendProfiles, identityLibraries, setIdentityLibraries)
@@ -333,6 +335,7 @@ export function MatchingPage() {
               categoryFilterError={categoryFilterError}
               categoriesByApp={categoriesByApp}
               onOpenCategoryPanel={() => setIsCategoryPanelOpen(prev => !prev)}
+              onOpenRecommendationsModal={() => setIsRecommendationsModalOpen(prev => !prev)}
               onOpenFriendsPanel={() => setIsFriendsPanelOpen(prev => !prev)}
               isCategoryPanelOpen={isCategoryPanelOpen}
               isFriendsPanelOpen={isFriendsPanelOpen}
@@ -414,6 +417,12 @@ export function MatchingPage() {
             onOpenChange={setIsSpecsModalOpen}
             playerSpecsById={playerSpecsById}
             onUpdatePlayerSpecs={updatePlayerSpecs}
+          />
+
+          <RecommendationsModal
+            open={isRecommendationsModalOpen}
+            onOpenChange={setIsRecommendationsModalOpen}
+            games={RECOMMENDED_GAMES}
           />
 
           <div 
