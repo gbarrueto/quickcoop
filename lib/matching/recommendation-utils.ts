@@ -18,8 +18,9 @@ function toRecommendedGame(
   categories: string[],
   fallbackCategory: string,
 ): RecommendedGame {
-  const primaryCategory = categories[0] ?? fallbackCategory
-  const secondaryCategory = categories[1] ?? categories[0] ?? fallbackCategory
+  const uniqueCategories = uniqueTags(categories)
+  const primaryCategory = uniqueCategories[0] ?? fallbackCategory
+  const secondaryCategory = uniqueCategories[1] ?? (primaryCategory === fallbackCategory ? "Library" : fallbackCategory)
 
   return {
     appId: game.appId,
