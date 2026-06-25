@@ -24,7 +24,7 @@ QCoop es una app web para encontrar juegos a jugar con amigos. La app permite co
 ## Requisitos
 
 - Node.js 22 o superior.
-- pnpm 10 o compatible. Se puede usar `corepack` en caso de no tenerlo instalado globalmente.
+- pnpm 10 o compatible.
 - Variables de entorno para las APIs externas.
 
 ## Variables de entorno
@@ -40,17 +40,17 @@ EPIC_CLIENT_SECRET=tu_client_secret_de_epic
 ## Instalación
 
 ```bash
-corepack pnpm install
+pnpm install
 ```
 
 ## Scripts
 
 ```bash
-corepack pnpm dev
-corepack pnpm build
-corepack pnpm start
-corepack pnpm lint
-corepack pnpm test
+pnpm dev
+pnpm build
+pnpm start
+pnpm lint
+pnpm test
 ```
 
 ## Estructura principal
