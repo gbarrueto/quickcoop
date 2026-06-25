@@ -28,6 +28,21 @@ function toRecommendedGame(
     imageUrl: game.imageUrl,
     categories: [primaryCategory, secondaryCategory],
     rating: game.rating,
+    description: `Most played game in your library. Strong match for ${primaryCategory.toLowerCase()} play.`,
+    price: "Owned",
+  }
+}
+
+function withCatalogDetails(game: RecommendedGame): RecommendedGame {
+  const catalogGame = RECOMMENDED_GAMES.find((candidate) => candidate.appId === game.appId)
+  if (!catalogGame) {
+    return game
+  }
+
+  return {
+    ...game,
+    description: catalogGame.description,
+    price: catalogGame.price,
   }
 }
 
@@ -82,7 +97,7 @@ export function buildUserRecommendations(
       return left.game.name.localeCompare(right.game.name)
     })
     .slice(0, SIMILAR_RECOMMENDATION_LIMIT)
-    .map(({ game }) => game)
+    .map(({ game }) => withCatalogDetails(game))
 
-  return [...topPlayedRecommendations, ...similarRecommendations]
+  return [...topPlayedRecommendations, ...similarRecommendations].map(withCatalogDetails)
 }

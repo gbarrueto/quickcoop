@@ -46,6 +46,9 @@ export function MatchingRecommendationsPanel({ recommendationsRef, recommendedGa
                 <div className="space-y-1.5 p-2.5">
                   <div>
                     <h3 className="line-clamp-1 text-xs font-semibold">{game.name}</h3>
+                    <p className="mt-1 line-clamp-2 text-[10px] leading-snug text-muted-foreground">
+                      {game.description}
+                    </p>
                     <div className="mt-1 flex flex-wrap gap-1">
                       {game.categories.map((category) => (
                         <span
@@ -59,7 +62,7 @@ export function MatchingRecommendationsPanel({ recommendationsRef, recommendedGa
                   </div>
 
                   <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-                    <span>Recommended</span>
+                    <span>{game.price}</span>
                     <span className="inline-flex items-center gap-1 text-amber-500">
                       <CheckCircle2 className="h-3 w-3" />
                       {game.rating}

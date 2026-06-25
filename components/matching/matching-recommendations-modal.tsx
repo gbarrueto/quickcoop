@@ -56,12 +56,15 @@ export function RecommendationsModal({ open, onOpenChange, games }: Recommendati
               )}
             </div>
 
-            <div className="absolute top-0 right-0 h-full w-[20%] text-center bg-background/60 py-4 px-4">
+            <div className="absolute top-0 right-0 h-full w-[20%] text-center bg-background/70 py-4 px-4">
               <div className="space-y-2">
                 <h2 className="text-base font-medium">{game.name}</h2>
                 <div className="flex items-center gap-1 justify-center text-secondary text-sm">
                   <Star className="h-4 w-4" />
                   {game.rating}
+                </div>
+                <div className="text-sm font-medium uppercase tracking-wide text-secondary bg-background/40 py-1 px-2">
+                  {game.price}
                 </div>
                 {game.categories && (
                   <div className="flex flex-wrap gap-2 justify-center">
@@ -75,6 +78,7 @@ export function RecommendationsModal({ open, onOpenChange, games }: Recommendati
                     ))}
                   </div>
                 )}
+                <p className="text-xs leading-5 text-white/70">{game.description}</p>
               </div>
             </div>
           </div>

@@ -24,6 +24,8 @@ export const RECOMMENDED_GAMES: RecommendedGame[] = [
     imageUrl: "https://cdn.akamai.steamstatic.com/steam/apps/730/header.jpg",
     categories: ["FPS", "Competitive"],
     rating: 4.8,
+    description: "Free-to-play tactical shooter built for high-skill competitive matches.",
+    price: "Free",
   },
   {
     appId: 553850,
@@ -31,6 +33,8 @@ export const RECOMMENDED_GAMES: RecommendedGame[] = [
     imageUrl: "https://cdn.akamai.steamstatic.com/steam/apps/553850/header.jpg",
     categories: ["Co-op", "Shooter"],
     rating: 4.7,
+    description: "Chaotic co-op missions where teamwork and friendly fire share the spotlight.",
+    price: "Paid",
   },
   {
     appId: 1172470,
@@ -38,6 +42,8 @@ export const RECOMMENDED_GAMES: RecommendedGame[] = [
     imageUrl: "https://cdn.akamai.steamstatic.com/steam/apps/1172470/header.jpg",
     categories: ["Battle Royale", "Hero Shooter"],
     rating: 4.5,
+    description: "Fast-paced hero shooter with squad-based battle royale play.",
+    price: "Free",
   },
   {
     appId: 252950,
@@ -45,6 +51,8 @@ export const RECOMMENDED_GAMES: RecommendedGame[] = [
     imageUrl: "https://cdn.akamai.steamstatic.com/steam/apps/252950/header.jpg",
     categories: ["Sports", "Arcade"],
     rating: 4.8,
+    description: "Arcade sports with cars, boost, aerial play, and quick match sessions.",
+    price: "Free",
   },
   {
     appId: 1091500,
@@ -52,6 +60,8 @@ export const RECOMMENDED_GAMES: RecommendedGame[] = [
     imageUrl: "https://cdn.akamai.steamstatic.com/steam/apps/1091500/header.jpg",
     categories: ["RPG", "Open World"],
     rating: 4.6,
+    description: "Narrative-driven open-world RPG set in the neon streets of Night City.",
+    price: "Paid",
   },
   {
     appId: 271590,
@@ -59,6 +69,8 @@ export const RECOMMENDED_GAMES: RecommendedGame[] = [
     imageUrl: "https://cdn.akamai.steamstatic.com/steam/apps/271590/header.jpg",
     categories: ["Action", "Open World"],
     rating: 4.9,
+    description: "Open-world action sandbox with story mode and endless online chaos.",
+    price: "Paid",
   },
   {
     appId: 413150,
@@ -66,6 +78,8 @@ export const RECOMMENDED_GAMES: RecommendedGame[] = [
     imageUrl: "https://cdn.akamai.steamstatic.com/steam/apps/413150/header.jpg",
     categories: ["Farming", "Co-op"],
     rating: 4.9,
+    description: "Relaxing farming sim with crafting, relationships, and co-op sessions.",
+    price: "Paid",
   },
   {
     appId: 322330,
@@ -73,6 +87,8 @@ export const RECOMMENDED_GAMES: RecommendedGame[] = [
     imageUrl: "https://cdn.akamai.steamstatic.com/steam/apps/322330/header.jpg",
     categories: ["Survival", "Co-op"],
     rating: 4.6,
+    description: "Survival co-op where resource management and madness go hand in hand.",
+    price: "Paid",
   },
   {
     appId: 381210,
@@ -80,6 +96,8 @@ export const RECOMMENDED_GAMES: RecommendedGame[] = [
     imageUrl: "https://cdn.akamai.steamstatic.com/steam/apps/381210/header.jpg",
     categories: ["Horror", "Multiplayer"],
     rating: 4.4,
+    description: "Asymmetric horror multiplayer with tense chases and team escapes.",
+    price: "Paid",
   },
   {
     appId: 1174180,
@@ -87,6 +105,8 @@ export const RECOMMENDED_GAMES: RecommendedGame[] = [
     imageUrl: "https://cdn.akamai.steamstatic.com/steam/apps/1174180/header.jpg",
     categories: ["Adventure", "Open World"],
     rating: 4.9,
+    description: "Slow-burn western adventure with a huge open world and strong story focus.",
+    price: "Paid",
   },
   {
     appId: 438100,
@@ -94,6 +114,8 @@ export const RECOMMENDED_GAMES: RecommendedGame[] = [
     imageUrl: "https://cdn.akamai.steamstatic.com/steam/apps/438100/header.jpg",
     categories: ["Social", "Multiplayer"],
     rating: 4.2,
+    description: "Social playground for hanging out, creating worlds, and roleplaying online.",
+    price: "Free",
   },
   {
     appId: 578080,
@@ -101,6 +123,8 @@ export const RECOMMENDED_GAMES: RecommendedGame[] = [
     imageUrl: "https://cdn.akamai.steamstatic.com/steam/apps/578080/header.jpg",
     categories: ["Battle Royale", "Shooter"],
     rating: 4.1,
+    description: "Large-scale battle royale with tension, positioning, and survival.",
+    price: "Free",
   },
   {
     appId: 440,
@@ -108,6 +132,8 @@ export const RECOMMENDED_GAMES: RecommendedGame[] = [
     imageUrl: "https://cdn.akamai.steamstatic.com/steam/apps/440/header.jpg",
     categories: ["FPS", "Team-Based"],
     rating: 4.8,
+    description: "Classic team shooter with fast classes, payload maps, and chaotic fun.",
+    price: "Free",
   },
   {
     appId: 393380,
@@ -115,6 +141,8 @@ export const RECOMMENDED_GAMES: RecommendedGame[] = [
     imageUrl: "https://cdn.akamai.steamstatic.com/steam/apps/393380/header.jpg",
     categories: ["Tactical", "Co-op"],
     rating: 4.4,
+    description: "Tactical infantry combat built around communication and large-scale teamwork.",
+    price: "Paid",
   },
   {
     appId: 1196590,
@@ -122,6 +150,8 @@ export const RECOMMENDED_GAMES: RecommendedGame[] = [
     imageUrl: "https://cdn.akamai.steamstatic.com/steam/apps/1196590/header.jpg",
     categories: ["Horror", "Adventure"],
     rating: 4.7,
+    description: "Cinematic horror adventure with exploration, combat, and intense atmosphere.",
+    price: "Paid",
   },
   {
     appId: 1245620,
@@ -129,6 +159,8 @@ export const RECOMMENDED_GAMES: RecommendedGame[] = [
     imageUrl: "https://cdn.akamai.steamstatic.com/steam/apps/1245620/header.jpg",
     categories: ["RPG", "Action"],
     rating: 4.8,
+    description: "Expansive action RPG with exploration, build variety, and boss fights.",
+    price: "Paid",
   },
   {
     appId: 1551360,
@@ -136,6 +168,8 @@ export const RECOMMENDED_GAMES: RecommendedGame[] = [
     imageUrl: "https://cdn.akamai.steamstatic.com/steam/apps/1551360/header.jpg",
     categories: ["Racing", "Open World"],
     rating: 4.8,
+    description: "Open-world racer with huge car variety and festival-style exploration.",
+    price: "Paid",
   },
   {
     appId: 739630,
@@ -143,6 +177,8 @@ export const RECOMMENDED_GAMES: RecommendedGame[] = [
     imageUrl: "https://cdn.akamai.steamstatic.com/steam/apps/739630/header.jpg",
     categories: ["Horror", "Co-op"],
     rating: 4.6,
+    description: "Co-op ghost hunting where voice chat and tension matter as much as evidence.",
+    price: "Paid",
   },
   {
     appId: 548430,
@@ -150,5 +186,7 @@ export const RECOMMENDED_GAMES: RecommendedGame[] = [
     imageUrl: "https://cdn.akamai.steamstatic.com/steam/apps/548430/header.jpg",
     categories: ["Co-op", "Shooter"],
     rating: 4.8,
+    description: "Mine, shoot, and survive with a squad of space dwarves in procedural caverns.",
+    price: "Paid",
   },
 ]

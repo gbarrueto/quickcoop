@@ -17,6 +17,8 @@ export type RecommendedGame = {
   imageUrl: string
   categories: [string, string]
   rating: number
+  description: string
+  price: string
 }
 
 export type TrendingGame = {
