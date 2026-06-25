@@ -1,0 +1,97 @@
+import { beforeEach, describe, expect, it, vi } from "vitest"
+import type { StoredUserProfile } from "../types"
+
+vi.mock("../lib/api", () => ({
+  fetchSteamOwnedGames: vi.fn(),
+  fetchSteamFriends: vi.fn(),
+  fetchEpicLibrary: vi.fn(),
+  fetchEpicFriends: vi.fn(),
+  fetchGamePassCatalog: vi.fn(),
+  epicGameToCard: (game: { id: string; title: string; keyImages?: Array<{ type: string; url: string }> }) => ({
+    appId: Number.parseInt(game.id, 10) || 0,
+    name: game.title,
+    imageUrl: game.keyImages?.[0]?.url ?? "",
+    rating: 0,
+    players: "1+",
+    platform: "epic",
+  }),
+  gamePassGameToCard: (game: { id: string; title: string; imageUrl: string }) => ({
+    appId: Number.parseInt(game.id, 10) || 0,
+    name: game.title,
+    imageUrl: game.imageUrl,
+    rating: 0,
+    players: "1+",
+    platform: "xbox",
+  }),
+}))
+
+import { fetchEpicFriends, fetchEpicLibrary, fetchGamePassCatalog, fetchSteamFriends, fetchSteamOwnedGames } from "../lib/api"
+import { loadMatchingData } from "../lib/matching/load-matching-data"
+
+describe("loadMatchingData", () => {
+  beforeEach(() => {
+    vi.resetAllMocks()
+  })
+
+  it("loads user libraries, friends and platform flags from the stored profile", async () => {
+    vi.mocked(fetchSteamOwnedGames).mockResolvedValue({
+      data: {
+        response: {
+          games: [{ appid: 730, name: "Counter-Strike 2", playtime_forever: 120 }],
+        },
+      },
+    })
+    vi.mocked(fetchSteamFriends).mockResolvedValue({
+      friends: [{ steamId: "friend-steam", name: "Steam Friend" }],
+    })
+    vi.mocked(fetchEpicLibrary).mockResolvedValue({
+      games: [{ id: "1091500", title: "Cyberpunk 2077", keyImages: [{ type: "Thumbnail", url: "https://example.com/cp.jpg" }] }],
+    })
+    vi.mocked(fetchEpicFriends).mockResolvedValue({
+      friends: [{ accountId: "friend-epic", displayName: "Epic Friend" }],
+    })
+    vi.mocked(fetchGamePassCatalog).mockResolvedValue({
+      games: [{ id: "1172470", title: "Apex Legends", imageUrl: "https://example.com/apex.jpg" }],
+    })
+
+    const profile: StoredUserProfile = {
+      userId: "user-1",
+      displayName: "User",
+      connections: {
+        steamId: "steam-123",
+        epicAccountId: "epic-456",
+        hasGamePass: true,
+      },
+      importedGames: ["Hades"],
+      friends: [
+        {
+          profileId: "profile:xbox:friend-pass",
+          identities: [
+            {
+              platform: "xbox",
+              accountId: "friend-pass",
+              displayName: "Game Pass Friend",
+            },
+          ],
+          connections: { steamId: null, epicAccountId: null, hasGamePass: true },
+          selected: false,
+          expanded: false,
+          libraryAppIds: [252950],
+          libraryTitles: ["Rocket League"],
+        },
+      ],
+      updatedAt: Date.now(),
+    }
+
+    const result = await loadMatchingData(profile)
+
+    expect(result.availablePlatforms).toEqual(["steam", "epic", "xbox"])
+    expect(result.userGames).toHaveLength(2)
+    expect(result.epicGames).toHaveLength(1)
+    expect(result.gamePassGames).toHaveLength(1)
+    expect(result.friendProfiles.some((friend) => friend.profileId === "profile:steam:friend-steam")).toBe(true)
+    expect(result.epicFriends.some((friend) => friend.profileId === "profile:epic:friend-epic")).toBe(true)
+    expect(result.identityLibraries["xbox:friend-pass"]).toBeDefined()
+    expect(result.playerSpecs).toBeNull()
+  })
+})
