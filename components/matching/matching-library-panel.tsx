@@ -181,10 +181,10 @@ export function MatchingLibraryPanel({
           <div className="flex gap-2">
             <Button 
               onClick={onOpenRecommendationsModal}
-              className={`border border-primary/50 text-primary transition-colors
+              className={`border text-secondary/90 transition-colors
                           ${isRecommendationsModalOpen
-                            ? "bg-primary/60 text-secondary hover:bg-primary/60"
-                            : "bg-background hover:bg-primary/20"
+                            ? "bg-quaternary border-quaternary"
+                            : "bg-quaternary/30 hover:bg-quaternary/40"
                           }
               `}
             >
