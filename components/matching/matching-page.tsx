@@ -342,6 +342,7 @@ export function MatchingPage() {
               onOpenCategoryPanel={() => setIsCategoryPanelOpen(prev => !prev)}
               onOpenRecommendationsModal={() => setIsRecommendationsModalOpen(prev => !prev)}
               onOpenFriendsPanel={() => setIsFriendsPanelOpen(prev => !prev)}
+              isRecommendationsModalOpen={isRecommendationsModalOpen}
               isCategoryPanelOpen={isCategoryPanelOpen}
               isFriendsPanelOpen={isFriendsPanelOpen}
               onToggleCategory={(category) =>

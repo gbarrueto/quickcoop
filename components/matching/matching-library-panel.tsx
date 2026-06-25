@@ -21,6 +21,7 @@ type MatchingLibraryPanelProps = {
   isLoadingCategories: boolean
   categoryFilterError: string | null
   categoriesByApp: Record<number, string[]>
+  isRecommendationsModalOpen: boolean
   isCategoryPanelOpen: boolean
   isFriendsPanelOpen: boolean
   onOpenCategoryPanel: () => void
@@ -156,6 +157,7 @@ export function MatchingLibraryPanel({
   categoryFilteredGames,
   selectedCount,
   categoriesByApp,
+  isRecommendationsModalOpen,
   isCategoryPanelOpen,
   isFriendsPanelOpen,
   onOpenCategoryPanel,
@@ -180,7 +182,7 @@ export function MatchingLibraryPanel({
             <Button 
               onClick={onOpenRecommendationsModal}
               className={`border border-primary/50 text-primary transition-colors
-                          ${isCategoryPanelOpen
+                          ${isRecommendationsModalOpen
                             ? "bg-primary/60 text-secondary hover:bg-primary/60"
                             : "bg-background hover:bg-primary/20"
                           }
