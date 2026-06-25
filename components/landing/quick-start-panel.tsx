@@ -58,10 +58,11 @@ export function QuickStartPanel({
         <div
           onClick={onSteamConnectClick}
           className={`flex items-center justify-between gap-3 px-6 py-2 rounded-3xl text-sm font-medium 
-            transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring/60 
+            outline-none focus-visible:ring-2 focus-visible:ring-ring/60 cursor-pointer border border-transparent
+            transition-all duration-300 ease-in-out
             ${ steamId 
               ? "bg-emerald-600" 
-              : "bg-primary/60 hover:bg-primary/90 text-secondary/60 hover:text-secondary/80 shadow-sm shadow-background hover:inset-shadow-sm hover:inset-shadow-background" }`
+              : "bg-primary/60 hover:bg-primary/90 text-secondary/60 hover:text-secondary/80 shadow-sm shadow-background hover:border-border active:inset-shadow-sm active:inset-shadow-background" }`
           }
         >
           <img className="w-10 h-10" src="/steam-svgrepo-com.svg" alt="steam" />
@@ -74,10 +75,11 @@ export function QuickStartPanel({
         <div
           onClick={onEpicConnectClick}
           className={`flex items-center justify-between gap-3 px-6 py-2 rounded-3xl text-sm font-medium 
-            transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring/60
+            outline-none focus-visible:ring-2 focus-visible:ring-ring/60 cursor-pointer border border-transparent
+            transition-all duration-300 ease-in-out
             ${ hasEpic 
               ? "bg-emerald-600" 
-              : "bg-primary/60 hover:bg-primary/90 text-secondary/60 hover:text-secondary/80 shadow-sm shadow-background hover:inset-shadow-sm hover:inset-shadow-background" 
+              : "bg-primary/60 hover:bg-primary/90 text-secondary/60 hover:text-secondary/80 shadow-sm shadow-background hover:border-border active:inset-shadow-sm active:inset-shadow-background" 
             }
           `}
         >
@@ -95,10 +97,11 @@ export function QuickStartPanel({
           onClick={onGamePassToggle}
           onKeyDown={handleGamePassKeyDown}
           className={`flex items-center justify-between gap-3 px-6 py-2 rounded-3xl text-sm font-medium
-            transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring/60 
+            outline-none focus-visible:ring-2 focus-visible:ring-ring/60 cursor-pointer border border-transparent
+            transition-all duration-300 ease-in-out
             ${ hasGamePass 
               ? "bg-emerald-600" 
-              : "bg-primary/60 hover:bg-primary/90 text-secondary/60 hover:text-secondary/80 shadow-sm shadow-background hover:inset-shadow-sm hover:inset-shadow-background" 
+              : "bg-primary/60 hover:bg-primary/90 text-secondary/60 hover:text-secondary/80 shadow-sm shadow-background hover:border-border active:inset-shadow-sm active:inset-shadow-background" 
             }
           `}
         >
@@ -119,9 +122,12 @@ export function QuickStartPanel({
         
         <div 
           onClick={onImportClick}
-          className={`flex items-center justify-between gap-3 px-6 py-2 rounded-3xl text-secondary/80 hover:text-secondary text-sm font-medium 
-            transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring/60 bg-tertiary/80 hover:bg-tertiary
-            shadow-sm shadow-background hover:inset-shadow-sm hover:inset-shadow-background
+          className={`flex items-center justify-between gap-3 px-6 py-2 rounded-3xl text-secondary/80 text-sm font-medium 
+            outline-none focus-visible:ring-2 focus-visible:ring-ring/60 bg-tertiary/80 cursor-pointer border border-transparent 
+            transition-all duration-300 ease-in-out
+            hover:text-secondary hover:bg-tertiary
+            shadow-sm shadow-background hover:border-border
+            active:inset-shadow-sm active:inset-shadow-background
           `}
         >
           <Upload className="w-8 h-8" />
@@ -140,8 +146,11 @@ export function QuickStartPanel({
           disabled={!canBeginMatching || importedGames.length == 0} 
           onClick={beginMatching}
           className={`px-8 py-6 w-[50%] rounded-3xl text-white/80 text-lg font-medium 
-            transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring/60 bg-quaternary/80 hover:bg-quaternary
-            shadow-sm shadow-background hover:inset-shadow-sm hover:inset-shadow-background hover:text-white hover:scale-110
+            outline-none focus-visible:ring-2 focus-visible:ring-ring/60 bg-quaternary/80 
+            cursor-pointer border border-transparent shadow-sm shadow-background 
+            transition-all duration-300 ease-in-out
+            hover:text-white hover:scale-110 hover:bg-quaternary hover:border-border 
+            active:inset-shadow-sm active:inset-shadow-background 
           `}
         >
           BEGIN MATCHING
