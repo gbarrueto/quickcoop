@@ -176,11 +176,17 @@ No se busca un backend robusto. Lo mínimo necesario:
    había una cuenta conectada al abrir el diálogo en una carga fresca — se unificó a
    una sola instancia (mismo patrón que ya usaba Steam).
 
-**Fase C — Resolución de identidad sin estado (para todos, anónimos y logueados)**
+**Fase C — Resolución de identidad sin estado ✅ implementado (2026-06-26)**
 8. Endpoint `POST /api/identity/resolve` (service-role, batch, sin persistencia).
-9. `load-matching-data.ts` lo usa para amigos Epic (y opcionalmente Steam) en vez de
-   depender de `friend_links`/triggers.
-10. Bulk lookup de nombres de amigos Epic (mismo tipo de trabajo, mismo milestone).
+9. `load-matching-data.ts` lo usa para amigos Epic — queda `qcoopUsername` en
+   `IdentityRef`, calculado pero **sin badge de UI todavía** (eso es Fase E,
+   disclosure). Steam no se resolvió (su librería de amigos ya funciona sin depender
+   de qcoop — "opcionalmente Steam" de la propuesta original, se dejó fuera por no
+   aportar valor funcional ahora). `friend_links`/sus triggers quedan sin uso, tal
+   como se decidió en la sección 6a.
+10. Bulk lookup de nombres de amigos Epic (`lib/epic/account-lookup.ts`,
+    `account/api/public/account`, batches de 100) — resuelve el bug reportado de
+    nombres vacíos en la lista de amigos de Epic.
 
 **Fase D — Piso mínimo de datos reales**
 11. Portar lo mínimo del pipeline de Epic (nombre+imagen+tags) para que los tiles de

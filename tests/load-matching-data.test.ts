@@ -7,6 +7,7 @@ vi.mock("../lib/api", () => ({
   fetchEpicLibrary: vi.fn(),
   fetchEpicFriends: vi.fn(),
   fetchGamePassCatalog: vi.fn(),
+  resolveQcoopIdentities: vi.fn(),
   epicGameToCard: (game: { id: string; title: string; keyImages?: Array<{ type: string; url: string }> }) => ({
     appId: Number.parseInt(game.id, 10) || 0,
     name: game.title,
@@ -25,7 +26,14 @@ vi.mock("../lib/api", () => ({
   }),
 }))
 
-import { fetchEpicFriends, fetchEpicLibrary, fetchGamePassCatalog, fetchSteamFriends, fetchSteamOwnedGames } from "../lib/api"
+import {
+  fetchEpicFriends,
+  fetchEpicLibrary,
+  fetchGamePassCatalog,
+  fetchSteamFriends,
+  fetchSteamOwnedGames,
+  resolveQcoopIdentities,
+} from "../lib/api"
 import { loadMatchingData } from "../lib/matching/load-matching-data"
 
 describe("loadMatchingData", () => {
@@ -50,6 +58,7 @@ describe("loadMatchingData", () => {
     vi.mocked(fetchEpicFriends).mockResolvedValue({
       friends: [{ accountId: "friend-epic", displayName: "Epic Friend" }],
     })
+    vi.mocked(resolveQcoopIdentities).mockResolvedValue([{ accountId: "friend-epic", username: "epic_friend_qcoop" }])
     vi.mocked(fetchGamePassCatalog).mockResolvedValue({
       games: [{ id: "1172470", title: "Apex Legends", imageUrl: "https://example.com/apex.jpg" }],
     })
@@ -90,7 +99,9 @@ describe("loadMatchingData", () => {
     expect(result.epicGames).toHaveLength(1)
     expect(result.gamePassGames).toHaveLength(1)
     expect(result.friendProfiles.some((friend) => friend.profileId === "profile:steam:friend-steam")).toBe(true)
-    expect(result.epicFriends.some((friend) => friend.profileId === "profile:epic:friend-epic")).toBe(true)
+    const epicFriend = result.epicFriends.find((friend) => friend.profileId === "profile:epic:friend-epic")
+    expect(epicFriend).toBeDefined()
+    expect(epicFriend?.identities[0]?.qcoopUsername).toBe("epic_friend_qcoop")
     expect(result.identityLibraries["xbox:friend-pass"]).toBeDefined()
     expect(result.playerSpecs).toBeNull()
   })

@@ -6,6 +6,7 @@ import {
   fetchSteamFriends,
   fetchSteamOwnedGames,
   gamePassGameToCard,
+  resolveQcoopIdentities,
 } from "@/lib/api"
 import {
   buildIdentityLibrariesFromFriends,
@@ -95,14 +96,25 @@ export async function loadMatchingData(profile: StoredUserProfile): Promise<Matc
     }
 
     if (epicFriendsPayload?.friends) {
+      // Epic exposes friends' games only if they're also registered on qcoop
+      // (see docs/anonymous-first-flow-plan.md section 2) — resolve that here
+      // so the UI can eventually distinguish them, stateless and without
+      // requiring a qcoop session.
+      const resolvedIdentities = await resolveQcoopIdentities(
+        "epic",
+        epicFriendsPayload.friends.map((friend) => friend.accountId),
+      )
+      const qcoopUsernameByAccountId = new Map(resolvedIdentities.map((identity) => [identity.accountId, identity.username]))
+
       const epicProfiles: FriendProfile[] = epicFriendsPayload.friends.map((friend) => ({
         profileId: `profile:epic:${friend.accountId}`,
         identities: [
           {
             platform: "epic" as const,
             accountId: friend.accountId,
-            displayName: friend.displayName,
+            displayName: friend.displayName ?? friend.accountId,
             avatar: null,
+            qcoopUsername: qcoopUsernameByAccountId.get(friend.accountId) ?? null,
           },
         ],
         connections: {

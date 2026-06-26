@@ -3,7 +3,7 @@ import { hashIdFromString } from "@/lib/matching/game-utils"
 
 export type EpicFriend = {
   accountId: string
-  displayName: string
+  displayName: string | null
 }
 
 export type EpicFriendsPayload = {

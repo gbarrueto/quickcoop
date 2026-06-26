@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { resolveEpicAccount } from "@/lib/epic/resolve-account"
+import { fetchEpicDisplayNames } from "@/lib/epic/account-lookup"
 
 export async function GET() {
   const account = await resolveEpicAccount()
@@ -34,14 +35,25 @@ export async function GET() {
 
     const data = await response.json()
 
-    // The public/friends/{accountId} endpoint returns a plain array of friends.
-    const friends = Array.isArray(data) ? data : (data.friends ?? [])
+    // The public/friends/{accountId} endpoint returns a plain array of
+    // friends with bare accountIds — no display name (see
+    // docs/integracion-epic-xbox.md section 3.1). Resolve names separately.
+    const friends: Array<{ accountId: string }> = Array.isArray(data) ? data : (data.friends ?? [])
+    const displayNames = await fetchEpicDisplayNames(
+      accessToken,
+      friends.map((friend) => friend.accountId).filter(Boolean),
+    )
+
+    const enrichedFriends = friends.map((friend) => ({
+      ...friend,
+      displayName: displayNames[friend.accountId] ?? null,
+    }))
 
     return NextResponse.json({
       success: true,
       accountId,
-      friendsCount: friends.length,
-      friends,
+      friendsCount: enrichedFriends.length,
+      friends: enrichedFriends,
     })
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error"
