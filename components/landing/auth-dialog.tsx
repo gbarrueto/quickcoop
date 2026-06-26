@@ -18,6 +18,15 @@ type AuthDialogProps = {
   onOpenChange: (open: boolean) => void
 }
 
+// Carries an anonymous Epic connection (if any) over to the BDD now that the
+// user has an active qcoop session. Best-effort: a failure here (e.g. that
+// Epic account is already linked to another qcoop user) must not block login.
+function migrateEpicSession() {
+  fetch("/api/epic/auth/migrate", { method: "POST" }).catch((error) => {
+    console.error("[auth-dialog] failed to migrate Epic session", error)
+  })
+}
+
 export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
   const [authMode, setAuthMode] = useState<"login" | "register">("login")
   const [authName, setAuthName] = useState("")
@@ -55,6 +64,7 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
           return
         }
 
+        migrateEpicSession()
         onOpenChange(false)
         return
       }
@@ -69,6 +79,7 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
         return
       }
 
+      migrateEpicSession()
       onOpenChange(false)
     } catch (error) {
       console.error("[auth-dialog] unexpected error", error)

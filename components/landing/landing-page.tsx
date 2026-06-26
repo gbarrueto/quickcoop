@@ -64,7 +64,7 @@ export function LandingPage() {
           isTrendingLoading={isTrendingLoading}
           trendingLoadError={trendingLoadError}
           onSteamConnectClick={() => setSteamModalOpen(true)}
-          onEpicConnectClick={() => (currentUser ? setEpicModalOpen(true) : setAuthModalOpen(true))}
+          onEpicConnectClick={() => setEpicModalOpen(true)}
           onGamePassToggle={toggleGamePass}
           onImportClick={() => setImportModalOpen(true)}
         />

@@ -1,28 +1,19 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createClient } from "@/utils/supabase/server"
-import { getEpicTokens } from "@/lib/epic/token-store"
+import { resolveEpicAccount } from "@/lib/epic/resolve-account"
 
 export async function GET(request: NextRequest) {
   const cursor = request.nextUrl.searchParams.get("cursor") || ""
 
-  const supabase = await createClient()
-  const { data: userData } = await supabase.auth.getUser()
-  const user = userData.user
+  const account = await resolveEpicAccount()
 
-  if (!user) {
-    return NextResponse.json({ error: "Not signed in." }, { status: 401 })
-  }
-
-  const tokens = await getEpicTokens(user.id)
-
-  if (!tokens) {
+  if (!account) {
     return NextResponse.json(
       { error: "Not authenticated. Please connect your Epic Games account first." },
       { status: 401 }
     )
   }
 
-  const { accessToken, accountId } = tokens
+  const { accessToken, accountId } = account
 
   try {
     const params = new URLSearchParams({
