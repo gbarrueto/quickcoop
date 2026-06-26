@@ -124,10 +124,19 @@ export async function loadMatchingData(profile: StoredUserProfile): Promise<Matc
     const gamePassPayload = await fetchGamePassCatalog()
 
     if (gamePassPayload?.games) {
-      gamePassGames = gamePassPayload.games.map(gamePassGameToCard)
+      const catalogCards = gamePassPayload.games.map(gamePassGameToCard)
+
+      // Only expose the catalog as the user's own library (which is shown in the
+      // UI and later enriched via Steam lookups) when their Game Pass toggle is
+      // on. When only a friend has Game Pass we still need the catalog below for
+      // friend library matching, but must not load it as the user's games —
+      // otherwise the enrichment phase fires a Steam query per catalog entry.
+      if (profile.connections.hasGamePass) {
+        gamePassGames = catalogCards
+      }
 
       if (hasGamePassFriend) {
-        const gamePassSnapshot = toLibrarySnapshot(gamePassGames)
+        const gamePassSnapshot = toLibrarySnapshot(catalogCards)
 
         identityLibraries = { ...identityLibraries }
 

@@ -62,7 +62,7 @@ describe("loadMatchingData", () => {
         epicAccountId: "epic-456",
         hasGamePass: true,
       },
-      importedGames: ["Hades"],
+      importedGames: [{ title: "Hades" }],
       friends: [
         {
           profileId: "profile:xbox:friend-pass",
@@ -93,5 +93,49 @@ describe("loadMatchingData", () => {
     expect(result.epicFriends.some((friend) => friend.profileId === "profile:epic:friend-epic")).toBe(true)
     expect(result.identityLibraries["xbox:friend-pass"]).toBeDefined()
     expect(result.playerSpecs).toBeNull()
+  })
+
+  it("does not load the Game Pass catalog as the user's library when their toggle is off, but still matches friends", async () => {
+    vi.mocked(fetchGamePassCatalog).mockResolvedValue({
+      games: [{ id: "1172470", title: "Apex Legends", imageUrl: "https://example.com/apex.jpg" }],
+    })
+
+    const profile: StoredUserProfile = {
+      userId: "user-1",
+      displayName: "User",
+      connections: {
+        steamId: null,
+        epicAccountId: null,
+        hasGamePass: false,
+      },
+      importedGames: [],
+      friends: [
+        {
+          profileId: "profile:xbox:friend-pass",
+          identities: [
+            {
+              platform: "xbox",
+              accountId: "friend-pass",
+              displayName: "Game Pass Friend",
+            },
+          ],
+          connections: { steamId: null, epicAccountId: null, hasGamePass: true },
+          selected: false,
+          expanded: false,
+          libraryAppIds: [],
+          libraryTitles: [],
+        },
+      ],
+      updatedAt: Date.now(),
+    }
+
+    const result = await loadMatchingData(profile)
+
+    // The user opted out of Game Pass, so the catalog must not appear in their
+    // own library (and therefore won't trigger per-game Steam enrichment)...
+    expect(result.availablePlatforms).not.toContain("xbox")
+    expect(result.gamePassGames).toHaveLength(0)
+    // ...but the catalog is still merged into the friend's library for matching.
+    expect(result.identityLibraries["xbox:friend-pass"].appIds.has(1172470)).toBe(true)
   })
 })

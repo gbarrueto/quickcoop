@@ -70,14 +70,14 @@ export function useMatchingInit() {
           setPlayerSpecsById((prev) => ({ ...prev, self: data.playerSpecs! }))
         }
 
-        profile.importedGames.forEach(async (name) => {
+        profile.importedGames.forEach(async ({ title }) => {
           try {
-            const searchResult = await searchSteamGame(name)
+            const searchResult = await searchSteamGame(title)
             if (!searchResult?.imageUrl) return
 
             setUserGames((prev) =>
               prev.map((game) =>
-                game.platform === "import" && game.name === name
+                game.platform === "import" && game.name === title
                   ? { ...game, imageUrl: searchResult.imageUrl!, tags: searchResult.tags ?? [] }
                   : game,
               ),
