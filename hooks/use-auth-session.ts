@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react"
 import { createClient } from "@/utils/supabase/client"
 import { useUserProfile } from "@/hooks/use-user-profile"
+import { ensureStoredUserProfile } from "@/lib/user-profile"
+import { persistSteamAccount } from "@/lib/steam/persist-account"
 import type { AuthUser } from "@/types"
 import { isAuthSessionMissingError, type User } from "@supabase/supabase-js"
 
@@ -34,6 +36,23 @@ export function useAuthSession() {
 
     return () => listener.subscription.unsubscribe()
   }, [])
+
+  useEffect(() => {
+    // Carries an anonymously-connected Steam account into the BDD the moment
+    // a session appears — covers login/register AND the email-confirmation
+    // redirect, where there's no single call site to hook the migration into
+    // (see docs/anonymous-first-flow-plan.md section 3).
+    if (!authUser) {
+      return
+    }
+
+    const steamId = ensureStoredUserProfile().connections.steamId
+    if (steamId) {
+      persistSteamAccount(steamId).catch((error) => {
+        console.error("[use-auth-session] failed to persist Steam account", error)
+      })
+    }
+  }, [authUser])
 
   const { data: profile } = useUserProfile(authUser?.id)
 

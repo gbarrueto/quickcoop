@@ -153,21 +153,28 @@ No se busca un backend robusto. Lo mínimo necesario:
 
 ## 8. Plan de fases
 
-**Fase A — Revertir gate + sesión efímera de Epic**
+**Fase A — Revertir gate + sesión efímera de Epic ✅ implementado (2026-06-26)**
 1. Revertir `onEpicConnectClick` en `landing-page.tsx` (sin gate).
 2. Resucitar una sesión Epic efímera (cookie + Map en memoria), separada de la
    persistente.
 3. `token-exchange`/`library`/`friends`: resolución dual (qcoop → BDD; si no, efímera),
    centralizada en un helper.
 4. Login/registro: si hay sesión efímera activa, migrarla a BDD ahí mismo.
+   (También se removió el gate de login en `/matching` que había quedado de Fase 1
+   — no estaba listado explícitamente aquí, pero contradecía la sección 1.)
 
-**Fase B — Persistencia de Steam + desconexión**
+**Fase B — Persistencia de Steam + desconexión ✅ implementado (2026-06-26)**
 5. Upsert de `external_accounts` para Steam al conectar logueado (cliente directo,
-   sin ruta backend nueva).
-6. Endpoints/handlers de desconexión para Epic y Steam (efímero + localStorage +, si
-   logueado, BDD). Mensaje claro para el caso de cuenta ya linkeada a otro usuario
-   (sección 6b).
-7. Botón "Disconnect" en los tiles/diálogos existentes (sin vistas nuevas).
+   sin ruta backend nueva) — también se cubre el caso anónimo-conecta-luego-se-loguea
+   desde `use-auth-session.ts`.
+6. Endpoints/handlers de desconexión para Epic (`POST /api/epic/auth/disconnect`) y
+   Steam (delete directo desde el cliente, RLS). Mensaje claro para el caso de cuenta
+   ya linkeada a otro usuario (sección 6b) vía `DuplicateAccountLinkError`.
+7. Botón "Disconnect" en los diálogos existentes de Steam/Epic (sin vistas nuevas).
+   De paso se corrigió un bug pre-existente: `EpicConnectDialog` instanciaba su propio
+   `useEpicAuth()` separado del de `landing-page.tsx`, por lo que nunca sabía que ya
+   había una cuenta conectada al abrir el diálogo en una carga fresca — se unificó a
+   una sola instancia (mismo patrón que ya usaba Steam).
 
 **Fase C — Resolución de identidad sin estado (para todos, anónimos y logueados)**
 8. Endpoint `POST /api/identity/resolve` (service-role, batch, sin persistencia).

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/utils/supabase/server"
 import { saveEpicTokens } from "@/lib/epic/token-store"
 import { EPIC_EPHEMERAL_SESSION_COOKIE, createEphemeralEpicSession } from "@/lib/epic/ephemeral-session"
+import { DuplicateAccountLinkError } from "@/lib/external-accounts/duplicate-link-error"
 
 const EPIC_TOKEN_ENDPOINT = "https://account-public-service-prod03.ol.epicgames.com/account/api/oauth/token"
 
@@ -112,6 +113,9 @@ export async function POST(request: NextRequest) {
 
     return response
   } catch (error) {
+    if (error instanceof DuplicateAccountLinkError) {
+      return NextResponse.json({ error: error.message }, { status: 409 })
+    }
     const message = error instanceof Error ? error.message : "Unknown error"
     console.error("[epic/auth/token-exchange] error:", message)
     return NextResponse.json({ error: message }, { status: 500 })

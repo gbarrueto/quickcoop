@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react"
 import { isTrustedOAuthMessage, openAuthPopup } from "@/lib/auth/oauth-popup"
 import { updateStoredUserProfile } from "@/lib/user-profile"
+import { deleteSteamAccount, persistSteamAccount } from "@/lib/steam/persist-account"
 
 export function useSteamAuth(initialSteamId: string | null = null) {
   const [steamId, setSteamId] = useState<string | null>(initialSteamId)
@@ -50,6 +51,10 @@ export function useSteamAuth(initialSteamId: string | null = null) {
           },
         }))
         setIsWaiting(false)
+
+        persistSteamAccount(resolvedSteamId).catch((error) => {
+          setSteamError(error instanceof Error ? error.message : "Failed to save Steam connection")
+        })
       }
 
       if (event.data.type === "steam-auth-error") {
@@ -62,5 +67,19 @@ export function useSteamAuth(initialSteamId: string | null = null) {
     return () => window.removeEventListener("message", handleMessage)
   }, [])
 
-  return { steamId, setSteamId, steamError, isWaiting, startAuth }
+  const disconnect = useCallback(async () => {
+    setSteamError(null)
+    try {
+      await deleteSteamAccount()
+    } catch (error) {
+      console.error("[use-steam-auth] failed to disconnect", error)
+    }
+    setSteamId(null)
+    updateStoredUserProfile((profile) => ({
+      ...profile,
+      connections: { ...profile.connections, steamId: null },
+    }))
+  }, [])
+
+  return { steamId, setSteamId, steamError, isWaiting, startAuth, disconnect }
 }

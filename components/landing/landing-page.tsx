@@ -27,9 +27,24 @@ export function LandingPage() {
     toggleGamePass,
     confirmImport,
   } = useLandingProfile()
-  const { steamId, steamError, isWaiting: isWaitingSteamAuth, startAuth: startSteamOpenId } =
-    useSteamAuth(initialSteamId)
-  const { epicId } = useEpicAuth(initialEpicId)
+  const {
+    steamId,
+    steamError,
+    isWaiting: isWaitingSteamAuth,
+    startAuth: startSteamOpenId,
+    disconnect: disconnectSteam,
+  } = useSteamAuth(initialSteamId)
+  const {
+    epicId,
+    epicError,
+    isWaiting: isWaitingEpicAuth,
+    popupClosed: epicPopupClosed,
+    extensionAvailable: epicExtensionAvailable,
+    startPopupAuth: startEpicPopupAuth,
+    submitAuthCode: submitEpicAuthCode,
+    reset: resetEpicAuth,
+    disconnect: disconnectEpic,
+  } = useEpicAuth(initialEpicId)
   const { games: trendingGames, isLoading: isTrendingLoading, loadError: trendingLoadError } =
     useTrendingGames()
 
@@ -77,6 +92,7 @@ export function LandingPage() {
         steamError={steamError}
         isWaiting={isWaitingSteamAuth}
         onStartAuth={startSteamOpenId}
+        onDisconnect={disconnectSteam}
       />
 
       <AuthDialog
@@ -84,7 +100,19 @@ export function LandingPage() {
         onOpenChange={setAuthModalOpen}
       />
 
-      <EpicConnectDialog open={epicModalOpen} onOpenChange={setEpicModalOpen} />
+      <EpicConnectDialog
+        open={epicModalOpen}
+        onOpenChange={setEpicModalOpen}
+        epicId={epicId}
+        epicError={epicError}
+        isWaiting={isWaitingEpicAuth}
+        popupClosed={epicPopupClosed}
+        extensionAvailable={epicExtensionAvailable}
+        startPopupAuth={startEpicPopupAuth}
+        submitAuthCode={submitEpicAuthCode}
+        reset={resetEpicAuth}
+        disconnect={disconnectEpic}
+      />
 
       <ImportGamesDialog
         open={importModalOpen}
