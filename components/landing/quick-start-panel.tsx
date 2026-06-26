@@ -9,12 +9,13 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Switch } from "@/components/ui/switch"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useState } from "react"
+import { ImportGame } from "@/types/game"
 
 type QuickStartPanelProps = {
   currentUser: MockUser | null
   steamId: string | null
   hasGamePass: boolean | null
-  importedGames: string[]
+  importedGames: ImportGame[]
   canBeginMatching: boolean
   onSteamConnectClick: () => void
   onEpicConnectClick: () => void
@@ -122,11 +123,11 @@ export function QuickStartPanel({
         
         <div 
           onClick={onImportClick}
-          className={`flex items-center justify-between gap-3 px-6 py-2 rounded-3xl text-secondary/80 text-sm font-medium 
+          className={`flex items-center justify-between gap-3 px-6 py-2 rounded-3xl text-secondary/90 text-sm font-medium 
             outline-none focus-visible:ring-2 focus-visible:ring-ring/60 bg-tertiary/80 cursor-pointer border border-transparent 
             transition-all duration-300 ease-in-out
-            hover:text-secondary hover:bg-tertiary
-            shadow-sm shadow-background hover:border-border
+            hover:text-secondary hover:bg-tertiary hover:border-border
+            shadow-sm shadow-background 
             active:inset-shadow-sm active:inset-shadow-background
           `}
         >

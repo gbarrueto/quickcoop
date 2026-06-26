@@ -91,8 +91,8 @@ export function LandingPage() {
       <ImportGamesDialog
         open={importModalOpen}
         importedGames={importedGames}
-        onConfirm={(importText) => {
-          confirmImport(importText)
+        onConfirm={(importGame) => {
+          confirmImport(importGame)
           setImportModalOpen(false)
         }}
         onClose={() => setImportModalOpen(false)}

@@ -46,7 +46,7 @@ export async function loadMatchingData(profile: StoredUserProfile): Promise<Matc
   if (profile.connections.epicAccountId) platforms.push("epic")
   if (profile.connections.hasGamePass) platforms.push("xbox")
 
-  let userGames = profile.importedGames.map(toImportedGameCard)
+  let userGames = profile.importedGames.map((game) => {return toImportedGameCard(game.title)})
   let epicGames: GameCard[] = []
   let gamePassGames: GameCard[] = []
   let friendProfiles = profile.friends.map(toFriendProfile)
