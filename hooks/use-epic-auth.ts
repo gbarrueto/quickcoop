@@ -146,6 +146,20 @@ export function useEpicAuth(initialEpicId: string | null = null) {
     clearClosePoll()
   }, [clearClosePoll])
 
+  const disconnect = useCallback(async () => {
+    setEpicError(null)
+    try {
+      await fetch("/api/epic/auth/disconnect", { method: "POST" })
+    } catch (error) {
+      console.error("[use-epic-auth] failed to disconnect", error)
+    }
+    setEpicId(null)
+    updateStoredUserProfile((profile) => ({
+      ...profile,
+      connections: { ...profile.connections, epicAccountId: null },
+    }))
+  }, [])
+
   return {
     epicId,
     setEpicId,
@@ -156,5 +170,6 @@ export function useEpicAuth(initialEpicId: string | null = null) {
     startPopupAuth,
     submitAuthCode,
     reset,
+    disconnect,
   }
 }

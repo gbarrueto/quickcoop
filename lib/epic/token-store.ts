@@ -7,6 +7,7 @@
 
 import { createServiceClient } from "@/utils/supabase/service"
 import { decryptToken, encryptToken } from "@/lib/crypto/token-cipher"
+import { DuplicateAccountLinkError, isUniqueViolation } from "@/lib/external-accounts/duplicate-link-error"
 
 const EPIC_PROVIDER = "epic"
 
@@ -47,8 +48,14 @@ export async function saveEpicTokens(userId: string, input: SaveEpicTokensInput)
     .select("id")
     .single()
 
-  if (accountError || !account) {
-    throw new Error(`Failed to upsert Epic account: ${accountError?.message ?? "unknown error"}`)
+  if (accountError) {
+    if (isUniqueViolation(accountError)) {
+      throw new DuplicateAccountLinkError("Epic")
+    }
+    throw new Error(`Failed to upsert Epic account: ${accountError.message}`)
+  }
+  if (!account) {
+    throw new Error("Failed to upsert Epic account: no row returned")
   }
 
   const { error: tokenError } = await supabase.from("external_account_tokens").upsert(

@@ -7,6 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { Button } from "@/components/ui/button"
 import { CircleCheckBig, SquareArrowOutUpRight } from "lucide-react"
 import Link from "next/link"
 
@@ -17,6 +18,7 @@ type SteamConnectDialogProps = {
   steamError: string | null
   isWaiting: boolean
   onStartAuth: () => void
+  onDisconnect: () => void
 }
 
 export function SteamConnectDialog({
@@ -26,6 +28,7 @@ export function SteamConnectDialog({
   steamError,
   isWaiting,
   onStartAuth,
+  onDisconnect,
 }: SteamConnectDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -70,9 +73,14 @@ export function SteamConnectDialog({
             </h3>
             {steamId
             ? (
-              <div className="flex justify-center gap-2 items-center rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm text-primary">
-                Steam authenticated successfully
-                <CircleCheckBig className="h-4 w-4" />
+              <div className="space-y-3">
+                <div className="flex justify-center gap-2 items-center rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm text-primary">
+                  Steam authenticated successfully
+                  <CircleCheckBig className="h-4 w-4" />
+                </div>
+                <Button onClick={onDisconnect} variant="outline" className="w-full">
+                  Disconnect Steam account
+                </Button>
               </div>
               )
             : (
