@@ -3,12 +3,13 @@ import { QuickStartPanel } from "./quick-start-panel"
 import { TrendingGamesPanel } from "./trending-games-panel"
 import { BackgroundGames } from "./background-games"
 import { TrendingGames } from "./trending-games"
+import { ImportGame } from "@/types/game"
 
 type HeroSectionProps = {
   currentUser: AuthUser | null
   steamId: string | null
   hasGamePass: boolean | null
-  importedGames: string[]
+  importedGames: ImportGame[]
   canBeginMatching: boolean
   trendingGames: TrendingGame[]
   isTrendingLoading: boolean

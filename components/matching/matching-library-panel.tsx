@@ -21,9 +21,11 @@ type MatchingLibraryPanelProps = {
   isLoadingCategories: boolean
   categoryFilterError: string | null
   categoriesByApp: Record<number, string[]>
+  isRecommendationsModalOpen: boolean
   isCategoryPanelOpen: boolean
   isFriendsPanelOpen: boolean
   onOpenCategoryPanel: () => void
+  onOpenRecommendationsModal: () => void
   onOpenFriendsPanel: () => void
   onToggleCategory: (category: string) => void
   onSetCategoryFilterMode: (mode: CategoryFilterMode) => void
@@ -155,9 +157,11 @@ export function MatchingLibraryPanel({
   categoryFilteredGames,
   selectedCount,
   categoriesByApp,
+  isRecommendationsModalOpen,
   isCategoryPanelOpen,
   isFriendsPanelOpen,
   onOpenCategoryPanel,
+  onOpenRecommendationsModal,
   onOpenFriendsPanel,
   onOpenRequirements,
 }: MatchingLibraryPanelProps) {
@@ -175,6 +179,17 @@ export function MatchingLibraryPanel({
           </div>
 
           <div className="flex gap-2">
+            <Button 
+              onClick={onOpenRecommendationsModal}
+              className={`border text-secondary/90 transition-colors
+                          ${isRecommendationsModalOpen
+                            ? "bg-quaternary border-quaternary"
+                            : "bg-quaternary/30 hover:bg-quaternary/40"
+                          }
+              `}
+            >
+              Recommendations
+            </Button>
             <Button 
               onClick={onOpenCategoryPanel}
               className={`border border-primary/50 text-primary transition-colors

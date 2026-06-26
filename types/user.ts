@@ -1,4 +1,5 @@
 import type { StoredFriendProfile } from "./friend"
+import { ImportGame } from "./game"
 
 export type ConnectedAccounts = {
   steamId: string | null
@@ -19,7 +20,7 @@ export type StoredUserProfile = {
   userId: string
   displayName: string
   connections: ConnectedAccounts
-  importedGames: string[]
+  importedGames: ImportGame[]
   friends: StoredFriendProfile[]
   playerSpecs?: StoredPlayerSpecs
   updatedAt: number

@@ -27,6 +27,7 @@ export {
   toGameCards,
   toImportedGameCard,
 } from "./game-utils"
+export { buildUserRecommendations } from "./recommendation-utils"
 export { loadMatchingData, type MatchingInitData } from "./load-matching-data"
 export {
   evaluateParticipantCompatibility,
