@@ -1,12 +1,12 @@
 import Link from "next/link"
 import { ArrowLeft, Cpu, LoaderCircle, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import type { MockUser } from "@/lib/mock-auth"
+import type { AuthUser } from "@/types"
 import { GameRecommendations } from "./game-recommendations"
 import { RECOMMENDED_GAMES } from "@/lib/matching"
 
 type MatchingHeaderProps = {
-  currentUser: MockUser | null
+  currentUser: AuthUser | null
   steamId: string | null
   activeIndex: number
   onOpenSpecs: () => void

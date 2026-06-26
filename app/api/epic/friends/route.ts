@@ -1,17 +1,26 @@
-import { NextRequest, NextResponse } from "next/server"
-import { EPIC_SESSION_COOKIE, getEpicSession } from "@/lib/epic-session"
+import { NextResponse } from "next/server"
+import { createClient } from "@/utils/supabase/server"
+import { getEpicTokens } from "@/lib/epic/token-store"
 
-export async function GET(request: NextRequest) {
-  const session = getEpicSession(request.cookies.get(EPIC_SESSION_COOKIE)?.value)
+export async function GET() {
+  const supabase = await createClient()
+  const { data: userData } = await supabase.auth.getUser()
+  const user = userData.user
 
-  if (!session) {
+  if (!user) {
+    return NextResponse.json({ error: "Not signed in." }, { status: 401 })
+  }
+
+  const tokens = await getEpicTokens(user.id)
+
+  if (!tokens) {
     return NextResponse.json(
       { error: "Not authenticated. Please connect your Epic Games account first." },
       { status: 401 }
     )
   }
 
-  const { accessToken, accountId } = session
+  const { accessToken, accountId } = tokens
 
   try {
     const response = await fetch(

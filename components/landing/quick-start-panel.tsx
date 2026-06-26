@@ -2,18 +2,18 @@
 
 import { useRouter } from "next/navigation"
 import { ArrowRight, CheckCircle2, Link2, Upload, CircleQuestionMark, Link2Off, CircleCheckBig } from "lucide-react"
-import type { MockUser } from "@/types"
+import type { AuthUser } from "@/types"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { Switch } from "@/components/ui/switch"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { useState } from "react"
 import { ImportGame } from "@/types/game"
 
 type QuickStartPanelProps = {
-  currentUser: MockUser | null
+  currentUser: AuthUser | null
   steamId: string | null
+  epicId: string | null
   hasGamePass: boolean | null
   importedGames: ImportGame[]
   canBeginMatching: boolean
@@ -26,6 +26,7 @@ type QuickStartPanelProps = {
 export function QuickStartPanel({
   currentUser,
   steamId,
+  epicId,
   hasGamePass,
   importedGames,
   canBeginMatching,
@@ -35,8 +36,6 @@ export function QuickStartPanel({
   onImportClick,
 }: QuickStartPanelProps) {
   const router = useRouter()
-
-  const [hasEpic, setHasEpic] = useState(false)
 
   const beginMatching = () => {
     if (!canBeginMatching) {
@@ -78,14 +77,14 @@ export function QuickStartPanel({
           className={`flex items-center justify-between gap-3 px-6 py-2 rounded-3xl text-sm font-medium 
             outline-none focus-visible:ring-2 focus-visible:ring-ring/60 cursor-pointer border border-transparent
             transition-all duration-300 ease-in-out
-            ${ hasEpic 
-              ? "bg-emerald-600" 
-              : "bg-primary/60 hover:bg-primary/90 text-secondary/60 hover:text-secondary/80 shadow-sm shadow-background hover:border-border active:inset-shadow-sm active:inset-shadow-background" 
+            ${ epicId
+              ? "bg-emerald-600"
+              : "bg-primary/60 hover:bg-primary/90 text-secondary/60 hover:text-secondary/80 shadow-sm shadow-background hover:border-border active:inset-shadow-sm active:inset-shadow-background"
             }
           `}
         >
           <img className="w-10 h-10" src="/epic-games-svgrepo-com.svg" alt="epic" />
-          {hasEpic 
+          {epicId
             ? <CircleCheckBig className="h-6 w-6" />
             : <Link2Off className="h-6 w-6" />
           }

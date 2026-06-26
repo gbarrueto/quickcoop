@@ -1,4 +1,4 @@
-export type { MockUser } from "./auth"
+export type { AuthUser } from "./auth"
 export type {
   EpicLibraryPayload,
   FriendsPayload,

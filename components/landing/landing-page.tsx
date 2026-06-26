@@ -2,9 +2,9 @@
 
 import { useState } from "react"
 import { BackgroundEffects, SiteFooter, SiteHeader } from "@/components/layout"
+import { useAuthSession } from "@/hooks/use-auth-session"
 import { useEpicAuth } from "@/hooks/use-epic-auth"
 import { useLandingProfile } from "@/hooks/use-landing-profile"
-import { useMockAuthSession } from "@/hooks/use-mock-auth-session"
 import { useSteamAuth } from "@/hooks/use-steam-auth"
 import { useTrendingGames } from "@/hooks/use-trending-games"
 import { AuthDialog } from "./auth-dialog"
@@ -17,7 +17,7 @@ import { StatsSection } from "./stats-section"
 import { SteamConnectDialog } from "./steam-connect-dialog"
 
 export function LandingPage() {
-  const { currentUser, setCurrentUser, logout } = useMockAuthSession()
+  const { currentUser, logout } = useAuthSession()
   const {
     hasGamePass,
     xboxConnected,
@@ -56,6 +56,7 @@ export function LandingPage() {
         <HeroSection
           currentUser={currentUser}
           steamId={steamId}
+          epicId={epicId}
           hasGamePass={hasGamePass}
           importedGames={importedGames}
           canBeginMatching={canBeginMatching}
@@ -63,7 +64,7 @@ export function LandingPage() {
           isTrendingLoading={isTrendingLoading}
           trendingLoadError={trendingLoadError}
           onSteamConnectClick={() => setSteamModalOpen(true)}
-          onEpicConnectClick={() => setEpicModalOpen(true)}
+          onEpicConnectClick={() => (currentUser ? setEpicModalOpen(true) : setAuthModalOpen(true))}
           onGamePassToggle={toggleGamePass}
           onImportClick={() => setImportModalOpen(true)}
         />
@@ -83,7 +84,6 @@ export function LandingPage() {
       <AuthDialog
         open={authModalOpen}
         onOpenChange={setAuthModalOpen}
-        onAuthenticated={setCurrentUser}
       />
 
       <EpicConnectDialog open={epicModalOpen} onOpenChange={setEpicModalOpen} />

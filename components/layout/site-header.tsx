@@ -1,11 +1,11 @@
 import Link from "next/link"
 import { Gamepad2, User } from "lucide-react"
-import type { MockUser } from "@/types"
+import type { AuthUser } from "@/types"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 
 type SiteHeaderProps = {
-  currentUser: MockUser | null
+  currentUser: AuthUser | null
   onLoginClick: () => void
   onLogout: () => void
 }

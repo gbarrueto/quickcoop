@@ -2,16 +2,11 @@
 
 import { useState } from "react"
 import { User } from "lucide-react"
-import {
-  loginMockUser,
-  registerMockUser,
-  type MockUser,
-} from "@/lib/mock-auth"
+import { createClient } from "@/utils/supabase/client"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
@@ -21,53 +16,72 @@ import { Label } from "@/components/ui/label"
 type AuthDialogProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
-  onAuthenticated: (user: MockUser) => void
 }
 
-export function AuthDialog({ open, onOpenChange, onAuthenticated }: AuthDialogProps) {
+export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
   const [authMode, setAuthMode] = useState<"login" | "register">("login")
   const [authName, setAuthName] = useState("")
   const [authEmail, setAuthEmail] = useState("")
   const [authPassword, setAuthPassword] = useState("")
   const [authError, setAuthError] = useState<string | null>(null)
+  const [infoMessage, setInfoMessage] = useState<string | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     setAuthError(null)
+    setInfoMessage(null)
+    setIsSubmitting(true)
 
-    if (authMode === "register") {
-      const result = registerMockUser({
-        name: authName,
+    const supabase = createClient()
+
+    try {
+      if (authMode === "register") {
+        const { data, error } = await supabase.auth.signUp({
+          email: authEmail,
+          password: authPassword,
+          options: {
+            data: { name: authName.trim() },
+            emailRedirectTo: `${window.location.origin}/auth/callback`,
+          },
+        })
+
+        if (error) {
+          setAuthError(error.message)
+          return
+        }
+
+        if (!data.session) {
+          setInfoMessage("Check your email to confirm your account, then log in.")
+          return
+        }
+
+        onOpenChange(false)
+        return
+      }
+
+      const { error } = await supabase.auth.signInWithPassword({
         email: authEmail,
         password: authPassword,
       })
 
-      if (!result.ok) {
-        setAuthError(result.message)
+      if (error) {
+        setAuthError(error.message)
         return
       }
 
-      onAuthenticated(result.user)
       onOpenChange(false)
-      return
+    } catch (error) {
+      console.error("[auth-dialog] unexpected error", error)
+      setAuthError(error instanceof Error ? error.message : "Unexpected error")
+    } finally {
+      setIsSubmitting(false)
     }
-
-    const result = loginMockUser({
-      email: authEmail,
-      password: authPassword,
-    })
-
-    if (!result.ok) {
-      setAuthError(result.message)
-      return
-    }
-
-    onAuthenticated(result.user)
-    onOpenChange(false)
   }
 
   const toggleMode = () => {
     setAuthMode(authMode === "login" ? "register" : "login")
     setAuthError(null)
+    setInfoMessage(null)
   }
 
   return (
@@ -106,7 +120,7 @@ export function AuthDialog({ open, onOpenChange, onAuthenticated }: AuthDialogPr
               type="email"
               value={authEmail}
               onChange={(event) => setAuthEmail(event.target.value)}
-              placeholder="demo@qcoop.app"
+              placeholder="you@example.com"
             />
           </div>
           <div className="space-y-2">
@@ -118,33 +132,35 @@ export function AuthDialog({ open, onOpenChange, onAuthenticated }: AuthDialogPr
               type="password"
               value={authPassword}
               onChange={(event) => setAuthPassword(event.target.value)}
-              placeholder="demo123"
+              placeholder="••••••••"
             />
           </div>
 
           {authError && <p className="text-xs text-destructive">{authError}</p>}
-
-          <div className="rounded-md border border-border/70 bg-secondary/20 p-2 text-[11px] text-muted-foreground">
-            Demo login: demo@qcoop.app / demo123
-          </div>
+          {infoMessage && (
+            <div className="rounded-md border border-border/70 bg-secondary/20 p-2 text-[11px] text-muted-foreground">
+              {infoMessage}
+            </div>
+          )}
 
           <div className="flex gap-2">
-            <Button 
-              type="button" 
-              variant="outline" 
+            <Button
+              type="button"
+              variant="outline"
               onClick={toggleMode}
-              className="flex-1 bg-muted/80 hover:bg-muted-foreground/10" 
+              className="flex-1 bg-muted/80 hover:bg-muted-foreground/10"
             >
               {authMode === "login" ? "Need account" : "Have account"}
             </Button>
-            <Button 
-              type="button" 
+            <Button
+              type="button"
               onClick={handleSubmit}
-              className={`flex-1 
-                          ${authMode === "login" 
-                            ? "bg-primary/80 hover:bg-primary" 
+              disabled={isSubmitting}
+              className={`flex-1
+                          ${authMode === "login"
+                            ? "bg-primary/80 hover:bg-primary"
                             : "bg-tertiary/80 hover:bg-tertiary"}
-              `} 
+              `}
             >
               {authMode === "login" ? "Login" : "Register"}
             </Button>
