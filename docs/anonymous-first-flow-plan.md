@@ -153,33 +153,158 @@ No se busca un backend robusto. Lo mínimo necesario:
 
 ## 8. Plan de fases
 
-**Fase A — Revertir gate + sesión efímera de Epic**
+**Fase A — Revertir gate + sesión efímera de Epic ✅ implementado (2026-06-26)**
 1. Revertir `onEpicConnectClick` en `landing-page.tsx` (sin gate).
 2. Resucitar una sesión Epic efímera (cookie + Map en memoria), separada de la
    persistente.
 3. `token-exchange`/`library`/`friends`: resolución dual (qcoop → BDD; si no, efímera),
    centralizada en un helper.
 4. Login/registro: si hay sesión efímera activa, migrarla a BDD ahí mismo.
+   (También se removió el gate de login en `/matching` que había quedado de Fase 1
+   — no estaba listado explícitamente aquí, pero contradecía la sección 1.)
 
-**Fase B — Persistencia de Steam + desconexión**
+**Fase B — Persistencia de Steam + desconexión ✅ implementado (2026-06-26)**
 5. Upsert de `external_accounts` para Steam al conectar logueado (cliente directo,
-   sin ruta backend nueva).
-6. Endpoints/handlers de desconexión para Epic y Steam (efímero + localStorage +, si
-   logueado, BDD). Mensaje claro para el caso de cuenta ya linkeada a otro usuario
-   (sección 6b).
-7. Botón "Disconnect" en los tiles/diálogos existentes (sin vistas nuevas).
+   sin ruta backend nueva) — también se cubre el caso anónimo-conecta-luego-se-loguea
+   desde `use-auth-session.ts`.
+6. Endpoints/handlers de desconexión para Epic (`POST /api/epic/auth/disconnect`) y
+   Steam (delete directo desde el cliente, RLS). Mensaje claro para el caso de cuenta
+   ya linkeada a otro usuario (sección 6b) vía `DuplicateAccountLinkError`.
+7. Botón "Disconnect" en los diálogos existentes de Steam/Epic (sin vistas nuevas).
+   De paso se corrigió un bug pre-existente: `EpicConnectDialog` instanciaba su propio
+   `useEpicAuth()` separado del de `landing-page.tsx`, por lo que nunca sabía que ya
+   había una cuenta conectada al abrir el diálogo en una carga fresca — se unificó a
+   una sola instancia (mismo patrón que ya usaba Steam).
 
-**Fase C — Resolución de identidad sin estado (para todos, anónimos y logueados)**
+**Fase C — Resolución de identidad sin estado ✅ implementado (2026-06-26)**
 8. Endpoint `POST /api/identity/resolve` (service-role, batch, sin persistencia).
-9. `load-matching-data.ts` lo usa para amigos Epic (y opcionalmente Steam) en vez de
-   depender de `friend_links`/triggers.
-10. Bulk lookup de nombres de amigos Epic (mismo tipo de trabajo, mismo milestone).
+9. `load-matching-data.ts` lo usa para amigos Epic — queda `qcoopUsername` en
+   `IdentityRef`, calculado pero **sin badge de UI todavía** (eso es Fase E,
+   disclosure). Steam no se resolvió (su librería de amigos ya funciona sin depender
+   de qcoop — "opcionalmente Steam" de la propuesta original, se dejó fuera por no
+   aportar valor funcional ahora). `friend_links`/sus triggers quedan sin uso, tal
+   como se decidió en la sección 6a.
+10. Bulk lookup de nombres de amigos Epic (`lib/epic/account-lookup.ts`,
+    `account/api/public/account`, batches de 100) — resuelve el bug reportado de
+    nombres vacíos en la lista de amigos de Epic.
 
 **Fase D — Piso mínimo de datos reales**
-11. Portar lo mínimo del pipeline de Epic (nombre+imagen+tags) para que los tiles de
-    Epic dejen de salir vacíos/rotos.
-12. Extender el `appdetails` de Steam ya en uso para traer precio + descripción corta.
-13. Tabla corta en docs: por proveedor, qué campo es real vs. mock/placeholder hoy.
+11. ✅ **Ampliado y implementado (2026-06-26)**: el alcance pasó de "lo mínimo" a
+    **pipeline de Epic completo**, incluyendo precio/descuento (la `OFFERS_QUERY` de
+    `epicstore_api` ya traía `price.totalPrice` completo — se portó incluido, no solo
+    nombre+imagen+tags). Incluye también el esquema de catálogo (`games`/
+    `game_listings`/`user_games`/`epic_namespace_slug`/`sync_state`, antes "Fase 3,
+    fuera de alcance" — el usuario la trajo a este alcance) y el enriquecimiento
+    on-demand (cache-check antes de re-fetchear Epic, upsert de lo nuevo). Ver detalle
+    debajo. **Sin wiring a la UI de matching todavía** — "el dónde va cada dato" queda
+    para la fase final de UIUX, según indicación explícita del usuario.
+12. ✅ **Implementado y verificado en vivo (2026-06-26)**: `lib/steam/{store-api,
+    game-details-pipeline}.ts` + `GET /api/steam/game-details?steamId=...` — usa
+    `appdetails` (`price_overview`, `detailed_description`, genres/categories,
+    `header_image`), mismo cache-check contra `game_listings` que Epic (vía
+    `lib/catalog/store.ts`, ahora provider-agnóstico). Probado contra una cuenta Steam
+    real: 76 juegos, BDD poblada (`game_listings` con `provider='steam'`), segunda
+    llamada confirmadamente más rápida (cache hit). Cap de 80 juegos nuevos por
+    request (mismo límite que `app/api/steam/game-categories/route.ts`).
+13. **Decisión (2026-06-26): no hace falta mock data.** Todo lo planificado hasta ahora
+    es obtenible de fuentes reales (Steam appdetails, Epic pipeline). Se descarta el
+    punto "fallback a mock documentado" de la sección 7 — ya no aplica.
+    **Hallazgo de paso**: `lib/matching/game-utils.ts`'s `deriveRating`/`derivePlayers`
+    (usados en `toGameCards` para juegos de Steam) son **valores inventados** (hash
+    determinístico del appId, no datos reales) — pendiente de decidir si se
+    reemplazan (Steam expone score de reviews vía `/appreviews/{appid}`, pero no un
+    "rango de jugadores" real). No se tocó, queda para cuando se revise esto.
+
+**Recomendaciones (`lib/matching/recommendation-utils.ts`) — investigado, decisión:
+esperar.** La lógica SÍ es real (ordena por `playtimeMinutes` real para "most played",
+score por tags coincidentes para "similar") — no hay que tocar el algoritmo. Lo que es
+mock es el **pool de candidatos** (`RECOMMENDED_GAMES`, estático). Cambiarlo por una
+query real contra `games`/`game_listings` es el paso natural, pero el catálogo se
+puebla on-demand (sección 4) — con pocos usuarios reales importando, el pool de "otros
+juegos no poseídos" puede salir vacío o muy chico en desarrollo/demo. **El usuario
+decidió esperar a tener más datos importados antes de hacer este swap** (2026-06-26) —
+no implementar todavía, revisitar cuando el catálogo tenga más variedad.
+
+**Política transversal (desde 2026-06-26): toda implementación nueva de data-fetching
+en el front usa TanStack Query** (`useQuery`/`useMutation`), sin excepción salvo lo ya
+documentado como excluido (flujos OAuth/popup, estado local/localStorage). No se
+refactoriza lo existente por ahora (tiempo) — la migración de `load-matching-data.ts`
+queda pendiente para cuando se aborde esa pieza completa.
+
+### Detalle de la Fase D (Epic, 2026-06-26)
+
+- **Migración** `20260626190137_catalog_games_schema.sql` (aplicada a dev): `games`,
+  `game_listings`, `user_games`, `epic_namespace_slug`, `sync_state` — esquema y RLS
+  tal cual [database-design.md](database-design.md) secciones 3, 6 y 8.
+  `epic_namespace_slug`/`sync_state` quedaron sin policies (solo `service_role`,
+  nunca las consulta el cliente).
+- **Pipeline** (`lib/epic/`): `store-api.ts` (get_product, productmapping, metadata
+  bulk, offers bulk vía GraphQL — query trimmed pero con `price.totalPrice` completo),
+  `namespace-slug.ts` (cache + guard de 6h en `sync_state` antes de re-descargar el
+  dump completo), `catalog-store.ts` (lee cache de `game_listings`, upsert de
+  `games`+`game_listings` nuevos con `kind`/`parent_listing_id` para DLC, link de
+  `user_games` solo si hay sesión qcoop), `game-details-pipeline.ts` (orquesta todo,
+  namespace por namespace, fully-cached → reconstruye desde BDD sin tocar Epic;
+  cache-miss → corre el pipeline completo).
+- **Endpoint** `GET /api/epic/game-details`: resuelve la cuenta (dual, igual que
+  library/friends), trae la library cruda, corre el pipeline, linkea `user_games` si
+  corresponde.
+- **Hook** `hooks/use-epic-game-details.ts`: `useQuery` (TanStack), no consumido por
+  ningún componente todavía.
+- **Gap conocido, no tocado**: `lib/api/epic.ts`/`load-matching-data.ts` esperan
+  `epicLibPayload.games`, pero `/api/epic/library` devuelve `items` — el campo nunca
+  matcheó, por eso `epicGames` queda `[]` siempre en matching hoy. No se tocó porque
+  es del lado de la UI de matching (deferido a la fase UIUX), pero hay que tenerlo
+  presente: con el pipeline nuevo disponible, probablemente la solución natural sea
+  reemplazar ese fetch crudo por `useEpicGameDetails` cuando se aborde esa fase.
+- **Sin tests automatizados**: el pipeline no se pudo probar contra Epic real desde
+  este entorno (sin sesión de usuario). Verificado solo con `tsc`/`eslint`/`db
+  advisors` limpios — falta probarlo end-to-end con una cuenta Epic real conectada.
+
+### Curación manual de offers (Epic) — decisión final (2026-06-26)
+
+`get_product` + metadata bulk (nombre, imagen base, descripción, géneros vía
+`meta.tags`) **nunca tuvieron problema** y siguen 100% automatizados en el pipeline
+live. El problema es específico de **offers/GraphQL** (precio, descuento, tags
+completos genre+feature, imagen del offer):
+
+- `store.epicgames.com/graphql` está detrás de un challenge de Cloudflare que bloquea
+  cualquier cliente HTTP plano (`fetch`/`curl`), headers de navegador completos o no
+  — confirmado a mano.
+- `cloudscraper` (Python) sí lo resuelve, pero **solo si la IP de origen tiene buena
+  reputación** — no es solo el challenge JS/TLS, Cloudflare también filtra por
+  reputación de IP/ASN. Confirmado con dos hosts distintos:
+  - **PythonAnywhere (free)**: ni siquiera llega — su proxy de salida obligatorio
+    bloquea dominios no-whitelisteados (`ProxyError 403` antes de tocar Cloudflare).
+  - **Render (free)**: llega, pero Cloudflare le devuelve el challenge 403 igual que
+    a curl — su rango de IPs (como el de cualquier PaaS conocido, target frecuente de
+    scraping) está mal reputado.
+  - Mi sandbox de desarrollo y la red local del usuario **sí pasan** — de ahí que el
+    flujo completo funcionara cuando se probó con el bridge corriendo en
+    `localhost` durante desarrollo.
+- **Decisión: curación manual, local, periódica** — en vez de perseguir un host que
+  pase el filtro de reputación (probar Railway/Fly es una apuesta sin garantía; un
+  proxy residencial pago sí funcionaría pero tiene costo recurrente, descartado para
+  un proyecto de curso). Se construyó
+  [scripts/curate_epic_offers.py](../scripts/curate_epic_offers.py): corre a mano
+  desde una máquina con buena reputación de IP (la del usuario), busca en
+  `game_listings` (`provider='epic'`, `price IS NULL`, con `offerId` conocido —
+  excluye DLCs a propósito, que nunca tienen oferta propia por diseño), resuelve los
+  offers contra Epic con `cloudscraper`, y actualiza `game_listings` +
+  `games.primary_image_url`/`tags` directo vía REST de Supabase
+  (`SUPABASE_SERVICE_ROLE_KEY`, leído de `.env.local`).
+  **Validado end-to-end**: se anuló a propósito el precio/tags/imagen de una entrada
+  real (Marvel's Guardians of the Galaxy) y el script la repobló correctamente en un
+  solo run.
+- **Workflow esperado**: "poblando de a poco" — cada vez que el catálogo tenga
+  entradas nuevas sin precio (alguien importó una librería de Epic nueva), correr
+  `python3 scripts/curate_epic_offers.py` (con `--dry-run` primero si se quiere
+  revisar antes de escribir) desde una máquina local. No es automático ni tiene por
+  qué serlo — es la curación manual que el usuario decidió adoptar.
+- El bridge (`services/epic-offers-bridge/`, desplegado en Render) **queda como
+  está pero no resuelve el problema** — se deja documentado por si Cloudflare cambia
+  de criterio o aparece un host con mejor reputación; `fetchOffersBulk` ya degrada a
+  `{}` con gracia si no responde, así que no hace daño dejarlo.
 
 **Fase E — Disclosure de UX (solo frontend, sin vistas nuevas)**
 14. Copys/badges contextuales en quick-start-panel/hero-section según sección 2.

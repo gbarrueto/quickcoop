@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/utils/supabase/server"
 import { saveEpicTokens } from "@/lib/epic/token-store"
+import { EPIC_EPHEMERAL_SESSION_COOKIE, createEphemeralEpicSession } from "@/lib/epic/ephemeral-session"
+import { DuplicateAccountLinkError } from "@/lib/external-accounts/duplicate-link-error"
 
 const EPIC_TOKEN_ENDPOINT = "https://account-public-service-prod03.ol.epicgames.com/account/api/oauth/token"
 
@@ -40,17 +42,6 @@ async function exchangeCodeForToken(code: string) {
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient()
-    const { data: userData } = await supabase.auth.getUser()
-    const user = userData.user
-
-    if (!user) {
-      return NextResponse.json(
-        { error: "You must be signed in to connect an Epic Games account." },
-        { status: 401 }
-      )
-    }
-
     const { authorizationCode } = await request.json()
 
     if (!authorizationCode || typeof authorizationCode !== "string") {
@@ -71,23 +62,60 @@ export async function POST(request: NextRequest) {
     const payload = decodeJwtPayload(tokenResponse.access_token)
     const accountId = payload.sub
     const displayName = payload.dn
+    const expiresAt = Date.now() + (tokenResponse.expires_in ?? 0) * 1000
 
-    await saveEpicTokens(user.id, {
-      accountId,
-      displayName,
+    // Connecting Epic never requires a qcoop account (see
+    // docs/anonymous-first-flow-plan.md). Logged-in users persist straight to
+    // the BDD; everyone else gets an ephemeral, cookie-keyed session that's
+    // migrated to the BDD if/when they register (migrate-ephemeral-session.ts).
+    const supabase = await createClient()
+    const { data: userData } = await supabase.auth.getUser()
+
+    if (userData.user) {
+      await saveEpicTokens(userData.user.id, {
+        accountId,
+        displayName,
+        accessToken: tokenResponse.access_token,
+        refreshToken: tokenResponse.refresh_token,
+        tokenType: tokenResponse.token_type,
+        expiresAt,
+      })
+
+      return NextResponse.json({
+        success: true,
+        accountId,
+        displayName,
+        expiresIn: tokenResponse.expires_in,
+      })
+    }
+
+    const sessionId = createEphemeralEpicSession({
       accessToken: tokenResponse.access_token,
       refreshToken: tokenResponse.refresh_token,
-      tokenType: tokenResponse.token_type,
-      expiresAt: Date.now() + (tokenResponse.expires_in ?? 0) * 1000,
+      accountId,
+      displayName,
+      expiresAt,
     })
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       accountId,
       displayName,
       expiresIn: tokenResponse.expires_in,
     })
+
+    response.cookies.set(EPIC_EPHEMERAL_SESSION_COOKIE, sessionId, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 2592000, // 30 days
+    })
+
+    return response
   } catch (error) {
+    if (error instanceof DuplicateAccountLinkError) {
+      return NextResponse.json({ error: error.message }, { status: 409 })
+    }
     const message = error instanceof Error ? error.message : "Unknown error"
     console.error("[epic/auth/token-exchange] error:", message)
     return NextResponse.json({ error: message }, { status: 500 })

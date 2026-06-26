@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { useEpicAuth } from "@/hooks/use-epic-auth"
+import { useState, useEffect, useRef } from "react"
+import { CircleCheckBig } from "lucide-react"
 import {
   Dialog,
   DialogContent,
@@ -15,21 +15,50 @@ import { Input } from "@/components/ui/input"
 type EpicConnectDialogProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
+  epicId: string | null
+  epicError: string | null
+  isWaiting: boolean
+  popupClosed: boolean
+  extensionAvailable: boolean
+  startPopupAuth: () => void
+  submitAuthCode: (code: string) => Promise<void>
+  reset: () => void
+  disconnect: () => Promise<void>
 }
 
-export function EpicConnectDialog({ open, onOpenChange }: EpicConnectDialogProps) {
-  const { epicId, epicError, isWaiting, popupClosed, extensionAvailable, startPopupAuth, submitAuthCode, reset } = useEpicAuth()
+export function EpicConnectDialog({
+  open,
+  onOpenChange,
+  epicId,
+  epicError,
+  isWaiting,
+  popupClosed,
+  extensionAvailable,
+  startPopupAuth,
+  submitAuthCode,
+  reset,
+  disconnect,
+}: EpicConnectDialogProps) {
   const [authCode, setAuthCode] = useState("")
+  const previousEpicIdRef = useRef(epicId)
 
+  // Only auto-close on a fresh connect (epicId transitioning to set) — if the
+  // dialog is opened while already connected, show the connected/disconnect
+  // state below instead of immediately closing.
   useEffect(() => {
-    if (epicId && open) {
+    if (epicId && epicId !== previousEpicIdRef.current && open) {
       setAuthCode("")
       onOpenChange(false)
     }
+    previousEpicIdRef.current = epicId
   }, [epicId, open, onOpenChange])
 
   const handleConnect = () => {
     startPopupAuth()
+  }
+
+  const handleDisconnect = () => {
+    void disconnect()
   }
 
   const handleSubmitCode = async () => {
@@ -64,7 +93,19 @@ export function EpicConnectDialog({ open, onOpenChange }: EpicConnectDialogProps
         </div>
 
         <div className="space-y-5 px-6 py-6">
-          {!popupClosed && !isWaiting && (
+          {epicId && !popupClosed && !isWaiting && (
+            <div className="space-y-4 text-center">
+              <div className="flex justify-center gap-2 items-center rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm text-primary">
+                Epic account connected
+                <CircleCheckBig className="h-4 w-4" />
+              </div>
+              <Button onClick={handleDisconnect} variant="outline" className="w-full">
+                Disconnect Epic account
+              </Button>
+            </div>
+          )}
+
+          {!epicId && !popupClosed && !isWaiting && (
             <>
               {epicError && (
                 <div className="rounded-lg border border-red-400/20 bg-red-400/5 px-3 py-2 text-sm text-red-300">

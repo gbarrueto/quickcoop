@@ -23,6 +23,10 @@ export type IdentityRef = {
   accountId: string
   displayName: string
   avatar?: string | null
+  // Public qcoop username, when this provider account is also a registered
+  // qcoop user (resolved via /api/identity/resolve). Null/undefined just
+  // means "not on qcoop" or "not checked yet" — never a hard dependency.
+  qcoopUsername?: string | null
 }
 
 export type FriendProfile = {

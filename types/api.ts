@@ -1,4 +1,4 @@
-import type { EpicGame, GamePassGame, SteamOwnedGame } from "./game"
+import type { EpicGame, EpicGameDetails, GamePassGame, SteamGameDetails, SteamOwnedGame } from "./game"
 import type { FriendFromApi } from "./friend"
 
 export type OwnedGamesPayload = {
@@ -12,6 +12,16 @@ export type OwnedGamesPayload = {
 
 export type EpicLibraryPayload = {
   games?: EpicGame[]
+  error?: string
+}
+
+export type EpicGameDetailsPayload = {
+  games?: EpicGameDetails[]
+  error?: string
+}
+
+export type SteamGameDetailsPayload = {
+  games?: SteamGameDetails[]
   error?: string
 }
 

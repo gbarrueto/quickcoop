@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
 import { searchSteamGame } from "@/lib/api"
 import { loadMatchingData } from "@/lib/matching/load-matching-data"
 import { ensureStoredUserProfile } from "@/lib/user-profile"
@@ -18,7 +17,6 @@ import type {
 } from "@/types"
 
 export function useMatchingInit() {
-  const router = useRouter()
   const [authUser, setAuthUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [pageError, setPageError] = useState<string | null>(null)
@@ -38,15 +36,13 @@ export function useMatchingInit() {
 
   useEffect(() => {
     const initialize = async () => {
+      // Matching never requires a qcoop account (see
+      // docs/anonymous-first-flow-plan.md) — anonymous visitors load it from
+      // their locally stored connections/imports same as registered users.
       const supabase = createClient()
       const { data } = await supabase.auth.getUser()
-      const user = data.user
-      if (!user) {
-        router.push("/")
-        return
-      }
+      setAuthUser(data.user)
 
-      setAuthUser(user)
       const profile = ensureStoredUserProfile()
 
       setLoading(true)
@@ -111,7 +107,7 @@ export function useMatchingInit() {
     }
 
     void initialize()
-  }, [router])
+  }, [])
 
   const { data: profile } = useUserProfile(authUser?.id)
 

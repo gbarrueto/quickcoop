@@ -2,7 +2,6 @@
 
 import { useRouter } from "next/navigation"
 import { ArrowRight, CheckCircle2, Link2, Upload, CircleQuestionMark, Link2Off, CircleCheckBig } from "lucide-react"
-import type { AuthUser } from "@/types"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
@@ -11,7 +10,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ImportGame } from "@/types/game"
 
 type QuickStartPanelProps = {
-  currentUser: AuthUser | null
   steamId: string | null
   epicId: string | null
   hasGamePass: boolean | null
@@ -24,7 +22,6 @@ type QuickStartPanelProps = {
 }
 
 export function QuickStartPanel({
-  currentUser,
   steamId,
   epicId,
   hasGamePass,
@@ -138,12 +135,12 @@ export function QuickStartPanel({
       <div className="flex flex-col items-center gap-3">
         {!canBeginMatching && (
           <p className="text-xs text-muted-foreground text-center">
-            {!currentUser ? "Login first to continue." : "Import games or connect at least one account to begin."}
+            Import games or connect at least one account to begin.
           </p>
         )}
-        <Button 
-          type="button" 
-          disabled={!canBeginMatching || importedGames.length == 0} 
+        <Button
+          type="button"
+          disabled={!canBeginMatching}
           onClick={beginMatching}
           className={`px-8 py-6 w-[50%] rounded-3xl text-white/80 text-lg font-medium 
             outline-none focus-visible:ring-2 focus-visible:ring-ring/60 bg-quaternary/80 

@@ -1,11 +1,14 @@
 import {
   epicGameToCard,
   fetchEpicFriends,
+  fetchEpicGameDetails,
   fetchEpicLibrary,
   fetchGamePassCatalog,
   fetchSteamFriends,
+  fetchSteamGameDetails,
   fetchSteamOwnedGames,
   gamePassGameToCard,
+  resolveQcoopIdentities,
 } from "@/lib/api"
 import {
   buildIdentityLibrariesFromFriends,
@@ -54,6 +57,14 @@ export async function loadMatchingData(profile: StoredUserProfile): Promise<Matc
   let identityLibraries = buildIdentityLibrariesFromFriends(profile.friends)
 
   if (profile.connections.steamId) {
+    // Best-effort, not awaited: enriches the BDD catalog (real description +
+    // price/discount, docs/database-design.md section 4) as a side effect of
+    // every import. Doesn't affect what's returned/displayed here — see
+    // docs/anonymous-first-flow-plan.md ("el dónde" is a later UIUX decision).
+    fetchSteamGameDetails(profile.connections.steamId).catch((error) => {
+      console.error("[load-matching-data] Steam catalog enrichment failed", error)
+    })
+
     const [gamesPayload, friendsPayload] = await Promise.all([
       fetchSteamOwnedGames(profile.connections.steamId),
       fetchSteamFriends(profile.connections.steamId),
@@ -85,6 +96,13 @@ export async function loadMatchingData(profile: StoredUserProfile): Promise<Matc
   }
 
   if (profile.connections.epicAccountId) {
+    // Same as the Steam call above: best-effort BDD enrichment, not awaited,
+    // doesn't touch epicGames below. Test directly via GET
+    // /api/epic/game-details if you need to see its result.
+    fetchEpicGameDetails().catch((error) => {
+      console.error("[load-matching-data] Epic catalog enrichment failed", error)
+    })
+
     const [epicLibPayload, epicFriendsPayload] = await Promise.all([
       fetchEpicLibrary(profile.connections.epicAccountId),
       fetchEpicFriends(profile.connections.epicAccountId),
@@ -95,14 +113,25 @@ export async function loadMatchingData(profile: StoredUserProfile): Promise<Matc
     }
 
     if (epicFriendsPayload?.friends) {
+      // Epic exposes friends' games only if they're also registered on qcoop
+      // (see docs/anonymous-first-flow-plan.md section 2) — resolve that here
+      // so the UI can eventually distinguish them, stateless and without
+      // requiring a qcoop session.
+      const resolvedIdentities = await resolveQcoopIdentities(
+        "epic",
+        epicFriendsPayload.friends.map((friend) => friend.accountId),
+      )
+      const qcoopUsernameByAccountId = new Map(resolvedIdentities.map((identity) => [identity.accountId, identity.username]))
+
       const epicProfiles: FriendProfile[] = epicFriendsPayload.friends.map((friend) => ({
         profileId: `profile:epic:${friend.accountId}`,
         identities: [
           {
             platform: "epic" as const,
             accountId: friend.accountId,
-            displayName: friend.displayName,
+            displayName: friend.displayName ?? friend.accountId,
             avatar: null,
+            qcoopUsername: qcoopUsernameByAccountId.get(friend.accountId) ?? null,
           },
         ],
         connections: {
