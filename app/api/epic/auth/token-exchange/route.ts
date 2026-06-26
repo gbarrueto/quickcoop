@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createEpicSession, EPIC_SESSION_COOKIE } from "@/lib/epic-session"
+import { createClient } from "@/utils/supabase/server"
+import { saveEpicTokens } from "@/lib/epic/token-store"
 
 const EPIC_TOKEN_ENDPOINT = "https://account-public-service-prod03.ol.epicgames.com/account/api/oauth/token"
 
@@ -39,6 +40,17 @@ async function exchangeCodeForToken(code: string) {
 
 export async function POST(request: NextRequest) {
   try {
+    const supabase = await createClient()
+    const { data: userData } = await supabase.auth.getUser()
+    const user = userData.user
+
+    if (!user) {
+      return NextResponse.json(
+        { error: "You must be signed in to connect an Epic Games account." },
+        { status: 401 }
+      )
+    }
+
     const { authorizationCode } = await request.json()
 
     if (!authorizationCode || typeof authorizationCode !== "string") {
@@ -60,39 +72,21 @@ export async function POST(request: NextRequest) {
     const accountId = payload.sub
     const displayName = payload.dn
 
-    // Epic eg1 access tokens are large JWTs (>4KB) and exceed the browser cookie
-    // size limit, so we store them server-side and only set a small session cookie.
-    const sessionId = createEpicSession({
-      accessToken: tokenResponse.access_token,
-      refreshToken: tokenResponse.refresh_token,
+    await saveEpicTokens(user.id, {
       accountId,
       displayName,
+      accessToken: tokenResponse.access_token,
+      refreshToken: tokenResponse.refresh_token,
+      tokenType: tokenResponse.token_type,
       expiresAt: Date.now() + (tokenResponse.expires_in ?? 0) * 1000,
     })
 
-    const response = NextResponse.json({
+    return NextResponse.json({
       success: true,
       accountId,
       displayName,
       expiresIn: tokenResponse.expires_in,
     })
-
-    response.cookies.set(EPIC_SESSION_COOKIE, sessionId, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 2592000, // 30 days
-    })
-
-    // Account id is also exposed (non-httpOnly) for UI purposes.
-    response.cookies.set("epic-account-id", accountId, {
-      httpOnly: false,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 2592000,
-    })
-
-    return response
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error"
     console.error("[epic/auth/token-exchange] error:", message)

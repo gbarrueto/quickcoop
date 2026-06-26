@@ -8,6 +8,7 @@ import { ImportGame } from "@/types/game"
 type HeroSectionProps = {
   currentUser: AuthUser | null
   steamId: string | null
+  epicId: string | null
   hasGamePass: boolean | null
   importedGames: ImportGame[]
   canBeginMatching: boolean
@@ -23,6 +24,7 @@ type HeroSectionProps = {
 export function HeroSection({
   currentUser,
   steamId,
+  epicId,
   hasGamePass,
   importedGames,
   canBeginMatching,
@@ -55,6 +57,7 @@ export function HeroSection({
               <QuickStartPanel
                 currentUser={currentUser}
                 steamId={steamId}
+                epicId={epicId}
                 hasGamePass={hasGamePass}
                 importedGames={importedGames}
                 canBeginMatching={canBeginMatching}

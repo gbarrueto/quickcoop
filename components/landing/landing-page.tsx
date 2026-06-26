@@ -56,6 +56,7 @@ export function LandingPage() {
         <HeroSection
           currentUser={currentUser}
           steamId={steamId}
+          epicId={epicId}
           hasGamePass={hasGamePass}
           importedGames={importedGames}
           canBeginMatching={canBeginMatching}
@@ -63,7 +64,7 @@ export function LandingPage() {
           isTrendingLoading={isTrendingLoading}
           trendingLoadError={trendingLoadError}
           onSteamConnectClick={() => setSteamModalOpen(true)}
-          onEpicConnectClick={() => setEpicModalOpen(true)}
+          onEpicConnectClick={() => (currentUser ? setEpicModalOpen(true) : setAuthModalOpen(true))}
           onGamePassToggle={toggleGamePass}
           onImportClick={() => setImportModalOpen(true)}
         />
