@@ -3,10 +3,6 @@
 export const STORAGE_KEYS = {
   /** Persisted user profile (localStorage) */
   userProfile: "qcoop-user-profile",
-  /** Mock auth users registry (localStorage) */
-  mockUsers: "qcoop-mock-users",
-  /** Mock auth session (localStorage) */
-  mockSession: "qcoop-mock-session",
   /** Steam ID synced to sessionStorage for legacy compatibility */
   steamSession: "qcoop-steam-id",
   /** Epic account ID synced to sessionStorage for legacy compatibility */

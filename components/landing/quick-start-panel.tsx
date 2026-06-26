@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation"
 import { ArrowRight, CheckCircle2, Link2, Upload, CircleQuestionMark, Link2Off, CircleCheckBig } from "lucide-react"
-import type { MockUser } from "@/types"
+import type { AuthUser } from "@/types"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useState } from "react"
 
 type QuickStartPanelProps = {
-  currentUser: MockUser | null
+  currentUser: AuthUser | null
   steamId: string | null
   hasGamePass: boolean | null
   importedGames: string[]

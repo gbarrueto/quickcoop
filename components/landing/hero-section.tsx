@@ -1,11 +1,11 @@
-import type { MockUser, TrendingGame } from "@/types"
+import type { AuthUser, TrendingGame } from "@/types"
 import { QuickStartPanel } from "./quick-start-panel"
 import { TrendingGamesPanel } from "./trending-games-panel"
 import { BackgroundGames } from "./background-games"
 import { TrendingGames } from "./trending-games"
 
 type HeroSectionProps = {
-  currentUser: MockUser | null
+  currentUser: AuthUser | null
   steamId: string | null
   hasGamePass: boolean | null
   importedGames: string[]
