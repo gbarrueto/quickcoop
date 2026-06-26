@@ -1,6 +1,8 @@
 export {
+  epicGameDetailsToCard,
   epicGameToCard,
   fetchEpicFriends,
+  fetchEpicGameDetails,
   fetchEpicLibrary,
   type EpicFriend,
   type EpicFriendsPayload,
@@ -11,6 +13,7 @@ export {
   fetchGameCategories,
   fetchGameRequirements,
   fetchSteamFriends,
+  fetchSteamGameDetails,
   fetchSteamOwnedGames,
   searchSteamGame,
 } from "./steam"

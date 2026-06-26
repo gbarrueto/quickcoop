@@ -1,4 +1,4 @@
-import type { EpicGame, EpicLibraryPayload, GameCard } from "@/types"
+import type { EpicGame, EpicGameDetails, EpicGameDetailsPayload, EpicLibraryPayload, GameCard } from "@/types"
 import { hashIdFromString } from "@/lib/matching/game-utils"
 
 export type EpicFriend = {
@@ -45,4 +45,25 @@ export async function fetchEpicFriends(accountId: string) {
   }
 
   return parseJson<EpicFriendsPayload>(response)
+}
+
+export function epicGameDetailsToCard(game: EpicGameDetails): GameCard {
+  return {
+    appId: hashIdFromString(game.catalogItemId ?? game.namespace),
+    name: game.title,
+    imageUrl: game.imageUrl ?? "",
+    rating: 0,
+    players: "1+",
+    platform: "epic",
+    tags: game.tags,
+  }
+}
+
+export async function fetchEpicGameDetails() {
+  const response = await fetch("/api/epic/game-details")
+  if (!response.ok) {
+    return null
+  }
+
+  return parseJson<EpicGameDetailsPayload>(response)
 }

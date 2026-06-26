@@ -189,10 +189,77 @@ No se busca un backend robusto. Lo mínimo necesario:
     nombres vacíos en la lista de amigos de Epic.
 
 **Fase D — Piso mínimo de datos reales**
-11. Portar lo mínimo del pipeline de Epic (nombre+imagen+tags) para que los tiles de
-    Epic dejen de salir vacíos/rotos.
-12. Extender el `appdetails` de Steam ya en uso para traer precio + descripción corta.
-13. Tabla corta en docs: por proveedor, qué campo es real vs. mock/placeholder hoy.
+11. ✅ **Ampliado y implementado (2026-06-26)**: el alcance pasó de "lo mínimo" a
+    **pipeline de Epic completo**, incluyendo precio/descuento (la `OFFERS_QUERY` de
+    `epicstore_api` ya traía `price.totalPrice` completo — se portó incluido, no solo
+    nombre+imagen+tags). Incluye también el esquema de catálogo (`games`/
+    `game_listings`/`user_games`/`epic_namespace_slug`/`sync_state`, antes "Fase 3,
+    fuera de alcance" — el usuario la trajo a este alcance) y el enriquecimiento
+    on-demand (cache-check antes de re-fetchear Epic, upsert de lo nuevo). Ver detalle
+    debajo. **Sin wiring a la UI de matching todavía** — "el dónde va cada dato" queda
+    para la fase final de UIUX, según indicación explícita del usuario.
+12. ✅ **Implementado y verificado en vivo (2026-06-26)**: `lib/steam/{store-api,
+    game-details-pipeline}.ts` + `GET /api/steam/game-details?steamId=...` — usa
+    `appdetails` (`price_overview`, `detailed_description`, genres/categories,
+    `header_image`), mismo cache-check contra `game_listings` que Epic (vía
+    `lib/catalog/store.ts`, ahora provider-agnóstico). Probado contra una cuenta Steam
+    real: 76 juegos, BDD poblada (`game_listings` con `provider='steam'`), segunda
+    llamada confirmadamente más rápida (cache hit). Cap de 80 juegos nuevos por
+    request (mismo límite que `app/api/steam/game-categories/route.ts`).
+13. **Decisión (2026-06-26): no hace falta mock data.** Todo lo planificado hasta ahora
+    es obtenible de fuentes reales (Steam appdetails, Epic pipeline). Se descarta el
+    punto "fallback a mock documentado" de la sección 7 — ya no aplica.
+    **Hallazgo de paso**: `lib/matching/game-utils.ts`'s `deriveRating`/`derivePlayers`
+    (usados en `toGameCards` para juegos de Steam) son **valores inventados** (hash
+    determinístico del appId, no datos reales) — pendiente de decidir si se
+    reemplazan (Steam expone score de reviews vía `/appreviews/{appid}`, pero no un
+    "rango de jugadores" real). No se tocó, queda para cuando se revise esto.
+
+**Recomendaciones (`lib/matching/recommendation-utils.ts`) — investigado, decisión:
+esperar.** La lógica SÍ es real (ordena por `playtimeMinutes` real para "most played",
+score por tags coincidentes para "similar") — no hay que tocar el algoritmo. Lo que es
+mock es el **pool de candidatos** (`RECOMMENDED_GAMES`, estático). Cambiarlo por una
+query real contra `games`/`game_listings` es el paso natural, pero el catálogo se
+puebla on-demand (sección 4) — con pocos usuarios reales importando, el pool de "otros
+juegos no poseídos" puede salir vacío o muy chico en desarrollo/demo. **El usuario
+decidió esperar a tener más datos importados antes de hacer este swap** (2026-06-26) —
+no implementar todavía, revisitar cuando el catálogo tenga más variedad.
+
+**Política transversal (desde 2026-06-26): toda implementación nueva de data-fetching
+en el front usa TanStack Query** (`useQuery`/`useMutation`), sin excepción salvo lo ya
+documentado como excluido (flujos OAuth/popup, estado local/localStorage). No se
+refactoriza lo existente por ahora (tiempo) — la migración de `load-matching-data.ts`
+queda pendiente para cuando se aborde esa pieza completa.
+
+### Detalle de la Fase D (Epic, 2026-06-26)
+
+- **Migración** `20260626190137_catalog_games_schema.sql` (aplicada a dev): `games`,
+  `game_listings`, `user_games`, `epic_namespace_slug`, `sync_state` — esquema y RLS
+  tal cual [database-design.md](database-design.md) secciones 3, 6 y 8.
+  `epic_namespace_slug`/`sync_state` quedaron sin policies (solo `service_role`,
+  nunca las consulta el cliente).
+- **Pipeline** (`lib/epic/`): `store-api.ts` (get_product, productmapping, metadata
+  bulk, offers bulk vía GraphQL — query trimmed pero con `price.totalPrice` completo),
+  `namespace-slug.ts` (cache + guard de 6h en `sync_state` antes de re-descargar el
+  dump completo), `catalog-store.ts` (lee cache de `game_listings`, upsert de
+  `games`+`game_listings` nuevos con `kind`/`parent_listing_id` para DLC, link de
+  `user_games` solo si hay sesión qcoop), `game-details-pipeline.ts` (orquesta todo,
+  namespace por namespace, fully-cached → reconstruye desde BDD sin tocar Epic;
+  cache-miss → corre el pipeline completo).
+- **Endpoint** `GET /api/epic/game-details`: resuelve la cuenta (dual, igual que
+  library/friends), trae la library cruda, corre el pipeline, linkea `user_games` si
+  corresponde.
+- **Hook** `hooks/use-epic-game-details.ts`: `useQuery` (TanStack), no consumido por
+  ningún componente todavía.
+- **Gap conocido, no tocado**: `lib/api/epic.ts`/`load-matching-data.ts` esperan
+  `epicLibPayload.games`, pero `/api/epic/library` devuelve `items` — el campo nunca
+  matcheó, por eso `epicGames` queda `[]` siempre en matching hoy. No se tocó porque
+  es del lado de la UI de matching (deferido a la fase UIUX), pero hay que tenerlo
+  presente: con el pipeline nuevo disponible, probablemente la solución natural sea
+  reemplazar ese fetch crudo por `useEpicGameDetails` cuando se aborde esa fase.
+- **Sin tests automatizados**: el pipeline no se pudo probar contra Epic real desde
+  este entorno (sin sesión de usuario). Verificado solo con `tsc`/`eslint`/`db
+  advisors` limpios — falta probarlo end-to-end con una cuenta Epic real conectada.
 
 **Fase E — Disclosure de UX (solo frontend, sin vistas nuevas)**
 14. Copys/badges contextuales en quick-start-panel/hero-section según sección 2.
