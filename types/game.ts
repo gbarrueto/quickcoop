@@ -27,6 +27,11 @@ export type TrendingGame = {
   imageUrl?: string
 }
 
+export type ImportGame = {
+  title: string
+  imageUrl?: string
+}
+
 export type SteamOwnedGame = {
   appid: number
   name?: string

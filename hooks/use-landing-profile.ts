@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from "react"
 import { ensureStoredUserProfile, updateStoredUserProfile } from "@/lib/user-profile"
+import { ImportGame } from "@/types/game"
 
 export function useLandingProfile() {
   const [hasGamePass, setHasGamePass] = useState<boolean | null>(null)
   const [xboxConnected, setXboxConnected] = useState(false)
-  const [importedGames, setImportedGames] = useState<string[]>([])
+  const [importedGames, setImportedGames] = useState<ImportGame[]>([])
   const [initialSteamId, setInitialSteamId] = useState<string | null>(null)
   const [initialEpicId, setInitialEpicId] = useState<string | null>(null)
 
@@ -45,12 +46,8 @@ export function useLandingProfile() {
     }
   }
 
-  const confirmImport = (importText: string) => {
-    const games = importText
-      .split("\n")
-      .map((game) => game.trim())
-      .filter(Boolean)
-    const mergedGames = Array.from(new Set([...importedGames, ...games]))
+  const confirmImport = (importGames: ImportGame[]) => {
+    const mergedGames = Array.from(new Set([...importedGames, ...importGames]))
 
     setImportedGames(mergedGames)
     updateStoredUserProfile((profile) => ({

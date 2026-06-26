@@ -6,6 +6,7 @@ import type {
   StoredPlayerSpecs,
   StoredUserProfile,
 } from "@/types"
+import { ImportGame } from "@/types/game"
 
 export type {
   ConnectedAccounts,
@@ -95,7 +96,13 @@ export function createDefaultUserProfile(): StoredUserProfile {
       epicAccountId: null,
       hasGamePass: false,
     },
-    importedGames: ["Hades", "Deep Rock Galactic", "Baldur's Gate 3", "Cyberpunk 2077", "Rocket League"],
+    importedGames: [
+      { title: "Hades" },
+      { title: "Deep Rock Galactic" },
+      { title: "Baldur's Gate 3" },
+      { title: "Cyberpunk 2077" },
+      { title: "Rocket League" },
+    ],
     friends: createDefaultFriends(),
     updatedAt: Date.now(),
   }
@@ -156,11 +163,11 @@ function readLegacySessionSnapshot(): Partial<StoredUserProfile> {
     connections.hasGamePass = false
   }
 
-  let importedGames: string[] = []
+  let importedGames: ImportGame[] = []
   try {
     const manualGamesRaw = window.sessionStorage.getItem(MANUAL_GAMES_KEY)
     if (manualGamesRaw) {
-      importedGames = JSON.parse(manualGamesRaw) as string[]
+      importedGames = JSON.parse(manualGamesRaw) as ImportGame[]
     }
   } catch {
     importedGames = []
