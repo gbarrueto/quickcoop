@@ -39,8 +39,7 @@ export function LandingPage() {
   const [importModalOpen, setImportModalOpen] = useState(false)
 
   const canBeginMatching =
-    Boolean(currentUser) &&
-    (Boolean(steamId) || Boolean(epicId) || xboxConnected || importedGames.length > 0)
+    Boolean(steamId) || Boolean(epicId) || xboxConnected || importedGames.length > 0
 
   return (
     <div className="min-h-screen bg-background overflow-hidden">
@@ -54,7 +53,6 @@ export function LandingPage() {
 
       <main className="relative">
         <HeroSection
-          currentUser={currentUser}
           steamId={steamId}
           epicId={epicId}
           hasGamePass={hasGamePass}
