@@ -261,6 +261,51 @@ queda pendiente para cuando se aborde esa pieza completa.
   este entorno (sin sesión de usuario). Verificado solo con `tsc`/`eslint`/`db
   advisors` limpios — falta probarlo end-to-end con una cuenta Epic real conectada.
 
+### Curación manual de offers (Epic) — decisión final (2026-06-26)
+
+`get_product` + metadata bulk (nombre, imagen base, descripción, géneros vía
+`meta.tags`) **nunca tuvieron problema** y siguen 100% automatizados en el pipeline
+live. El problema es específico de **offers/GraphQL** (precio, descuento, tags
+completos genre+feature, imagen del offer):
+
+- `store.epicgames.com/graphql` está detrás de un challenge de Cloudflare que bloquea
+  cualquier cliente HTTP plano (`fetch`/`curl`), headers de navegador completos o no
+  — confirmado a mano.
+- `cloudscraper` (Python) sí lo resuelve, pero **solo si la IP de origen tiene buena
+  reputación** — no es solo el challenge JS/TLS, Cloudflare también filtra por
+  reputación de IP/ASN. Confirmado con dos hosts distintos:
+  - **PythonAnywhere (free)**: ni siquiera llega — su proxy de salida obligatorio
+    bloquea dominios no-whitelisteados (`ProxyError 403` antes de tocar Cloudflare).
+  - **Render (free)**: llega, pero Cloudflare le devuelve el challenge 403 igual que
+    a curl — su rango de IPs (como el de cualquier PaaS conocido, target frecuente de
+    scraping) está mal reputado.
+  - Mi sandbox de desarrollo y la red local del usuario **sí pasan** — de ahí que el
+    flujo completo funcionara cuando se probó con el bridge corriendo en
+    `localhost` durante desarrollo.
+- **Decisión: curación manual, local, periódica** — en vez de perseguir un host que
+  pase el filtro de reputación (probar Railway/Fly es una apuesta sin garantía; un
+  proxy residencial pago sí funcionaría pero tiene costo recurrente, descartado para
+  un proyecto de curso). Se construyó
+  [scripts/curate_epic_offers.py](../scripts/curate_epic_offers.py): corre a mano
+  desde una máquina con buena reputación de IP (la del usuario), busca en
+  `game_listings` (`provider='epic'`, `price IS NULL`, con `offerId` conocido —
+  excluye DLCs a propósito, que nunca tienen oferta propia por diseño), resuelve los
+  offers contra Epic con `cloudscraper`, y actualiza `game_listings` +
+  `games.primary_image_url`/`tags` directo vía REST de Supabase
+  (`SUPABASE_SERVICE_ROLE_KEY`, leído de `.env.local`).
+  **Validado end-to-end**: se anuló a propósito el precio/tags/imagen de una entrada
+  real (Marvel's Guardians of the Galaxy) y el script la repobló correctamente en un
+  solo run.
+- **Workflow esperado**: "poblando de a poco" — cada vez que el catálogo tenga
+  entradas nuevas sin precio (alguien importó una librería de Epic nueva), correr
+  `python3 scripts/curate_epic_offers.py` (con `--dry-run` primero si se quiere
+  revisar antes de escribir) desde una máquina local. No es automático ni tiene por
+  qué serlo — es la curación manual que el usuario decidió adoptar.
+- El bridge (`services/epic-offers-bridge/`, desplegado en Render) **queda como
+  está pero no resuelve el problema** — se deja documentado por si Cloudflare cambia
+  de criterio o aparece un host con mejor reputación; `fetchOffersBulk` ya degrada a
+  `{}` con gracia si no responde, así que no hace daño dejarlo.
+
 **Fase E — Disclosure de UX (solo frontend, sin vistas nuevas)**
 14. Copys/badges contextuales en quick-start-panel/hero-section según sección 2.
 
