@@ -69,21 +69,47 @@ query catalogQuery($productNamespace: String!, $offerId: String!, $locale: Strin
 """
 
 
+GRAPHQL_URL = "https://store.epicgames.com/graphql"
+
+
 def get_offers_bulk(offer_specs, chunk=CHUNK_SIZE):
     out = {}
     specs = [(spec["namespace"], spec["offerId"]) for spec in offer_specs if spec.get("offerId")]
 
     for i in range(0, len(specs), chunk):
         batch = specs[i:i + chunk]
-        variables_list = [{"productNamespace": ns, "offerId": oid} for ns, oid in batch]
+        body = [
+            {
+                "query": OFFERS_QUERY,
+                "variables": {"productNamespace": ns, "offerId": oid, "locale": "en-US", "country": "US"},
+            }
+            for ns, oid in batch
+        ]
+
+        # Calling the session directly (instead of api._make_graphql_query)
+        # so a non-JSON response — Cloudflare challenge page, empty body,
+        # whatever — gets logged with enough detail to actually diagnose,
+        # instead of a bare "Expecting value" JSONDecodeError.
         try:
-            # A batched (list) GraphQL response — unlike a single query, the
-            # library's error-checking is a no-op for these, so one bad
-            # offer in the batch can't take down the rest. See api.py's
-            # _get_errors: it only inspects non-list responses.
-            results = api._make_graphql_query(OFFERS_QUERY, {}, *variables_list)
-        except Exception as exc:  # noqa: BLE001 — log and keep going, partial results are fine
-            app.logger.error("offers bulk chunk %d failed: %s", i, exc)
+            response = api._session.post(GRAPHQL_URL, json=body)
+        except Exception as exc:  # noqa: BLE001
+            app.logger.error("offers bulk chunk %d request failed: %s", i, exc)
+            continue
+
+        if response.status_code != 200:
+            app.logger.error(
+                "offers bulk chunk %d got HTTP %d, body: %s",
+                i, response.status_code, response.text[:500],
+            )
+            continue
+
+        try:
+            results = response.json()
+        except ValueError:
+            app.logger.error(
+                "offers bulk chunk %d returned non-JSON (%d bytes), body: %s",
+                i, len(response.content), response.text[:500],
+            )
             continue
 
         for result in results:
