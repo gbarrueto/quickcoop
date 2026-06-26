@@ -1,4 +1,4 @@
-import type { AuthUser, TrendingGame } from "@/types"
+import type { TrendingGame } from "@/types"
 import { QuickStartPanel } from "./quick-start-panel"
 import { TrendingGamesPanel } from "./trending-games-panel"
 import { BackgroundGames } from "./background-games"
@@ -6,7 +6,6 @@ import { TrendingGames } from "./trending-games"
 import { ImportGame } from "@/types/game"
 
 type HeroSectionProps = {
-  currentUser: AuthUser | null
   steamId: string | null
   epicId: string | null
   hasGamePass: boolean | null
@@ -22,7 +21,6 @@ type HeroSectionProps = {
 }
 
 export function HeroSection({
-  currentUser,
   steamId,
   epicId,
   hasGamePass,
@@ -55,7 +53,6 @@ export function HeroSection({
 
             <section className="content-end w-full" aria-labelledby="quick-start-title">
               <QuickStartPanel
-                currentUser={currentUser}
                 steamId={steamId}
                 epicId={epicId}
                 hasGamePass={hasGamePass}
