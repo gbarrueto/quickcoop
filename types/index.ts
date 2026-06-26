@@ -1,11 +1,13 @@
 export type { AuthUser } from "./auth"
 export type {
+  EpicGameDetailsPayload,
   EpicLibraryPayload,
   FriendsPayload,
   GameCategoriesPayload,
   GamePassPayload,
   GameRequirementsPayload,
   OwnedGamesPayload,
+  SteamGameDetailsPayload,
   SteamSearchPayload,
 } from "./api"
 export type {
@@ -18,9 +20,14 @@ export type {
 } from "./friend"
 export type {
   EpicGame,
+  EpicGameDetails,
+  EpicGameDlc,
+  EpicGamePrice,
   GameCard,
   GamePassGame,
   RecommendedGame,
+  SteamGameDetails,
+  SteamGamePrice,
   SteamOwnedGame,
   TrendingGame,
 } from "./game"

@@ -4,8 +4,10 @@ import type { StoredUserProfile } from "../types"
 vi.mock("../lib/api", () => ({
   fetchSteamOwnedGames: vi.fn(),
   fetchSteamFriends: vi.fn(),
+  fetchSteamGameDetails: vi.fn(),
   fetchEpicLibrary: vi.fn(),
   fetchEpicFriends: vi.fn(),
+  fetchEpicGameDetails: vi.fn(),
   fetchGamePassCatalog: vi.fn(),
   resolveQcoopIdentities: vi.fn(),
   epicGameToCard: (game: { id: string; title: string; keyImages?: Array<{ type: string; url: string }> }) => ({
@@ -28,9 +30,11 @@ vi.mock("../lib/api", () => ({
 
 import {
   fetchEpicFriends,
+  fetchEpicGameDetails,
   fetchEpicLibrary,
   fetchGamePassCatalog,
   fetchSteamFriends,
+  fetchSteamGameDetails,
   fetchSteamOwnedGames,
   resolveQcoopIdentities,
 } from "../lib/api"
@@ -52,6 +56,8 @@ describe("loadMatchingData", () => {
     vi.mocked(fetchSteamFriends).mockResolvedValue({
       friends: [{ steamId: "friend-steam", name: "Steam Friend" }],
     })
+    vi.mocked(fetchSteamGameDetails).mockResolvedValue({ games: [] })
+    vi.mocked(fetchEpicGameDetails).mockResolvedValue({ games: [] })
     vi.mocked(fetchEpicLibrary).mockResolvedValue({
       games: [{ id: "1091500", title: "Cyberpunk 2077", keyImages: [{ type: "Thumbnail", url: "https://example.com/cp.jpg" }] }],
     })

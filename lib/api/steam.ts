@@ -3,6 +3,7 @@ import type {
   GameCategoriesPayload,
   GameRequirementsPayload,
   OwnedGamesPayload,
+  SteamGameDetailsPayload,
   SteamSearchPayload,
 } from "@/types"
 
@@ -50,6 +51,15 @@ export async function fetchGameCategories(appIds: number[]) {
   }
 
   return payload
+}
+
+export async function fetchSteamGameDetails(steamId: string) {
+  const response = await fetch(`/api/steam/game-details?steamId=${steamId}`)
+  if (!response.ok) {
+    return null
+  }
+
+  return parseJson<SteamGameDetailsPayload>(response)
 }
 
 export async function fetchGameRequirements(appId: number, searchName?: string) {
