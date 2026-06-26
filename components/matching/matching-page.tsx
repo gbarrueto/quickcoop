@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { fetchGameRequirements } from "@/lib/api"
 import {
   DEFAULT_PLAYER_SPECS,
-  RECOMMENDED_GAMES,
+  buildUserRecommendations,
   buildSelectedLibrarySets,
   canMergeProfiles,
   dedupeGameCards,
@@ -39,6 +39,7 @@ import { Spinner } from "../ui/spinner"
 import { CategoryFiltersPanel } from "./matching-category-panel"
 import { useCarousel } from "@/hooks/use-carousel"
 import { GameRecommendationsCarousel } from "./game-recommendations-carousel"
+import { RecommendationsModal } from "./matching-recommendations-modal"
 
 export function MatchingPage() {
   const recommendationsRef = useRef<HTMLDivElement | null>(null)
@@ -62,8 +63,6 @@ export function MatchingPage() {
     setPlayerSpecsById,
   } = useMatchingInit()
 
-  const { activeIndex, goTo } = useCarousel(RECOMMENDED_GAMES.length, 5000)
-
   const [draggingProfileId, setDraggingProfileId] = useState<string | null>(null)
   const [mergeNotice, setMergeNotice] = useState<string | null>(null)
   const [selectedCategories, setSelectedCategories] = useState<string[]>([])
@@ -75,12 +74,14 @@ export function MatchingPage() {
   const [isRequirementsModalOpen, setIsRequirementsModalOpen] = useState(false)
   const [isSpecsModalOpen, setIsSpecsModalOpen] = useState(false)
   const [isCategoryPanelOpen, setIsCategoryPanelOpen] = useState(false)
+  const [isRecommendationsModalOpen, setIsRecommendationsModalOpen] = useState(false)
   const [isFriendsPanelOpen, setIsFriendsPanelOpen] = useState(false)
 
   const { loadingIdentities, identityErrors } = useIdentityLibrary(friendProfiles, identityLibraries, setIdentityLibraries)
 
   const allFriendProfiles = useMemo(() => [...friendProfiles, ...epicFriends], [friendProfiles, epicFriends])
   const allUserGames = useMemo(() => dedupeGameCards([...userGames, ...epicGames, ...gamePassGames]), [userGames, epicGames, gamePassGames])
+  const { categoriesByApp: userCategoriesByApp } = useGameCategories(allUserGames)
 
   const filteredGames = useMemo(() => {
     const selectedProfiles = allFriendProfiles.filter((profile) => profile.selected)
@@ -90,10 +91,16 @@ export function MatchingPage() {
 
   const { categoriesByApp, isLoadingCategories, categoryFilterError } = useGameCategories(filteredGames)
   const availableCategories = useMemo(() => getAvailableCategories(filteredGames, categoriesByApp), [filteredGames, categoriesByApp])
+  const recommendedGames = useMemo(
+    () => buildUserRecommendations(allUserGames, userCategoriesByApp),
+    [allUserGames, userCategoriesByApp],
+  )
   const categoryFilteredGames = useMemo(
     () => filterGamesByCategories(filteredGames, categoriesByApp, selectedCategories, categoryFilterMode),
     [filteredGames, categoriesByApp, selectedCategories, categoryFilterMode],
   )
+
+  const { activeIndex, goTo } = useCarousel(recommendedGames.length, 5000)
 
   const requirementsParticipants = useMemo<RequirementsParticipant[]>(
     () => [
@@ -313,7 +320,7 @@ export function MatchingPage() {
     <main className="relative h-screen bg-background overflow-x-hidden">
       <div className="h-full grid grid-cols-[7%_86%_7%] grid-rows-[10%_90%]">
         <div className="col-1 row-1 relative">
-          <GameRecommendationsCarousel games={RECOMMENDED_GAMES} activeIndex={activeIndex} onSelect={goTo} />
+          <GameRecommendationsCarousel games={recommendedGames} activeIndex={activeIndex} onSelect={goTo} />
         </div>
         <div className="col-2 row-1">
           <MatchingHeader currentUser={currentUser} steamId={steamId} onOpenSpecs={() => setIsSpecsModalOpen(true)} activeIndex={activeIndex} />
@@ -333,7 +340,9 @@ export function MatchingPage() {
               categoryFilterError={categoryFilterError}
               categoriesByApp={categoriesByApp}
               onOpenCategoryPanel={() => setIsCategoryPanelOpen(prev => !prev)}
+              onOpenRecommendationsModal={() => setIsRecommendationsModalOpen(prev => !prev)}
               onOpenFriendsPanel={() => setIsFriendsPanelOpen(prev => !prev)}
+              isRecommendationsModalOpen={isRecommendationsModalOpen}
               isCategoryPanelOpen={isCategoryPanelOpen}
               isFriendsPanelOpen={isFriendsPanelOpen}
               onToggleCategory={(category) =>
@@ -414,6 +423,12 @@ export function MatchingPage() {
             onOpenChange={setIsSpecsModalOpen}
             playerSpecsById={playerSpecsById}
             onUpdatePlayerSpecs={updatePlayerSpecs}
+          />
+
+          <RecommendationsModal
+            open={isRecommendationsModalOpen}
+            onOpenChange={setIsRecommendationsModalOpen}
+            games={recommendedGames}
           />
 
           <div 

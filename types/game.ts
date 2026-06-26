@@ -8,6 +8,7 @@ export type GameCard = {
   players: string
   platform: Platform
   tags?: string[]
+  playtimeMinutes?: number
 }
 
 export type RecommendedGame = {
@@ -16,6 +17,8 @@ export type RecommendedGame = {
   imageUrl: string
   categories: [string, string]
   rating: number
+  description: string
+  price: string
 }
 
 export type TrendingGame = {
@@ -35,6 +38,7 @@ export type ImportGame = {
 export type SteamOwnedGame = {
   appid: number
   name?: string
+  playtime_forever?: number
 }
 
 export type EpicGame = {

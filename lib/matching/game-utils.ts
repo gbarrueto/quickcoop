@@ -39,6 +39,7 @@ export function toGameCards(games: SteamOwnedGame[], platform: Platform = "steam
     rating: deriveRating(game.appid),
     players: derivePlayers(game.appid),
     platform,
+    playtimeMinutes: game.playtime_forever ?? 0,
   }))
 }
 
@@ -50,6 +51,7 @@ export function toImportedGameCard(name: string): GameCard {
     rating: 0,
     players: "??",
     platform: "import",
+    playtimeMinutes: 0,
   }
 }
 
