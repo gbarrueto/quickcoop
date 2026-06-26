@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { createClient } from "@/utils/supabase/client"
 import { useUserProfile } from "@/hooks/use-user-profile"
 import type { AuthUser } from "@/types"
-import type { User } from "@supabase/supabase-js"
+import { isAuthSessionMissingError, type User } from "@supabase/supabase-js"
 
 export function useAuthSession() {
   const [authUser, setAuthUser] = useState<User | null>(null)
@@ -14,7 +14,9 @@ export function useAuthSession() {
     const supabase = createClient()
 
     supabase.auth.getUser().then(({ data, error }) => {
-      if (error) {
+      // Anonymous browsing is the default (see docs/anonymous-first-flow-plan.md),
+      // so "no session" is an expected outcome here, not a failure to log.
+      if (error && !isAuthSessionMissingError(error)) {
         console.error("[use-auth-session] getUser failed", error)
       }
       setAuthUser(data.user ?? null)
