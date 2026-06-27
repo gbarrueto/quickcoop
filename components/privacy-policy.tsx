@@ -1,9 +1,9 @@
 "use client"
 
-import { Gamepad2, ArrowLeft, Shield, Eye, Database, Trash2, Mail } from "lucide-react"
+import { Gamepad2, ArrowLeft, Shield, Eye, Database, Trash2, Mail, Puzzle, Globe } from "lucide-react"
 import Link from "next/link"
 
-const LAST_UPDATED = "May 23, 2026"
+const LAST_UPDATED = "June 27, 2026"
 
 type Section = {
   id: string
@@ -20,30 +20,41 @@ const sections: Section[] = [
     content: (
       <div className="space-y-4 text-muted-foreground">
         <p>
-          QCoop collects only the minimum information necessary to provide game
-          matching between you and your friends. We collect:
+          QCoop is built to work without ever creating an account — connecting
+          Steam or Epic and matching games with friends never requires signing
+          up. We collect only what each feature actually needs:
         </p>
         <ul className="space-y-3 ml-4">
           {[
             {
+              label: "Account Information (only if you register)",
+              detail:
+                "Your email address, password, and an optional display name — collected only if you choose to create a QCoop account. Passwords are handled entirely by our authentication provider (Supabase); we never see or store them in plain text.",
+            },
+            {
               label: "Steam Account Data",
               detail:
-                "Your Steam ID, public game library, and friends list — obtained through Steam OpenID authentication. We never store your Steam password.",
+                "Your Steam ID, public game library, and public friends list — obtained through Steam OpenID authentication. We never see or store your Steam password.",
             },
             {
               label: "Epic Games Account Data",
               detail:
-                "Your Epic Account ID and display name — obtained through Epic OAuth 2.0. We access only the basic_profile scope.",
+                "Your Epic Account ID, display name, and OAuth access/refresh tokens — obtained through Epic's official OAuth 2.0 login.",
+            },
+            {
+              label: "System Specs (optional)",
+              detail:
+                "If you enter your computer's specs (OS, CPU/GPU tier, RAM, VRAM, storage), we use them to check whether a game will run well for you and the friends you're matching with.",
             },
             {
               label: "Xbox / Game Pass Status",
               detail:
-                "A self-reported indicator of whether you hold an active Game Pass subscription. No Xbox account credentials are stored.",
+                "A self-reported indicator of whether you hold an active Game Pass subscription, kept only in your browser. No Xbox account credentials are collected or stored.",
             },
             {
-              label: "Session Data",
+              label: "Browser Extension Data (only if installed)",
               detail:
-                "Temporary identifiers stored in your browser's sessionStorage to keep you authenticated during a single visit. This data is erased when you close the tab.",
+                "Our optional Chrome extension reads the one-time login code Epic's own page displays after you sign in, and relays it inside your browser to the QuickCoop tab you already have open — see \"Browser Extension\" below for details.",
             },
           ].map((item) => (
             <li key={item.label} className="flex gap-3">
@@ -57,8 +68,9 @@ const sections: Section[] = [
         </ul>
         <p>
           We do <span className="font-medium text-foreground">not</span> collect
-          payment information, email addresses, real names, or any data beyond
-          what is listed above.
+          payment information, real names (unless you choose to type one as your
+          display name), health or financial data, message contents, or your
+          browsing activity outside of QCoop.
         </p>
       </div>
     ),
@@ -75,7 +87,10 @@ const sections: Section[] = [
             "Identifying which games you and your friends share across platforms.",
             "Displaying your connected account status within the QCoop interface.",
             "Generating multiplayer game recommendations based on your combined libraries.",
+            "Checking whether everyone's hardware can run a given game, if you provided your specs.",
+            "Keeping your Steam/Epic connection active across visits, if you created an account.",
             "Caching trending game data locally in your browser to reduce load times.",
+            "Completing the Epic login handshake automatically instead of asking you to copy/paste a code, if you installed our browser extension.",
           ].map((item) => (
             <li key={item} className="flex gap-3">
               <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-primary" />
@@ -98,14 +113,65 @@ const sections: Section[] = [
     content: (
       <div className="space-y-4 text-muted-foreground">
         <p>
-          QCoop is designed with a minimal data footprint:
+          How much of your data reaches our servers depends entirely on whether
+          you create a QCoop account:
         </p>
         <ul className="space-y-3 ml-4">
           {[
-            "Account identifiers (Steam ID, Epic Account ID) are stored only in your browser's sessionStorage and are never persisted to a database or server.",
-            "Trending game data is cached in localStorage on your device for up to 24 hours to reduce redundant network requests.",
-            "No cookies containing personal data are set beyond the temporary OAuth state token used to prevent CSRF attacks during the login flow. This cookie expires within 10 minutes.",
-            "All communication between your browser and our servers uses HTTPS.",
+            {
+              label: "Without an account",
+              detail:
+                "Your Steam ID, Epic ID, specs, and imported games live only in your browser (localStorage/sessionStorage). An Epic connection is held only in temporary server memory, identified by a random session cookie — it is never written to our database, and is lost if our server restarts.",
+            },
+            {
+              label: "With an account",
+              detail:
+                "We persist which store accounts you've connected (provider + your public account ID) and, for Epic, your OAuth tokens — encrypted at rest with AES-256-GCM before they ever reach the database. Public and authenticated database access to encrypted tokens is revoked at the database level; only our backend service can decrypt them. We also remember which games you own and the specs you provided, so you don't have to reconnect every visit.",
+            },
+            {
+              label: "Passwords & credentials",
+              detail:
+                "We never store your Steam or Epic password. We only ever receive the identifiers and tokens those platforms issue after you log in directly with them.",
+            },
+            {
+              label: "Friends lists",
+              detail:
+                "Your Steam/Epic friends list is fetched live from Steam/Epic each time you open matching — we do not store a copy of it.",
+            },
+            {
+              label: "Encryption in transit",
+              detail: "All communication between your browser and our servers uses HTTPS.",
+            },
+          ].map((item) => (
+            <li key={item.label} className="flex gap-3">
+              <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-primary" />
+              <span>
+                <span className="font-medium text-foreground">{item.label}: </span>
+                {item.detail}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    ),
+  },
+  {
+    id: "browser-extension",
+    icon: <Puzzle className="w-5 h-5" />,
+    title: "Browser Extension",
+    content: (
+      <div className="space-y-4 text-muted-foreground">
+        <p>
+          QCoop offers an optional Chrome extension with a single purpose: making
+          the Epic Games login handshake automatic instead of requiring you to
+          copy and paste a code by hand. Concretely:
+        </p>
+        <ul className="space-y-3 ml-4">
+          {[
+            "After you log in on Epic's own page, the extension reads the one-time authorization code Epic displays there — the same code you'd otherwise copy yourself.",
+            "It relays that code locally, inside your browser, to the QuickCoop tab you already have open. The extension itself never makes any network request — the QuickCoop page you're already using sends the resulting login request to our backend, exactly as it would for a manual paste.",
+            "The extension does not read, store, or transmit anything beyond that one code. It has no analytics, no remote code (every script ships inside the extension package), and no storage permission — it keeps nothing after the page receives the code.",
+            "It only activates on Epic's official login redirect page and on quickcoop.me — it does not run on any other site.",
           ].map((item) => (
             <li key={item} className="flex gap-3">
               <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-primary" />
@@ -113,6 +179,51 @@ const sections: Section[] = [
             </li>
           ))}
         </ul>
+        <p>
+          Not installing the extension does not limit any functionality — you can
+          always connect Epic by pasting the code yourself.
+        </p>
+      </div>
+    ),
+  },
+  {
+    id: "third-party-services",
+    icon: <Globe className="w-5 h-5" />,
+    title: "Third-Party Services",
+    content: (
+      <div className="space-y-4 text-muted-foreground">
+        <p>QCoop talks to the following third parties to do its job:</p>
+        <ul className="space-y-3 ml-4">
+          {[
+            {
+              label: "Steam & Epic Games",
+              detail:
+                "Used to authenticate you and fetch your library/friends list directly from the platform you connect. This is the core of what QCoop does.",
+            },
+            {
+              label: "Supabase",
+              detail:
+                "Our database and authentication provider. It stores your account (if you register) and any encrypted tokens, hosted on infrastructure we manage.",
+            },
+            {
+              label: "Vercel Analytics",
+              detail:
+                "Anonymous, aggregate page-view and performance metrics (e.g. load times) on our production site — no personal identifiers.",
+            },
+          ].map((item) => (
+            <li key={item.label} className="flex gap-3">
+              <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-primary" />
+              <span>
+                <span className="font-medium text-foreground">{item.label}: </span>
+                {item.detail}
+              </span>
+            </li>
+          ))}
+        </ul>
+        <p>
+          We do <span className="font-medium text-foreground">not</span> use
+          advertising networks, trackers, or any service that resells your data.
+        </p>
       </div>
     ),
   },
@@ -122,16 +233,13 @@ const sections: Section[] = [
     title: "Your Rights & Data Deletion",
     content: (
       <div className="space-y-4 text-muted-foreground">
-        <p>
-          Because QCoop does not persist personal data to a server-side database,
-          you have full control over your data at all times:
-        </p>
+        <p>You're always in control of your data:</p>
         <ul className="space-y-3 ml-4">
           {[
-            "Closing or refreshing the browser tab clears all sessionStorage data, effectively disconnecting your accounts.",
-            "You can clear localStorage (trending cache) through your browser's developer tools or privacy settings.",
-            "You may revoke QCoop's access to your Steam account from your Steam account settings at any time.",
-            "You may revoke QCoop's access to your Epic account from your Epic account connection settings at any time.",
+            "If you never created an account, closing or refreshing the tab clears your session, and clearing your browser's local storage removes everything else QCoop kept on your device.",
+            "Disconnecting Steam or Epic from within the app immediately deletes that connection — and, for Epic, its encrypted tokens — from our database.",
+            "You may revoke QCoop's access from your Steam or Epic account settings directly, at any time.",
+            "If you registered, you can email us to request deletion of your account and all associated data.",
           ].map((item) => (
             <li key={item} className="flex gap-3">
               <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-primary" />
@@ -282,13 +390,14 @@ export function PrivacyPolicy() {
           {/* Footer note */}
           <div className="mt-16 rounded-xl border border-primary/20 bg-primary/5 px-6 py-5 text-sm text-muted-foreground">
             <p>
-              This privacy policy applies solely to{" "}
+              This privacy policy applies to{" "}
               <span className="font-medium text-foreground">
-                quickcoop.vercel.app
+                quickcoop.me
               </span>{" "}
-              and does not cover the practices of any third-party services linked
-              from this page. We may update this policy as the product evolves —
-              the "Last updated" date at the top will always reflect the most
+              and to the QCoop browser extension, and does not cover the
+              practices of any third-party services linked from this page. We
+              may update this policy as the product evolves — the "Last
+              updated" date at the top will always reflect the most
               recent version.
             </p>
           </div>
