@@ -19,7 +19,7 @@ export function BackgroundGames({ games, activeIndex }: BackgroundGamesProps) {
             {game.imageUrl ? (
               <img
                 src={game.imageUrl}
-                alt={`${game.name} cover`}
+                alt=""
                 className="absolute block w-full h-full object-cover -translate-x-1/2 -translate-y-1/2 top-1/2 left-1/2 blur-md scale-110"
                 loading="lazy"
               />

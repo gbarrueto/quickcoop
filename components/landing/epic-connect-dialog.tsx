@@ -81,7 +81,7 @@ export function EpicConnectDialog({
         <div className="pt-6 pb-6 text-center bg-primary/20">
           <DialogHeader className="items-center text-center">
             <div className="flex h-14 w-14 items-center justify-center rounded-2xl">
-              <img className="w-10 h-10 shadow-lg shadow-primary/15 bg-primary/10" src="/epic-games-svgrepo-com.svg" alt="steam" />
+              <img className="w-10 h-10 shadow-lg shadow-primary/15 bg-primary/10" src="/epic-games-svgrepo-com.svg" alt="epic login" />
             </div>
             <DialogTitle>Connect Epic Games</DialogTitle>
             <DialogDescription className="max-w-sm text-sm">

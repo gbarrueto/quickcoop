@@ -62,7 +62,7 @@ export function QuickStartPanel({
               : "bg-primary/60 hover:bg-primary/90 text-secondary/60 hover:text-secondary/80 shadow-sm shadow-background hover:border-border active:inset-shadow-sm active:inset-shadow-background" }`
           }
         >
-          <img className="w-10 h-10" src="/steam-svgrepo-com.svg" alt="steam" />
+          <img className="w-10 h-10" src="/steam-svgrepo-com.svg" alt="steam connection" />
           {steamId 
             ? <CircleCheckBig className="h-6 w-6" />
             : <Link2Off className="h-6 w-6" />
@@ -80,7 +80,7 @@ export function QuickStartPanel({
             }
           `}
         >
-          <img className="w-10 h-10" src="/epic-games-svgrepo-com.svg" alt="epic" />
+          <img className="w-10 h-10" src="/epic-games-svgrepo-com.svg" alt="epic connection" />
           {epicId
             ? <CircleCheckBig className="h-6 w-6" />
             : <Link2Off className="h-6 w-6" />
@@ -103,7 +103,7 @@ export function QuickStartPanel({
           `}
         >
           <div className="flex items-center gap-3">
-            <img className="w-10 h-10" src="/xbox-fill-svgrepo-com.svg" alt="gamepass" />
+            <img className="w-10 h-10" src="/xbox-fill-svgrepo-com.svg" alt="gamepass connection" />
             {hasGamePass 
               ? <CircleCheckBig className="h-6 w-6" />
               : <Link2Off className="h-6 w-6" />

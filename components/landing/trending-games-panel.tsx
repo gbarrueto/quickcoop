@@ -57,7 +57,7 @@ export function TrendingGamesPanel({ games, isLoading, loadError, activeIndex, o
                     {game.imageUrl ? (
                       <img
                         src={game.imageUrl}
-                        alt={`${game.name} cover`}
+                        alt=""
                         className="h-full w-full object-cover"
                         loading="lazy"
                       />

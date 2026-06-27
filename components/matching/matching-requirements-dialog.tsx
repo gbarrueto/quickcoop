@@ -46,7 +46,7 @@ export function MatchingRequirementsDialog({
           <DialogHeader className="relative gap-2 items-center py-3">
             <div className="absolute top-0 left-0 w-full h-full overflow-hidden rounded-xl border border-border/70 bg-secondary/30">
               {selectedGame?.imageUrl ? (
-                <img src={selectedGame.imageUrl} alt={selectedGame.name} className="h-15 w-full object-cover blur-xs" />
+                <img src={selectedGame.imageUrl} alt="" className="h-15 w-full object-cover blur-xs" />
               ) : (
                 <div className="flex h-40 w-full items-center justify-center bg-secondary/40 text-sm text-muted-foreground">
                   No image available

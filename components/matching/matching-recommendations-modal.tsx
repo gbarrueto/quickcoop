@@ -61,7 +61,7 @@ export function RecommendationsModal({ open, onOpenChange, games }: Recommendati
               {game.imageUrl ? (
                 <img
                   src={game.imageUrl}
-                  alt={game.name}
+                  alt=""
                   className="w-full h-full object-cover"
                 />
               ) : (
@@ -126,7 +126,7 @@ export function RecommendationsModal({ open, onOpenChange, games }: Recommendati
               >
                 <img
                   src={optionGame.imageUrl}
-                  alt={`${optionGame.name} cover`}
+                  alt={`${optionGame.name}`}
                   className="h-full w-full object-cover"
                   loading="lazy"
                 />

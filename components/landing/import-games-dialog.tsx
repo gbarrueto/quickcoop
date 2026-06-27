@@ -141,7 +141,7 @@ export function ImportGamesDialog({
                   >
                     <div className="flex aspect-video w-20 min-h-10 items-center justify-center bg-background/40">
                       {game.imageUrl ? (
-                        <img src={game.imageUrl} alt={game.title} className="h-full w-full object-cover" />
+                        <img src={game.imageUrl} alt="" className="h-full w-full object-cover" />
                       ) : (
                         <Image className="h-5 w-5" />
                       )}
@@ -194,7 +194,7 @@ export function ImportGamesDialog({
                     >
                       <div className="flex aspect-video w-20 min-h-10 max-h-15 items-center justify-center bg-background/40">
                         {game.imageUrl ? (
-                          <img src={game.imageUrl} alt={game.title} className="h-full w-full object-cover" />
+                          <img src={game.imageUrl} alt="" className="h-full w-full object-cover" />
                         ) : (
                           <Image className="h-5 w-5" />
                         )}
