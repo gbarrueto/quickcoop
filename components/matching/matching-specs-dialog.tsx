@@ -27,9 +27,19 @@ const storageOptions = [50, 100, 200, 500, 1000]
 export function MatchingSpecsDialog({ open, onOpenChange, playerSpecsById, onUpdatePlayerSpecs }: MatchingSpecsDialogProps) {
   const specs = playerSpecsById.self ?? DEFAULT_PLAYER_SPECS
 
+  function onCustomNameKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      onOpenChange(false);
+    }
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[95vh] overflow-hidden border-border bg-card/95 p-0 shadow-2xl backdrop-blur-xl">
+      <DialogContent 
+        className="max-w-lg max-h-[95vh] overflow-hidden border-border bg-card/95 p-0 shadow-2xl backdrop-blur-xl"
+        onKeyDown={onCustomNameKeyDown}
+      >
         <div className="px-6 pt-4">
           <DialogHeader className="items-center text-center">
             <DialogTitle>My hardware specs</DialogTitle>
