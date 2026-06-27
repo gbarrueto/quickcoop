@@ -2,11 +2,7 @@
 // y el content script de la app de QuickCoop (que lo entrega a la página).
 // Dos content scripts no se comunican directamente; el mensaje pasa por aquí.
 
-const APP_ORIGIN_PATTERNS = [
-  "http://localhost:3000/*",
-  "https://quickcoop-git-develop-gbarruetos-projects.vercel.app/*",
-  "https://www.quickcoop.me/*",
-];
+const APP_ORIGIN_PATTERNS = ["https://quickcoop.me/*"];
 
 chrome.runtime.onMessage.addListener((message, sender) => {
   if (!message || message.type !== "epic-auth-code" || !message.code) {

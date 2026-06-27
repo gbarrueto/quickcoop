@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "QuickCoop Epic Connector",
-  "version": "0.2.0",
+  "version": "0.2.3",
   "description": "Automatiza la conexión de Epic Games para QuickCoop capturando el authorization code.",
   "action": {
     "default_popup": "popup.html",
@@ -15,9 +15,7 @@
   ],
   "host_permissions": [
     "https://*.epicgames.com/*",
-    "http://localhost:3000/*",
-    "https://quickcoop-git-develop-gbarruetos-projects.vercel.app/*",
-    "https://www.quickcoop.me/*"
+    "https://quickcoop.me/*"
   ],
   "content_scripts": [
     {
@@ -26,11 +24,7 @@
       "run_at": "document_end"
     },
     {
-      "matches": [
-        "http://localhost:3000/*",
-        "https://quickcoop-git-develop-gbarruetos-projects.vercel.app/*",
-        "https://www.quickcoop.me/*"
-      ],
+      "matches": ["https://quickcoop.me/*"],
       "js": ["content-app.js"],
       "run_at": "document_start"
     }
