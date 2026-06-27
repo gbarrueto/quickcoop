@@ -8,12 +8,9 @@ import { useLandingProfile } from "@/hooks/use-landing-profile"
 import { useSteamAuth } from "@/hooks/use-steam-auth"
 import { useTrendingGames } from "@/hooks/use-trending-games"
 import { AuthDialog } from "./auth-dialog"
-import { CtaSection } from "./cta-section"
 import { EpicConnectDialog } from "./epic-connect-dialog"
-import { FeaturesSection } from "./features-section"
 import { HeroSection } from "./hero-section"
 import { ImportGamesDialog } from "./import-games-dialog"
-import { StatsSection } from "./stats-section"
 import { SteamConnectDialog } from "./steam-connect-dialog"
 
 export function LandingPage() {
@@ -45,7 +42,7 @@ export function LandingPage() {
     reset: resetEpicAuth,
     disconnect: disconnectEpic,
   } = useEpicAuth(initialEpicId)
-  const { games: trendingGames, isLoading: isTrendingLoading, loadError: trendingLoadError } =
+  const { games: trendingGames, isLoading: isTrendingLoading, isLive: isTrendingLive } =
     useTrendingGames()
 
   const [authModalOpen, setAuthModalOpen] = useState(false)
@@ -75,14 +72,12 @@ export function LandingPage() {
           canBeginMatching={canBeginMatching}
           trendingGames={trendingGames}
           isTrendingLoading={isTrendingLoading}
-          trendingLoadError={trendingLoadError}
+          isTrendingLive={isTrendingLive}
           onSteamConnectClick={() => setSteamModalOpen(true)}
           onEpicConnectClick={() => setEpicModalOpen(true)}
           onGamePassToggle={toggleGamePass}
           onImportClick={() => setImportModalOpen(true)}
         />
-        {/* <FeaturesSection />
-        <StatsSection /> */}
       </main>
 
       <SteamConnectDialog

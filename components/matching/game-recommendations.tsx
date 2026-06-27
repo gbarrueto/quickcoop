@@ -1,9 +1,7 @@
 'use client'
 
 import type { RecommendedGame } from "@/types"
-import { GameRecommendationsCarousel } from "./game-recommendations-carousel"
 import { BackgroundGames } from "./background-games"
-import { useCarousel } from "@/hooks/use-carousel"
 
 type GameRecommendationsPanelProps = {
   games: RecommendedGame[]

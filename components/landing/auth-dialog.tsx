@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import { User } from "lucide-react"
 import { createClient } from "@/utils/supabase/client"
 import { Button } from "@/components/ui/button"
 import {

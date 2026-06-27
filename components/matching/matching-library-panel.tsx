@@ -1,10 +1,6 @@
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
-import { Users } from "lucide-react"
-import { identityKey } from "@/lib/matching"
 import type { CategoryFilterMode, FriendLibrarySnapshot, FriendProfile, GameCard } from "@/types"
 import { PlatformBadge } from "./platform-badge"
 import { Star } from "lucide-react"
@@ -32,71 +28,6 @@ type MatchingLibraryPanelProps = {
   onClearFilters: () => void
   onOpenRequirements: (game: GameCard) => void
   onToggleSelection: (profileId: string) => void
-}
-
-function getInitials(value: string) {
-  return value
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? "")
-    .join("")
-}
-
-function countGames(profile: FriendProfile, identityLibraries: Record<string, FriendLibrarySnapshot>): number {
-  const allIds = new Set<number>()
-  profile.identities.forEach((identity) => {
-    identityLibraries[identityKey(identity)]?.appIds.forEach((id) => allIds.add(id))
-  })
-  return allIds.size
-}
-
-function FriendAvatarStack({
-  profiles,
-  identityLibraries,
-  onToggleSelection,
-}: {
-  profiles: FriendProfile[]
-  identityLibraries: Record<string, FriendLibrarySnapshot>
-  onToggleSelection: (profileId: string) => void
-}) {
-  return (
-    <div className="flex items-center">
-      {profiles.map((profile, index) => {
-        const name = profile.identities[0]?.displayName ?? "?"
-        const gameCount = countGames(profile, identityLibraries)
-
-        return (
-          <Tooltip key={profile.profileId}>
-            <TooltipTrigger asChild>
-              <button
-                type="button"
-                onClick={() => onToggleSelection(profile.profileId)}
-                className="relative rounded-full ring-2 ring-card transition-all duration-150 hover:scale-110 focus:outline-none"
-                style={{ zIndex: profiles.length - index, marginLeft: index > 0 ? "-0.625rem" : undefined }}
-              >
-                <Avatar className="h-8 w-8">
-                  <AvatarFallback className="text-[10px]">{getInitials(name)}</AvatarFallback>
-                </Avatar>
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side="bottom" className="space-y-1.5 p-2.5">
-              <p className="font-semibold">{name}</p>
-              <div className="flex gap-1">
-                {profile.identities.map((identity) => (
-                  <PlatformBadge key={identityKey(identity)} platform={identity.platform} />
-                ))}
-              </div>
-              {gameCount > 0 && (
-                <p className="text-[11px] opacity-70">{gameCount} games in library</p>
-              )}
-              <p className="text-[10px] opacity-50">Click to remove</p>
-            </TooltipContent>
-          </Tooltip>
-        )
-      })}
-    </div>
-  )
 }
 
 function GameTile({ game, categories, onOpenRequirements }: { game: GameCard; categories: string[]; onOpenRequirements: (game: GameCard) => void }) {

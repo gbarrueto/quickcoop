@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { fetchGameRequirements } from "@/lib/api"
@@ -43,13 +43,10 @@ import { GameRecommendationsCarousel } from "./game-recommendations-carousel"
 import { RecommendationsModal } from "./matching-recommendations-modal"
 
 export function MatchingPage() {
-  const recommendationsRef = useRef<HTMLDivElement | null>(null)
-
   const {
     currentUser,
     loading,
     pageError,
-    steamId,
     availablePlatforms,
     userGames,
     epicGames,
@@ -303,13 +300,6 @@ export function MatchingPage() {
     return evaluateParticipantCompatibility(specs, requirements)
   }
 
-  const scrollRecommendations = (direction: -1 | 1) => {
-    const container = recommendationsRef.current
-    if (!container) return
-
-    container.scrollBy({ left: direction * container.clientWidth, behavior: "smooth" })
-  }
-
   if (loading) {
     return (
       <main className="min-h-screen bg-background px-6 py-16 lg:px-12 flex">
@@ -343,7 +333,7 @@ export function MatchingPage() {
           <GameRecommendationsCarousel games={recommendedGames} activeIndex={activeIndex} onSelect={goTo} />
         </div>
         <div className="col-2 row-1">
-          <MatchingHeader currentUser={currentUser} steamId={steamId} onOpenSpecs={() => setIsSpecsModalOpen(true)} activeIndex={activeIndex} />
+          <MatchingHeader currentUser={currentUser} onOpenSpecs={() => setIsSpecsModalOpen(true)} activeIndex={activeIndex} />
         </div>
         <div className="h-full col-2 row-2">
           <section className="grid gap-6 max-h-full overflow-hidden overflow-x-hidden lg:grid-rows-1">

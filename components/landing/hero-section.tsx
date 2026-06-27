@@ -1,7 +1,5 @@
 import type { TrendingGame } from "@/types"
 import { QuickStartPanel } from "./quick-start-panel"
-import { TrendingGamesPanel } from "./trending-games-panel"
-import { BackgroundGames } from "./background-games"
 import { TrendingGames } from "./trending-games"
 import { ImportGame } from "@/types/game"
 
@@ -13,7 +11,7 @@ type HeroSectionProps = {
   canBeginMatching: boolean
   trendingGames: TrendingGame[]
   isTrendingLoading: boolean
-  trendingLoadError: string | null
+  isTrendingLive: boolean
   onSteamConnectClick: () => void
   onEpicConnectClick: () => void
   onGamePassToggle: () => void
@@ -28,7 +26,7 @@ export function HeroSection({
   canBeginMatching,
   trendingGames,
   isTrendingLoading,
-  trendingLoadError,
+  isTrendingLive,
   onSteamConnectClick,
   onEpicConnectClick,
   onGamePassToggle,
@@ -71,7 +69,7 @@ export function HeroSection({
       <TrendingGames
         games={trendingGames}
         isLoading={isTrendingLoading}
-        loadError={trendingLoadError}
+        isLive={isTrendingLive}
       />
     </section>
   )

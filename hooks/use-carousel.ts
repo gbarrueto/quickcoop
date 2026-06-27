@@ -6,6 +6,9 @@ export function useCarousel(total: number, autoPlayInterval = 1000) {
 
   const goTo = useCallback((index: number) => {
     setActiveIndex(index)
+    // Restart the autoplay countdown so a manual click isn't immediately
+    // overridden by an in-flight interval tick.
+    setResetKey((key) => key + 1)
   }, [])
 
   const next = useCallback(() => {

@@ -1,35 +1,4 @@
-import { Shield, Star, Users, Zap } from "lucide-react"
 import type { TrendingGame } from "@/types"
-
-export const LANDING_FEATURES = [
-  {
-    icon: Users,
-    title: "Game Matching",
-    description: "Find games you and your friends all own instantly",
-  },
-  {
-    icon: Star,
-    title: "Smart Recommendations",
-    description: "Suggestions based on your play style",
-  },
-  {
-    icon: Zap,
-    title: "Quick Hop-In",
-    description: "No software to install, works in your browser",
-  },
-  {
-    icon: Shield,
-    title: "Specs & Requirements",
-    description: "Check if everyone can run the game",
-  },
-] as const
-
-export const LANDING_STATS = [
-  { value: "50K+", label: "Games Indexed" },
-  { value: "100K+", label: "Active Users" },
-  { value: "1M+", label: "Matches Made" },
-  { value: "4.9", label: "User Rating" },
-] as const
 
 export const FALLBACK_TRENDING_GAMES: TrendingGame[] = [
   {
