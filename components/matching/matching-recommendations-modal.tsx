@@ -15,14 +15,29 @@ export function RecommendationsModal({ open, onOpenChange, games }: Recommendati
   const game = games[current]
 
   const navigate = (dir: -1 | 1) => {
-    const next = current + dir
-    if (next < 0 || next >= games.length) return
+    let next = current + dir
+    if (next < 0) next = games.length - 1
+    else if (next >= games.length) next = 0
     setCurrent(next)
+  }
+
+  function onCustomNameKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
+    if (event.key === "ArrowLeft") {
+      event.preventDefault()
+      navigate(-1)
+    }
+    else if (event.key === "ArrowRight") {
+      event.preventDefault()
+      navigate(1)
+    }
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-screen lg:max-w-[70vw] max-h-[90vh] h-full w-screen p-0 overflow-hidden bg-card gap-0">
+      <DialogContent 
+        className="max-w-screen lg:max-w-[70vw] max-h-[90vh] h-full w-screen p-0 overflow-hidden bg-card gap-0"
+        onKeyDown={onCustomNameKeyDown}
+      >
 
         <DialogTitle className="px-5 py-4">
           <p className="text-xs font-medium">Recommended games for you</p>
@@ -32,9 +47,9 @@ export function RecommendationsModal({ open, onOpenChange, games }: Recommendati
           <button
             type="button"
             onClick={() => navigate(-1)}
-            disabled={current === 0}
             className="px-3 flex items-center justify-center text-muted-foreground
                        hover:text-foreground hover:bg-primary/60 transition-colors
+                       active:inset-shadow-sm active:inset-shadow-background
                        disabled:opacity-0"
             aria-label="Anterior"
           >
@@ -86,9 +101,9 @@ export function RecommendationsModal({ open, onOpenChange, games }: Recommendati
           <button
             type="button"
             onClick={() => navigate(1)}
-            disabled={current === games.length - 1}
             className="px-3 flex items-center justify-center text-muted-foreground
                        hover:text-foreground hover:bg-primary/60 transition-colors
+                       active:inset-shadow-sm active:inset-shadow-background
                        disabled:opacity-0"
             aria-label="Siguiente"
           >
