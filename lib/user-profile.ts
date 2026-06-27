@@ -1,9 +1,7 @@
 import { STORAGE_KEYS } from "@/lib/storage"
 import type {
   ConnectedAccounts,
-  FriendIdentity,
   StoredFriendProfile,
-  StoredPlayerSpecs,
   StoredUserProfile,
 } from "@/types"
 import { ImportGame } from "@/types/game"

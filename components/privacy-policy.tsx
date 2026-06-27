@@ -1,6 +1,6 @@
 "use client"
 
-import { Gamepad2, ArrowLeft, Shield, Eye, Database, Lock, Trash2, Mail } from "lucide-react"
+import { Gamepad2, ArrowLeft, Shield, Eye, Database, Trash2, Mail } from "lucide-react"
 import Link from "next/link"
 
 const LAST_UPDATED = "May 23, 2026"

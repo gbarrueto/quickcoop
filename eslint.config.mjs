@@ -3,6 +3,11 @@ import unusedImports from "eslint-plugin-unused-imports"
 
 const baseConfig = Array.isArray(nextVitals) ? nextVitals : [nextVitals]
 const eslintConfig = [
+	{
+		// scripts/ is local-only Python prototyping (gitignored) — its vendored
+		// venv packages aren't even valid JS/TS and shouldn't be linted at all.
+		ignores: ["scripts/**"],
+	},
 	...baseConfig,
 	{
 		plugins: {

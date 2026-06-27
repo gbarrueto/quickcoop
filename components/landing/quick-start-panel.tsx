@@ -1,12 +1,9 @@
 "use client"
 
 import { useRouter } from "next/navigation"
-import { ArrowRight, CheckCircle2, Link2, Upload, CircleQuestionMark, Link2Off, CircleCheckBig } from "lucide-react"
+import { Upload, Link2Off, CircleCheckBig } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Card, CardContent } from "@/components/ui/card"
 import { Switch } from "@/components/ui/switch"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ImportGame } from "@/types/game"
 
 type QuickStartPanelProps = {

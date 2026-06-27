@@ -1,6 +1,6 @@
 import { Gamepad2, Star } from "lucide-react"
 import type { RecommendedGame } from "@/types"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { useEffect, useRef } from "react"
 
 type GameRecommendationsPanelProps = {
@@ -35,9 +35,10 @@ export function GameRecommendationsCarousel({ games, activeIndex, onSelect }: Ga
               <li
                 key={`${game.name}-${index}`}
                 ref={(el) => { itemRefs.current[index] = el }}
-                className={`flex items-center justify-between px-2 py-1 rounded-xl transition-colors cursor-pointer group 
+                onClick={() => onSelect(index)}
+                className={`flex items-center justify-between px-2 py-1 rounded-xl transition-colors cursor-pointer group
                           ${ index === activeIndex ? "transform scale-125" : "" }
-                          transition-transform duration-300 ease-in-out 
+                          transition-transform duration-300 ease-in-out
                           `
                 }
                 aria-current={index === activeIndex ? "true" : "false"}

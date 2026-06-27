@@ -3,12 +3,10 @@ import type { TrendingGame } from "@/types"
 
 type BackgroundGamesProps = {
   games: TrendingGame[]
-  isLoading: boolean
-  loadError: string | null
   activeIndex: number
 }
 
-export function BackgroundGames({ games, isLoading, loadError, activeIndex }: BackgroundGamesProps) {
+export function BackgroundGames({ games, activeIndex }: BackgroundGamesProps) {
   return (
     <div className="absolute top-0 left-0 w-full h-full">
       <div className="relative h-full w-full overflow-hidden">

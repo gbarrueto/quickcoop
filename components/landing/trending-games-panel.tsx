@@ -1,4 +1,4 @@
-import { Gamepad2, Star } from "lucide-react"
+import { Gamepad2 } from "lucide-react"
 import type { TrendingGame } from "@/types"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -6,12 +6,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 type TrendingGamesPanelProps = {
   games: TrendingGame[]
   isLoading: boolean
-  loadError: string | null
+  isLive: boolean
   activeIndex: number
-  onSelect: (index: number) => void 
+  onSelect: (index: number) => void
 }
 
-export function TrendingGamesPanel({ games, isLoading, loadError, activeIndex, onSelect }: TrendingGamesPanelProps) {
+export function TrendingGamesPanel({ games, isLoading, isLive, activeIndex, onSelect }: TrendingGamesPanelProps) {
   return (
     <aside className="absolute top-0 right-0 h-full content-center z-2" aria-labelledby="matched-games-title">
       <Card className="group relative rounded-2xl border-none shadow-none bg-card/0 p-6 gap-0
@@ -29,15 +29,10 @@ export function TrendingGamesPanel({ games, isLoading, loadError, activeIndex, o
             Trending Multiplayer Games
           </CardTitle>
           <Badge variant="secondary" className="text-xs text-primary bg-primary/10 border-transparent">
-            {isLoading ? "Refreshing..." : "Live now"}
+            {isLoading ? "Refreshing..." : isLive ? "Live now" : "Trending"}
           </Badge>
         </CardHeader>
         <CardContent className="px-0">
-          {loadError && (
-            <p className="mb-4 rounded-md border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-xs text-amber-300">
-              {loadError}
-            </p>
-          )}
           <ul className="space-y-1">
             {games.map((game, index) => (
               <li

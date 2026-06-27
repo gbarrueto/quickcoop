@@ -8,7 +8,11 @@ import { FALLBACK_TRENDING_GAMES } from "@/components/landing/constants"
 export function useTrendingGames() {
   const [games, setGames] = useState<TrendingGame[]>(FALLBACK_TRENDING_GAMES)
   const [isLoading, setIsLoading] = useState(true)
-  const [loadError, setLoadError] = useState<string | null>(null)
+  // Whether `games` is real trending data (live fetch or its cache) vs the
+  // static fallback list — drives the "Live now" badge. Never shown to
+  // users as raw text; the fallback list is curated and fine to display
+  // as-is, just not labeled "live".
+  const [isLive, setIsLive] = useState(true)
 
   useEffect(() => {
     let isCancelled = false
@@ -67,7 +71,7 @@ export function useTrendingGames() {
       const cachedGames = readCachedTrendingGames()
       if (cachedGames) {
         setGames(cachedGames)
-        setLoadError(null)
+        setIsLive(true)
         setIsLoading(false)
         return
       }
@@ -89,13 +93,14 @@ export function useTrendingGames() {
 
         if (!isCancelled) {
           setGames(payload.games)
-          setLoadError(null)
+          setIsLive(true)
           saveCachedTrendingGames(payload.games)
         }
-      } catch {
+      } catch (error) {
+        console.error("[use-trending-games] live fetch failed, showing fallback list", error)
         if (!isCancelled) {
           setGames(FALLBACK_TRENDING_GAMES)
-          setLoadError("Live trend data unavailable. Showing fallback list.")
+          setIsLive(false)
         }
       } finally {
         if (!isCancelled) {
@@ -111,5 +116,5 @@ export function useTrendingGames() {
     }
   }, [])
 
-  return { games, isLoading, loadError }
+  return { games, isLoading, isLive }
 }
