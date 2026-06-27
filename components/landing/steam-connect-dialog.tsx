@@ -33,10 +33,10 @@ export function SteamConnectDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-xl overflow-hidden border-border bg-card/95 p-0 shadow-2xl backdrop-blur-xl">
-        <div className="pt-6 pb-6 text-center">
+        <div className="pt-6 pb-6 text-center bg-primary/20">
           <DialogHeader className="items-center text-center">
             <div className="flex h-14 w-14 items-center justify-center rounded-2xl">
-              <img className="w-10 h-10 shadow-lg shadow-primary/15 rounded-full" src="/steam-svgrepo-com.svg" alt="steam" />
+              <img className="w-10 h-10 shadow-lg shadow-primary/15 rounded-full bg-primary/10" src="/steam-svgrepo-com.svg" alt="steam" />
             </div>
             <DialogTitle>Connect Steam</DialogTitle>
           </DialogHeader>
