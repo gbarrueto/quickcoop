@@ -95,6 +95,12 @@ export function EpicConnectDialog({
           </DialogHeader>
         </div>
 
+        {epicError && (
+          <div className="absolute rounded-lg border border-red-400/20 bg-red-400/5 px-3 py-2 text-sm text-red-300 text-xs">
+            {epicError}
+          </div>
+        )}
+
         <div className="space-y-5 px-6 py-6">
           {epicId && !popupClosed && !isWaiting && (
             <div className="space-y-4 text-center">
@@ -113,14 +119,8 @@ export function EpicConnectDialog({
             </div>
           )}
 
-          {!epicId && !popupClosed && !isWaiting && (
+          {!epicId && (
             <>
-              {epicError && (
-                <div className="rounded-lg border border-red-400/20 bg-red-400/5 px-3 py-2 text-sm text-red-300">
-                  {epicError}
-                </div>
-              )}
-
               {extensionAvailable ? (
                 <div className="rounded-lg border border-green-400/20 bg-green-400/5 px-4 py-3 text-xs text-green-300 space-y-2">
                   <p className="font-medium">⚡ Automatic mode (extension detected)</p>
@@ -146,13 +146,15 @@ export function EpicConnectDialog({
                 </div>
               )}
 
-              <Button
-                onClick={handleConnect}
-                className="w-full"
-                variant="default"
-              >
-                Connect with Epic
-              </Button>
+              {!popupClosed && !isWaiting && (
+                <Button
+                  onClick={handleConnect}
+                  className="w-full"
+                  variant="default"
+                >
+                  Connect with Epic
+                </Button>
+              )}
             </>
           )}
 
@@ -184,12 +186,6 @@ export function EpicConnectDialog({
               <div className="rounded-lg border border-green-400/20 bg-green-400/5 px-3 py-2 text-sm text-green-300 text-center">
                 ✅ Popup closed. Paste your code below.
               </div>
-
-              {epicError && (
-                <div className="rounded-lg border border-red-400/20 bg-red-400/5 px-3 py-2 text-sm text-red-300">
-                  {epicError}
-                </div>
-              )}
 
               <div className="space-y-2">
                 <label className="text-xs font-medium text-muted-foreground">

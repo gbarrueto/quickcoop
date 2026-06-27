@@ -34,7 +34,6 @@ import type {
 import { MatchingFriendsPanel } from "./matching-friends-panel"
 import { MatchingHeader } from "./matching-header"
 import { MatchingLibraryPanel } from "./matching-library-panel"
-import { MatchingRecommendationsPanel } from "./matching-recommendations-panel"
 import { MatchingRequirementsDialog } from "./matching-requirements-dialog"
 import { MatchingSpecsDialog } from "./matching-specs-dialog"
 import { Spinner } from "../ui/spinner"
