@@ -104,7 +104,7 @@ export function ImportGamesDialog({
       <DialogContent
         className="w-full lg:max-w-[60vw] h-full max-h-[90vh] overflow-hidden border-border bg-card/95 p-0 shadow-2xl backdrop-blur-xl flex flex-col gap-0"
         onPointerDownOutside={(event) => event.preventDefault()}
-        onEscapeKeyDown={(event) => event.preventDefault()}
+        onEscapeKeyDown={(event) => {event.preventDefault(); onDone()}}
         showCloseButton={false}
       >
         <div className="shrink-0 p-4">
