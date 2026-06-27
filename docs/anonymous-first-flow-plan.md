@@ -305,9 +305,38 @@ completos genre+feature, imagen del offer):
   está pero no resuelve el problema** — se deja documentado por si Cloudflare cambia
   de criterio o aparece un host con mejor reputación; `fetchOffersBulk` ya degrada a
   `{}` con gracia si no responde, así que no hace daño dejarlo.
+- **Backlog (no curación ahora):** revisando la BDD quedan juegos no-DLC con
+  `description`/`requirements` vacíos (casos donde `get_product` no encontró
+  `productHome` o vino sin `about.shortDescription`/`requirements.systems` — degrada
+  con gracia, no rompe nada, pero el dato falta). Se deja para una curación futura,
+  no bloquea el cierre de Fase D.
 
-**Fase E — Disclosure de UX (solo frontend, sin vistas nuevas)**
-14. Copys/badges contextuales en quick-start-panel/hero-section según sección 2.
+**Fase D — cerrada (2026-06-26).**
+
+**Fase E — Disclosure de UX ✅ implementado (2026-06-26), sin vistas nuevas**
+14. Copys/badges contextuales según sección 2: nota en `quick-start-panel.tsx` cuando
+    hay Game Pass sin Steam/Epic; badge "On QuickCoop as {username}" + nota general
+    por amigo Epic en `matching-friends-panel.tsx` (consume el `qcoopUsername` que
+    Fase C ya calculaba); nudge "Sign up to keep this connection..." en
+    `steam-connect-dialog.tsx`/`epic-connect-dialog.tsx` cuando se conecta sin sesión
+    qcoop (requirió pasar `currentUser` a ambos diálogos desde `landing-page.tsx`).
+
+**Sumado a pedido del usuario en esta misma fase:**
+15. **Juegos de Epic ya se muestran en matching** — `load-matching-data.ts` reemplazó
+    el fetch crudo roto (`fetchEpicLibrary`/`epicGameToCard`, esperaba un campo
+    `games` que `/api/epic/library` nunca tuvo) por `fetchEpicGameDetails`/
+    `epicGameDetailsToCard` — el pipeline completo de Fase D, que de paso sigue
+    enriqueciendo la BDD como antes. Se eliminó el código muerto resultante:
+    `fetchEpicLibrary`, `epicGameToCard`, los tipos `EpicGame`/`EpicLibraryPayload`, y
+    la ruta `app/api/epic/library` (sin más consumidores).
+16. **Recommendations con datos reales** — `lib/api/catalog.ts` (`fetchCatalogCandidates`,
+    query directa a Supabase vía `games.tags.overlaps(...)`, sin ruta nueva — la tabla
+    ya es de lectura pública) + `hooks/use-catalog-recommendations.ts` (TanStack).
+    `recommendation-utils.ts` prioriza estos candidatos reales sobre `RECOMMENDED_GAMES`
+    (dedupe por nombre), y solo usa el mock estático para rellenar cuando el catálogo
+    no tiene suficientes — nunca antes. El scoring (most-played, tag-matching) no
+    cambió, solo la fuente de candidatos. Verificado contra la BDD real (juegos de
+    Epic ya curados aparecen con precio/descripción reales).
 
 ## 9. Fuera de alcance
 

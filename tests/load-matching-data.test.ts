@@ -5,15 +5,14 @@ vi.mock("../lib/api", () => ({
   fetchSteamOwnedGames: vi.fn(),
   fetchSteamFriends: vi.fn(),
   fetchSteamGameDetails: vi.fn(),
-  fetchEpicLibrary: vi.fn(),
   fetchEpicFriends: vi.fn(),
   fetchEpicGameDetails: vi.fn(),
   fetchGamePassCatalog: vi.fn(),
   resolveQcoopIdentities: vi.fn(),
-  epicGameToCard: (game: { id: string; title: string; keyImages?: Array<{ type: string; url: string }> }) => ({
-    appId: Number.parseInt(game.id, 10) || 0,
+  epicGameDetailsToCard: (game: { catalogItemId: string | null; title: string; imageUrl: string | null }) => ({
+    appId: Number.parseInt(game.catalogItemId ?? "0", 10) || 0,
     name: game.title,
-    imageUrl: game.keyImages?.[0]?.url ?? "",
+    imageUrl: game.imageUrl ?? "",
     rating: 0,
     players: "1+",
     platform: "epic",
@@ -31,7 +30,6 @@ vi.mock("../lib/api", () => ({
 import {
   fetchEpicFriends,
   fetchEpicGameDetails,
-  fetchEpicLibrary,
   fetchGamePassCatalog,
   fetchSteamFriends,
   fetchSteamGameDetails,
@@ -57,9 +55,25 @@ describe("loadMatchingData", () => {
       friends: [{ steamId: "friend-steam", name: "Steam Friend" }],
     })
     vi.mocked(fetchSteamGameDetails).mockResolvedValue({ games: [] })
-    vi.mocked(fetchEpicGameDetails).mockResolvedValue({ games: [] })
-    vi.mocked(fetchEpicLibrary).mockResolvedValue({
-      games: [{ id: "1091500", title: "Cyberpunk 2077", keyImages: [{ type: "Thumbnail", url: "https://example.com/cp.jpg" }] }],
+    vi.mocked(fetchEpicGameDetails).mockResolvedValue({
+      games: [
+        {
+          namespace: "ns-1",
+          slug: "cyberpunk-2077",
+          catalogItemId: "1091500",
+          title: "Cyberpunk 2077",
+          description: null,
+          offerDescription: null,
+          imageUrl: "https://example.com/cp.jpg",
+          requirements: [],
+          tags: [],
+          metaTags: [],
+          price: null,
+          offerId: null,
+          isDlc: false,
+          dlcs: [],
+        },
+      ],
     })
     vi.mocked(fetchEpicFriends).mockResolvedValue({
       friends: [{ accountId: "friend-epic", displayName: "Epic Friend" }],

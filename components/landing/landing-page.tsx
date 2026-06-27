@@ -91,6 +91,7 @@ export function LandingPage() {
         steamId={steamId}
         steamError={steamError}
         isWaiting={isWaitingSteamAuth}
+        currentUser={currentUser}
         onStartAuth={startSteamOpenId}
         onDisconnect={disconnectSteam}
       />
@@ -108,6 +109,7 @@ export function LandingPage() {
         isWaiting={isWaitingEpicAuth}
         popupClosed={epicPopupClosed}
         extensionAvailable={epicExtensionAvailable}
+        currentUser={currentUser}
         startPopupAuth={startEpicPopupAuth}
         submitAuthCode={submitEpicAuthCode}
         reset={resetEpicAuth}

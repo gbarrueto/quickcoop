@@ -133,6 +133,12 @@ export function QuickStartPanel({
       </div>
 
       <div className="flex flex-col items-center gap-3">
+        {hasGamePass && !steamId && !epicId && (
+          <p className="text-xs text-muted-foreground text-center">
+            Game Pass alone won't find matches — connect Steam or Epic too so we can
+            compare libraries with your friends.
+          </p>
+        )}
         {!canBeginMatching && (
           <p className="text-xs text-muted-foreground text-center">
             Import games or connect at least one account to begin.
