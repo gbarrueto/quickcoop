@@ -2,6 +2,10 @@
 
 QCoop es una app web para encontrar juegos a jugar con amigos. La app permite conectar bibliotecas de Steam, Epic Games y Game Pass, importar juegos manualmente, explorar recomendaciones y hacer matching con amigos.
 
+## Link
+
+https://quickcoop.me/
+
 ## Stack
 
 - Next.js 16 con App Router
