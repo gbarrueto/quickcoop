@@ -47,7 +47,7 @@ export function HeroSection({
                 </span>
               </h1>
               <p className="text-lg text-foreground/80 mb-8 max-w-lg">
-                Connect your Steam account or import a list of games and match games with your friends.
+                Connect your accounts or import a list of games and match games with your friends.
               </p>
             </section>
 

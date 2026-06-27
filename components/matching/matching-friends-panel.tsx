@@ -120,7 +120,7 @@ export function MatchingFriendsPanel({
         <CardDescription className="text-xs">Click to select. Drag to merge.</CardDescription>
       </CardHeader>
 
-      <CardContent className="space-y-2 p-5 flex flex-col flex-1 min-h-0 gap-1.5">
+      <CardContent className="p-5 flex flex-col flex-1 min-h-0 gap-1.5 overflow-hidden">
         {tipVisible && (
           <div className="relative shrink-0 rounded-lg border border-primary/30 bg-primary/10 p-3 text-xs text-primary">
             <button
@@ -145,7 +145,7 @@ export function MatchingFriendsPanel({
           </Badge>
         )}
 
-        <ScrollArea className="flex-1 min-h-0 pr-1">
+        <ScrollArea className="flex-1 min-h-0 w-full overflow-hidden">
           <div className="space-y-3">
             {allFriendProfiles.map((profile) => {
               const primaryIdentity = profile.identities[0]
@@ -174,7 +174,7 @@ export function MatchingFriendsPanel({
                   onClick={() => onToggleSelection(profile.profileId)}
                   className={articleClass}
                 >
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center">
                     <div
                       onPointerDown={(e) => {
                         if (!canDragMerge) return
@@ -201,14 +201,16 @@ export function MatchingFriendsPanel({
                       <GripVertical className="h-4 w-4" />
                     </div>
 
-                    <Avatar className="h-9 w-9">
-                      <AvatarFallback className="text-[11px]">{getInitials(primaryIdentity?.displayName ?? "P")}</AvatarFallback>
-                    </Avatar>
+                    <div className="flex flex-1 items-center gap-1">
+                      <Avatar className="h-9 w-9">
+                        <AvatarFallback className="text-[11px]">{getInitials(primaryIdentity?.displayName ?? "P")}</AvatarFallback>
+                      </Avatar>
 
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium">{primaryIdentity?.displayName}</p>
-                      {hasLoadingIdentity && <p className="text-xs text-primary">Loading library...</p>}
-                      {firstIdentityError && <p className="text-xs text-destructive">{firstIdentityError}</p>}
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium">{primaryIdentity?.displayName}</p>
+                        {hasLoadingIdentity && <p className="text-xs text-primary">Loading library...</p>}
+                        {firstIdentityError && <p className="text-xs text-destructive">{firstIdentityError}</p>}
+                      </div>
                     </div>
 
                     <div className="flex items-center gap-1">

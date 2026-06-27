@@ -98,16 +98,16 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md overflow-hidden border-border bg-card/95 p-0 shadow-2xl backdrop-blur-xl">
-        <div className="px-6 pt-6 pb-2 text-center">
-          <DialogHeader className="grid grid-cols-3 items-center">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/15 text-primary shadow-lg shadow-primary/15">
-              <User className="h-7 w-7" />
-            </div>
+        <div className={`px-6 pt-4 pb-4 text-center 
+                        ${authMode === "login" ? "bg-primary/80" : "bg-tertiary/80"}
+          `}
+        >
+          <DialogHeader className="grid items-center justify-center">
             <DialogTitle>{authMode === "login" ? "Login" : "Create account"}</DialogTitle>
           </DialogHeader>
         </div>
 
-        <div className="space-y-4 px-6 py-6">
+        <div className="space-y-4 px-6 pt-4 pb-6">
           {authMode === "register" && (
             <div className="space-y-2">
               <Label htmlFor="auth-name" className="text-xs text-muted-foreground">
