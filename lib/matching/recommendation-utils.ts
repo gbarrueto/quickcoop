@@ -46,11 +46,8 @@ function withCatalogDetails(game: RecommendedGame): RecommendedGame {
   }
 }
 
-export function buildUserRecommendations(
-  userGames: GameCard[],
-  categoriesByApp: Record<number, string[]>,
-): RecommendedGame[] {
-  const sortedUserGames = [...userGames].sort((left, right) => {
+function sortByPlaytime(userGames: GameCard[]): GameCard[] {
+  return [...userGames].sort((left, right) => {
     const rightPlaytime = right.playtimeMinutes ?? 0
     const leftPlaytime = left.playtimeMinutes ?? 0
 
@@ -60,29 +57,57 @@ export function buildUserRecommendations(
 
     return left.name.localeCompare(right.name)
   })
+}
 
+// Raw (non-normalized) tags from the user's most-played games — used as-is
+// to query the real BDD catalog (tags there keep their original casing from
+// Steam/Epic). Scoring against them still normalizes on both sides.
+export function getTopPlayedTags(userGames: GameCard[], categoriesByApp: Record<number, string[]>): string[] {
+  const mostPlayedGames = sortByPlaytime(userGames).slice(0, TOP_PLAYED_LIMIT)
+  const rawTags = new Set<string>()
+  mostPlayedGames.forEach((game) => {
+    getGameTags(game, categoriesByApp).forEach((tag) => rawTags.add(tag))
+  })
+  return [...rawTags]
+}
+
+export function buildUserRecommendations(
+  userGames: GameCard[],
+  categoriesByApp: Record<number, string[]>,
+  catalogCandidates: RecommendedGame[] = [],
+): RecommendedGame[] {
+  const sortedUserGames = sortByPlaytime(userGames)
   const mostPlayedGames = sortedUserGames.slice(0, TOP_PLAYED_LIMIT)
   const ownedKeys = new Set(userGames.map(gameMatchKey))
   const topGameKeys = new Set(mostPlayedGames.map(gameMatchKey))
 
-  const topTags = new Set<string>()
-  mostPlayedGames.forEach((game) => {
-    getGameTags(game, categoriesByApp).forEach((tag) => topTags.add(normalizeGameName(tag)))
-  })
+  const topTags = new Set(getTopPlayedTags(userGames, categoriesByApp).map(normalizeGameName))
 
   const topPlayedRecommendations = mostPlayedGames.map((game) =>
     toRecommendedGame(game, getGameTags(game, categoriesByApp), "Most played"),
   )
 
-  const scoredCandidates = RECOMMENDED_GAMES.filter(
-    (game) => !ownedKeys.has(gameMatchKey(game)) && !topGameKeys.has(gameMatchKey(game)),
-  ).map((game) => ({
-    game,
-    categoryScore: game.categories.reduce(
-      (score, category) => score + (topTags.has(normalizeGameName(category)) ? 1 : 0),
-      0,
-    ),
-  }))
+  // Real catalog data first; the static pool only fills gaps when the BDD
+  // doesn't have enough relevant games yet (on-demand population).
+  const seenKeys = new Set<string>()
+  const candidatePool = [...catalogCandidates, ...RECOMMENDED_GAMES].filter((game) => {
+    const key = gameMatchKey(game)
+    if (seenKeys.has(key)) {
+      return false
+    }
+    seenKeys.add(key)
+    return true
+  })
+
+  const scoredCandidates = candidatePool
+    .filter((game) => !ownedKeys.has(gameMatchKey(game)) && !topGameKeys.has(gameMatchKey(game)))
+    .map((game) => ({
+      game,
+      categoryScore: game.categories.reduce(
+        (score, category) => score + (topTags.has(normalizeGameName(category)) ? 1 : 0),
+        0,
+      ),
+    }))
 
   const similarRecommendations = scoredCandidates
     .sort((left, right) => {

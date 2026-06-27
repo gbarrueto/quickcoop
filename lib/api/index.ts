@@ -1,9 +1,7 @@
 export {
   epicGameDetailsToCard,
-  epicGameToCard,
   fetchEpicFriends,
   fetchEpicGameDetails,
-  fetchEpicLibrary,
   type EpicFriend,
   type EpicFriendsPayload,
 } from "./epic"

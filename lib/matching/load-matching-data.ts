@@ -1,8 +1,7 @@
 import {
-  epicGameToCard,
+  epicGameDetailsToCard,
   fetchEpicFriends,
   fetchEpicGameDetails,
-  fetchEpicLibrary,
   fetchGamePassCatalog,
   fetchSteamFriends,
   fetchSteamGameDetails,
@@ -96,20 +95,18 @@ export async function loadMatchingData(profile: StoredUserProfile): Promise<Matc
   }
 
   if (profile.connections.epicAccountId) {
-    // Same as the Steam call above: best-effort BDD enrichment, not awaited,
-    // doesn't touch epicGames below. Test directly via GET
-    // /api/epic/game-details if you need to see its result.
-    fetchEpicGameDetails().catch((error) => {
-      console.error("[load-matching-data] Epic catalog enrichment failed", error)
-    })
-
-    const [epicLibPayload, epicFriendsPayload] = await Promise.all([
-      fetchEpicLibrary(profile.connections.epicAccountId),
+    // fetchEpicGameDetails runs the full enrichment pipeline (real name/
+    // image/tags/price, docs/epic-game-details-pipeline.md) and writes to
+    // the BDD catalog as a side effect — this is now the real data source
+    // for epicGames, replacing the old raw-library fetch that never had
+    // usable names/images (see docs/anonymous-first-flow-plan.md).
+    const [epicDetailsPayload, epicFriendsPayload] = await Promise.all([
+      fetchEpicGameDetails(),
       fetchEpicFriends(profile.connections.epicAccountId),
     ])
 
-    if (epicLibPayload?.games) {
-      epicGames = epicLibPayload.games.map(epicGameToCard)
+    if (epicDetailsPayload?.games) {
+      epicGames = epicDetailsPayload.games.map(epicGameDetailsToCard)
     }
 
     if (epicFriendsPayload?.friends) {

@@ -112,12 +112,20 @@ export function MatchingFriendsPanel({
     ? allFriendProfiles.find((p) => p.profileId === draggingProfileId) ?? null
     : null
   const ghostWidth = draggingRef.current?.cardWidth ?? 280
+  const hasEpicFriends = allFriendProfiles.some((profile) =>
+    profile.identities.some((identity) => identity.platform === "epic"),
+  )
 
   return (
     <Card className="flex flex-col border-border/70 bg-background/80 h-full gap-0 py-0 pt-2 overflow-hidden">
       <CardHeader className="border-border/70 px-5 shrink-0">
         <CardTitle className="text-xs">Friends</CardTitle>
         <CardDescription className="text-xs">Click to select. Drag to merge.</CardDescription>
+        {hasEpicFriends && (
+          <CardDescription className="text-xs">
+            Epic friends only show their library if they're also on QuickCoop.
+          </CardDescription>
+        )}
       </CardHeader>
 
       <CardContent className="space-y-2 p-5 flex flex-col flex-1 min-h-0 gap-1.5">
@@ -152,6 +160,8 @@ export function MatchingFriendsPanel({
               const hasMultipleIdentities = profile.identities.length > 1
               const hasLoadingIdentity = profile.identities.some((identity) => loadingIdentities[identityKey(identity)])
               const firstIdentityError = profile.identities.map((identity) => identityErrors[identityKey(identity)]).find(Boolean)
+
+              const qcoopUsername = profile.identities.find((identity) => identity.qcoopUsername)?.qcoopUsername
 
               const isDragSource = draggingProfileId === profile.profileId
               const isDragTarget = dragOverProfileId === profile.profileId && draggingProfileId !== profile.profileId
@@ -207,6 +217,7 @@ export function MatchingFriendsPanel({
 
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium">{primaryIdentity?.displayName}</p>
+                      {qcoopUsername && <p className="truncate text-xs text-emerald-500">On QuickCoop as {qcoopUsername}</p>}
                       {hasLoadingIdentity && <p className="text-xs text-primary">Loading library...</p>}
                       {firstIdentityError && <p className="text-xs text-destructive">{firstIdentityError}</p>}
                     </div>

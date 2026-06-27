@@ -14,11 +14,13 @@ import {
   filterGamesByCategories,
   filterSharedGames,
   getAvailableCategories,
+  getTopPlayedTags,
   identityKey,
   mergeProfileIdentities,
   toStoredIdentities,
 } from "@/lib/matching"
 import { updateStoredUserProfile } from "@/lib/user-profile"
+import { useCatalogRecommendations } from "@/hooks/use-catalog-recommendations"
 import { useGameCategories } from "@/hooks/use-game-categories"
 import { useIdentityLibrary } from "@/hooks/use-identity-library"
 import { useMatchingInit } from "@/hooks/use-matching-init"
@@ -91,9 +93,16 @@ export function MatchingPage() {
 
   const { categoriesByApp, isLoadingCategories, categoryFilterError } = useGameCategories(filteredGames)
   const availableCategories = useMemo(() => getAvailableCategories(filteredGames, categoriesByApp), [filteredGames, categoriesByApp])
-  const recommendedGames = useMemo(
-    () => buildUserRecommendations(allUserGames, userCategoriesByApp),
+  const topPlayedTags = useMemo(
+    () => getTopPlayedTags(allUserGames, userCategoriesByApp),
     [allUserGames, userCategoriesByApp],
+  )
+  // Real catalog data when the BDD has it; buildUserRecommendations falls
+  // back to the static RECOMMENDED_GAMES pool for whatever it's missing.
+  const { data: catalogCandidates } = useCatalogRecommendations(topPlayedTags)
+  const recommendedGames = useMemo(
+    () => buildUserRecommendations(allUserGames, userCategoriesByApp, catalogCandidates ?? []),
+    [allUserGames, userCategoriesByApp, catalogCandidates],
   )
   const categoryFilteredGames = useMemo(
     () => filterGamesByCategories(filteredGames, categoriesByApp, selectedCategories, categoryFilterMode),

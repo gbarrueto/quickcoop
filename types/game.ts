@@ -41,12 +41,6 @@ export type SteamOwnedGame = {
   playtime_forever?: number
 }
 
-export type EpicGame = {
-  id: string
-  title: string
-  keyImages?: { type: string; url: string }[]
-}
-
 export type GamePassGame = {
   id: string
   title: string

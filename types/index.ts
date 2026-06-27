@@ -1,7 +1,6 @@
 export type { AuthUser } from "./auth"
 export type {
   EpicGameDetailsPayload,
-  EpicLibraryPayload,
   FriendsPayload,
   GameCategoriesPayload,
   GamePassPayload,
@@ -19,7 +18,6 @@ export type {
   StoredFriendProfile,
 } from "./friend"
 export type {
-  EpicGame,
   EpicGameDetails,
   EpicGameDlc,
   EpicGamePrice,

@@ -55,6 +55,33 @@ export function toImportedGameCard(name: string): GameCard {
   }
 }
 
+// `game_listings.price` stores either an EpicGamePrice or a SteamGamePrice —
+// different shapes in the same jsonb column (see types/game.ts). Formats
+// whichever one is there into a display string, without normalizing currency.
+export function formatStoredPrice(price: unknown): string | null {
+  if (!price || typeof price !== "object") {
+    return null
+  }
+
+  const value = price as Record<string, unknown>
+
+  // Epic shape: { formatted: { discountPrice, ... } }
+  const formatted = value.formatted
+  if (formatted && typeof formatted === "object") {
+    const discountPrice = (formatted as Record<string, unknown>).discountPrice
+    if (typeof discountPrice === "string" && discountPrice) {
+      return discountPrice
+    }
+  }
+
+  // Steam shape: { finalFormatted, initialFormatted }
+  if (typeof value.finalFormatted === "string" && value.finalFormatted) {
+    return value.finalFormatted
+  }
+
+  return null
+}
+
 export function dedupeGameCards(games: GameCard[]): GameCard[] {
   const seen = new Set<string>()
   return games.filter((game) => {

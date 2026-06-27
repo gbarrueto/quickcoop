@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import type { AuthUser } from "@/types"
 
 type EpicConnectDialogProps = {
   open: boolean
@@ -20,6 +21,7 @@ type EpicConnectDialogProps = {
   isWaiting: boolean
   popupClosed: boolean
   extensionAvailable: boolean
+  currentUser: AuthUser | null
   startPopupAuth: () => void
   submitAuthCode: (code: string) => Promise<void>
   reset: () => void
@@ -34,6 +36,7 @@ export function EpicConnectDialog({
   isWaiting,
   popupClosed,
   extensionAvailable,
+  currentUser,
   startPopupAuth,
   submitAuthCode,
   reset,
@@ -102,6 +105,11 @@ export function EpicConnectDialog({
               <Button onClick={handleDisconnect} variant="outline" className="w-full">
                 Disconnect Epic account
               </Button>
+              {!currentUser && (
+                <p className="text-xs text-muted-foreground">
+                  Sign up to keep this connection saved across devices and sessions.
+                </p>
+              )}
             </div>
           )}
 

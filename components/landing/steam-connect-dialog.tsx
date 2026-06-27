@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { CircleCheckBig, SquareArrowOutUpRight } from "lucide-react"
 import Link from "next/link"
+import type { AuthUser } from "@/types"
 
 type SteamConnectDialogProps = {
   open: boolean
@@ -17,6 +18,7 @@ type SteamConnectDialogProps = {
   steamId: string | null
   steamError: string | null
   isWaiting: boolean
+  currentUser: AuthUser | null
   onStartAuth: () => void
   onDisconnect: () => void
 }
@@ -27,6 +29,7 @@ export function SteamConnectDialog({
   steamId,
   steamError,
   isWaiting,
+  currentUser,
   onStartAuth,
   onDisconnect,
 }: SteamConnectDialogProps) {
@@ -81,6 +84,11 @@ export function SteamConnectDialog({
                 <Button onClick={onDisconnect} variant="outline" className="w-full">
                   Disconnect Steam account
                 </Button>
+                {!currentUser && (
+                  <p className="text-xs text-muted-foreground">
+                    Sign up to keep this connection saved across devices and sessions.
+                  </p>
+                )}
               </div>
               )
             : (
