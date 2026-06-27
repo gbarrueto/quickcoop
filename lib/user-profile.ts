@@ -1,11 +1,10 @@
 import { STORAGE_KEYS } from "@/lib/storage"
 import type {
   ConnectedAccounts,
-  FriendIdentity,
   StoredFriendProfile,
-  StoredPlayerSpecs,
   StoredUserProfile,
 } from "@/types"
+import { ImportGame } from "@/types/game"
 
 export type {
   ConnectedAccounts,
@@ -95,10 +94,44 @@ export function createDefaultUserProfile(): StoredUserProfile {
       epicAccountId: null,
       hasGamePass: false,
     },
-    importedGames: ["Hades", "Deep Rock Galactic", "Baldur's Gate 3", "Cyberpunk 2077", "Rocket League"],
+    importedGames: [
+      { title: "Hades" },
+      { title: "Deep Rock Galactic" },
+      { title: "Baldur's Gate 3" },
+      { title: "Cyberpunk 2077" },
+      { title: "Rocket League" },
+    ],
     friends: createDefaultFriends(),
     updatedAt: Date.now(),
   }
+}
+
+// Coerce persisted/legacy data into ImportGame objects. Older versions stored
+// imported games as a string[] of titles; entries may also be objects missing a
+// title. Anything without a usable title is dropped so downstream consumers
+// (e.g. normalizeTitle) never receive undefined.
+function normalizeImportedGames(value: unknown): ImportGame[] {
+  if (!Array.isArray(value)) {
+    return []
+  }
+
+  return value.flatMap((entry) => {
+    if (typeof entry === "string") {
+      const title = entry.trim()
+      return title ? [{ title }] : []
+    }
+
+    if (entry && typeof entry === "object" && typeof (entry as ImportGame).title === "string") {
+      const title = (entry as ImportGame).title.trim()
+      if (!title) {
+        return []
+      }
+      const imageUrl = (entry as ImportGame).imageUrl
+      return [imageUrl ? { title, imageUrl } : { title }]
+    }
+
+    return []
+  })
 }
 
 function readProfile(): StoredUserProfile | null {
@@ -125,7 +158,7 @@ function readProfile(): StoredUserProfile | null {
         epicAccountId: parsed.connections.epicAccountId ?? null,
         hasGamePass: Boolean(parsed.connections.hasGamePass),
       },
-      importedGames: Array.isArray(parsed.importedGames) ? parsed.importedGames.filter(Boolean) : [],
+      importedGames: normalizeImportedGames(parsed.importedGames),
       friends: Array.isArray(parsed.friends) ? parsed.friends : [],
       playerSpecs: parsed.playerSpecs ?? undefined,
       updatedAt: typeof parsed.updatedAt === "number" ? parsed.updatedAt : Date.now(),
@@ -156,11 +189,11 @@ function readLegacySessionSnapshot(): Partial<StoredUserProfile> {
     connections.hasGamePass = false
   }
 
-  let importedGames: string[] = []
+  let importedGames: ImportGame[] = []
   try {
     const manualGamesRaw = window.sessionStorage.getItem(MANUAL_GAMES_KEY)
     if (manualGamesRaw) {
-      importedGames = JSON.parse(manualGamesRaw) as string[]
+      importedGames = normalizeImportedGames(JSON.parse(manualGamesRaw))
     }
   } catch {
     importedGames = []

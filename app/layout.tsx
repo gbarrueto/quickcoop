@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { Toaster } from '@/components/ui/toaster'
+import { QueryProvider } from '@/components/providers/query-provider'
 import './globals.css'
 
 const geistSans = Geist({
@@ -17,7 +18,6 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: 'QCoop - Find Games to Play with Friends',
   description: 'Sync your Steam and Epic libraries, match games with friends, and find the perfect multiplayer experience.',
-  generator: 'v0.app',
   icons: {
     icon: 
       {
@@ -37,9 +37,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}>
-        {children}
-        <Toaster />
-        {process.env.NODE_ENV === 'production' && <Analytics />}
+        <QueryProvider>
+          {children}
+          <Toaster />
+          {process.env.NODE_ENV === 'production' && <Analytics />}
+        </QueryProvider>
       </body>
     </html>
   )

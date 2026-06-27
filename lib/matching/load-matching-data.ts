@@ -1,11 +1,13 @@
 import {
-  epicGameToCard,
+  epicGameDetailsToCard,
   fetchEpicFriends,
-  fetchEpicLibrary,
+  fetchEpicGameDetails,
   fetchGamePassCatalog,
   fetchSteamFriends,
+  fetchSteamGameDetails,
   fetchSteamOwnedGames,
   gamePassGameToCard,
+  resolveQcoopIdentities,
 } from "@/lib/api"
 import {
   buildIdentityLibrariesFromFriends,
@@ -46,7 +48,7 @@ export async function loadMatchingData(profile: StoredUserProfile): Promise<Matc
   if (profile.connections.epicAccountId) platforms.push("epic")
   if (profile.connections.hasGamePass) platforms.push("xbox")
 
-  let userGames = profile.importedGames.map(toImportedGameCard)
+  let userGames = profile.importedGames.map((game) => {return toImportedGameCard(game.title)})
   let epicGames: GameCard[] = []
   let gamePassGames: GameCard[] = []
   let friendProfiles = profile.friends.map(toFriendProfile)
@@ -54,6 +56,14 @@ export async function loadMatchingData(profile: StoredUserProfile): Promise<Matc
   let identityLibraries = buildIdentityLibrariesFromFriends(profile.friends)
 
   if (profile.connections.steamId) {
+    // Best-effort, not awaited: enriches the BDD catalog (real description +
+    // price/discount, docs/database-design.md section 4) as a side effect of
+    // every import. Doesn't affect what's returned/displayed here — see
+    // docs/anonymous-first-flow-plan.md ("el dónde" is a later UIUX decision).
+    fetchSteamGameDetails(profile.connections.steamId).catch((error) => {
+      console.error("[load-matching-data] Steam catalog enrichment failed", error)
+    })
+
     const [gamesPayload, friendsPayload] = await Promise.all([
       fetchSteamOwnedGames(profile.connections.steamId),
       fetchSteamFriends(profile.connections.steamId),
@@ -85,24 +95,40 @@ export async function loadMatchingData(profile: StoredUserProfile): Promise<Matc
   }
 
   if (profile.connections.epicAccountId) {
-    const [epicLibPayload, epicFriendsPayload] = await Promise.all([
-      fetchEpicLibrary(profile.connections.epicAccountId),
+    // fetchEpicGameDetails runs the full enrichment pipeline (real name/
+    // image/tags/price, docs/epic-game-details-pipeline.md) and writes to
+    // the BDD catalog as a side effect — this is now the real data source
+    // for epicGames, replacing the old raw-library fetch that never had
+    // usable names/images (see docs/anonymous-first-flow-plan.md).
+    const [epicDetailsPayload, epicFriendsPayload] = await Promise.all([
+      fetchEpicGameDetails(),
       fetchEpicFriends(profile.connections.epicAccountId),
     ])
 
-    if (epicLibPayload?.games) {
-      epicGames = epicLibPayload.games.map(epicGameToCard)
+    if (epicDetailsPayload?.games) {
+      epicGames = epicDetailsPayload.games.map(epicGameDetailsToCard)
     }
 
     if (epicFriendsPayload?.friends) {
+      // Epic exposes friends' games only if they're also registered on qcoop
+      // (see docs/anonymous-first-flow-plan.md section 2) — resolve that here
+      // so the UI can eventually distinguish them, stateless and without
+      // requiring a qcoop session.
+      const resolvedIdentities = await resolveQcoopIdentities(
+        "epic",
+        epicFriendsPayload.friends.map((friend) => friend.accountId),
+      )
+      const qcoopUsernameByAccountId = new Map(resolvedIdentities.map((identity) => [identity.accountId, identity.username]))
+
       const epicProfiles: FriendProfile[] = epicFriendsPayload.friends.map((friend) => ({
         profileId: `profile:epic:${friend.accountId}`,
         identities: [
           {
             platform: "epic" as const,
             accountId: friend.accountId,
-            displayName: friend.displayName,
+            displayName: friend.displayName ?? friend.accountId,
             avatar: null,
+            qcoopUsername: qcoopUsernameByAccountId.get(friend.accountId) ?? null,
           },
         ],
         connections: {
@@ -124,10 +150,19 @@ export async function loadMatchingData(profile: StoredUserProfile): Promise<Matc
     const gamePassPayload = await fetchGamePassCatalog()
 
     if (gamePassPayload?.games) {
-      gamePassGames = gamePassPayload.games.map(gamePassGameToCard)
+      const catalogCards = gamePassPayload.games.map(gamePassGameToCard)
+
+      // Only expose the catalog as the user's own library (which is shown in the
+      // UI and later enriched via Steam lookups) when their Game Pass toggle is
+      // on. When only a friend has Game Pass we still need the catalog below for
+      // friend library matching, but must not load it as the user's games —
+      // otherwise the enrichment phase fires a Steam query per catalog entry.
+      if (profile.connections.hasGamePass) {
+        gamePassGames = catalogCards
+      }
 
       if (hasGamePassFriend) {
-        const gamePassSnapshot = toLibrarySnapshot(gamePassGames)
+        const gamePassSnapshot = toLibrarySnapshot(catalogCards)
 
         identityLibraries = { ...identityLibraries }
 

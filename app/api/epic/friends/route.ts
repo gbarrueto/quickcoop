@@ -1,69 +1,63 @@
-import { NextRequest, NextResponse } from "next/server"
+import { NextResponse } from "next/server"
+import { resolveEpicAccount } from "@/lib/epic/resolve-account"
+import { fetchEpicDisplayNames } from "@/lib/epic/account-lookup"
 
-export async function GET(request: NextRequest) {
-  const accessToken = request.cookies.get("epic_access_token")?.value
-  const accountId = request.cookies.get("epic_account_id")?.value
+export async function GET() {
+  const account = await resolveEpicAccount()
 
-  console.log("[epic/friends] accessToken:", accessToken ? "present" : "missing")
-  console.log("[epic/friends] accountId:", accountId ?? "missing")
-
-  if (!accessToken || !accountId) {
-    return NextResponse.json({ error: "Epic session not found" }, { status: 401 })
+  if (!account) {
+    return NextResponse.json(
+      { error: "Not authenticated. Please connect your Epic Games account first." },
+      { status: 401 }
+    )
   }
 
+  const { accessToken, accountId } = account
+
   try {
-    // Obtiene lista de amigos
-    const friendsRes = await fetch(
-      `https://friends-public-service-prod.ol.epicgames.com/friends/api/public/friends/${accountId}?includePending=false`,
+    const response = await fetch(
+      `https://friends-public-service-prod.ol.epicgames.com/friends/api/public/friends/${accountId}`,
       {
-        headers: { Authorization: `Bearer ${accessToken}` },
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
       }
     )
 
-    if (!friendsRes.ok) {
-      const err = await friendsRes.text()
-      console.log("[epic/friends] Epic API error:", err)
-      throw new Error(`Epic friends fetch failed: ${err}`)
+    if (!response.ok) {
+      const err = await response.text()
+      console.error("[epic/friends] error:", err)
+      return NextResponse.json(
+        { error: `Epic API error: ${response.status} ${err}` },
+        { status: response.status }
+      )
     }
 
-    const friendsData = await friendsRes.json() as {
-      accountId: string
-      alias?: string
-    }[]
+    const data = await response.json()
 
-    if (friendsData.length === 0) {
-      return NextResponse.json({ friends: [] })
-    }
-
-    // Obtiene display names en bulk (máx 100 por request)
-    const accountIds = friendsData.slice(0, 100).map((f) => f.accountId)
-    const displayNamesRes = await fetch(
-      `https://account-public-service-prod.ol.epicgames.com/account/api/public/account?${accountIds.map((id) => `accountId=${id}`).join("&")}`,
-      {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      }
+    // The public/friends/{accountId} endpoint returns a plain array of
+    // friends with bare accountIds — no display name (see
+    // docs/integracion-epic-xbox.md section 3.1). Resolve names separately.
+    const friends: Array<{ accountId: string }> = Array.isArray(data) ? data : (data.friends ?? [])
+    const displayNames = await fetchEpicDisplayNames(
+      accessToken,
+      friends.map((friend) => friend.accountId).filter(Boolean),
     )
 
-    type EpicAccountInfo = { id: string; displayName?: string; externalAuths?: unknown }
-    let accountInfoMap: Record<string, EpicAccountInfo> = {}
-
-    if (displayNamesRes.ok) {
-      const accountInfoList = await displayNamesRes.json() as EpicAccountInfo[]
-      accountInfoMap = Object.fromEntries(accountInfoList.map((a) => [a.id, a]))
-    }
-
-    const friends = friendsData.slice(0, 100).map((friend) => ({
-      accountId: friend.accountId,
-      displayName:
-        friend.alias ||
-        accountInfoMap[friend.accountId]?.displayName ||
-        `Epic User ${friend.accountId.slice(0, 6)}`,
+    const enrichedFriends = friends.map((friend) => ({
+      ...friend,
+      displayName: displayNames[friend.accountId] ?? null,
     }))
 
-    return NextResponse.json({ friends })
+    return NextResponse.json({
+      success: true,
+      accountId,
+      friendsCount: enrichedFriends.length,
+      friends: enrichedFriends,
+    })
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error"
-    console.log("[epic/friends] catch error:", message)
+    console.error("[epic/friends] error:", message)
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }

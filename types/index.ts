@@ -1,11 +1,12 @@
-export type { MockUser } from "./auth"
+export type { AuthUser } from "./auth"
 export type {
-  EpicLibraryPayload,
+  EpicGameDetailsPayload,
   FriendsPayload,
   GameCategoriesPayload,
   GamePassPayload,
   GameRequirementsPayload,
   OwnedGamesPayload,
+  SteamGameDetailsPayload,
   SteamSearchPayload,
 } from "./api"
 export type {
@@ -17,10 +18,14 @@ export type {
   StoredFriendProfile,
 } from "./friend"
 export type {
-  EpicGame,
+  EpicGameDetails,
+  EpicGameDlc,
+  EpicGamePrice,
   GameCard,
   GamePassGame,
   RecommendedGame,
+  SteamGameDetails,
+  SteamGamePrice,
   SteamOwnedGame,
   TrendingGame,
 } from "./game"

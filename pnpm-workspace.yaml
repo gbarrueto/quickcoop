@@ -1,0 +1,9 @@
+allowBuilds:
+  esbuild: true
+  sharp: true
+  unrs-resolver: true
+overrides:
+  # cmdk pulls @radix-ui/react-primitive@2.1.6, which depends on the broken
+  # @radix-ui/react-slot@1.3.0 (unpublished from npm; latest stable is 1.2.5).
+  # Pin to the previous good primitive release that resolves slot@1.2.5.
+  '@radix-ui/react-primitive': 2.1.5

@@ -1,12 +1,12 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { fetchGameRequirements } from "@/lib/api"
 import {
   DEFAULT_PLAYER_SPECS,
-  RECOMMENDED_GAMES,
+  buildUserRecommendations,
   buildSelectedLibrarySets,
   canMergeProfiles,
   dedupeGameCards,
@@ -14,11 +14,13 @@ import {
   filterGamesByCategories,
   filterSharedGames,
   getAvailableCategories,
+  getTopPlayedTags,
   identityKey,
   mergeProfileIdentities,
   toStoredIdentities,
 } from "@/lib/matching"
 import { updateStoredUserProfile } from "@/lib/user-profile"
+import { useCatalogRecommendations } from "@/hooks/use-catalog-recommendations"
 import { useGameCategories } from "@/hooks/use-game-categories"
 import { useIdentityLibrary } from "@/hooks/use-identity-library"
 import { useMatchingInit } from "@/hooks/use-matching-init"
@@ -32,18 +34,19 @@ import type {
 import { MatchingFriendsPanel } from "./matching-friends-panel"
 import { MatchingHeader } from "./matching-header"
 import { MatchingLibraryPanel } from "./matching-library-panel"
-import { MatchingRecommendationsPanel } from "./matching-recommendations-panel"
 import { MatchingRequirementsDialog } from "./matching-requirements-dialog"
 import { MatchingSpecsDialog } from "./matching-specs-dialog"
+import { Spinner } from "../ui/spinner"
+import { CategoryFiltersPanel } from "./matching-category-panel"
+import { useCarousel } from "@/hooks/use-carousel"
+import { GameRecommendationsCarousel } from "./game-recommendations-carousel"
+import { RecommendationsModal } from "./matching-recommendations-modal"
 
 export function MatchingPage() {
-  const recommendationsRef = useRef<HTMLDivElement | null>(null)
-
   const {
     currentUser,
     loading,
     pageError,
-    steamId,
     availablePlatforms,
     userGames,
     epicGames,
@@ -68,11 +71,15 @@ export function MatchingPage() {
   const [selectedGameForRequirements, setSelectedGameForRequirements] = useState<GameCard | null>(null)
   const [isRequirementsModalOpen, setIsRequirementsModalOpen] = useState(false)
   const [isSpecsModalOpen, setIsSpecsModalOpen] = useState(false)
+  const [isCategoryPanelOpen, setIsCategoryPanelOpen] = useState(false)
+  const [isRecommendationsModalOpen, setIsRecommendationsModalOpen] = useState(false)
+  const [isFriendsPanelOpen, setIsFriendsPanelOpen] = useState(false)
 
   const { loadingIdentities, identityErrors } = useIdentityLibrary(friendProfiles, identityLibraries, setIdentityLibraries)
 
   const allFriendProfiles = useMemo(() => [...friendProfiles, ...epicFriends], [friendProfiles, epicFriends])
   const allUserGames = useMemo(() => dedupeGameCards([...userGames, ...epicGames, ...gamePassGames]), [userGames, epicGames, gamePassGames])
+  const { categoriesByApp: userCategoriesByApp } = useGameCategories(allUserGames)
 
   const filteredGames = useMemo(() => {
     const selectedProfiles = allFriendProfiles.filter((profile) => profile.selected)
@@ -82,10 +89,23 @@ export function MatchingPage() {
 
   const { categoriesByApp, isLoadingCategories, categoryFilterError } = useGameCategories(filteredGames)
   const availableCategories = useMemo(() => getAvailableCategories(filteredGames, categoriesByApp), [filteredGames, categoriesByApp])
+  const topPlayedTags = useMemo(
+    () => getTopPlayedTags(allUserGames, userCategoriesByApp),
+    [allUserGames, userCategoriesByApp],
+  )
+  // Real catalog data when the BDD has it; buildUserRecommendations falls
+  // back to the static RECOMMENDED_GAMES pool for whatever it's missing.
+  const { data: catalogCandidates } = useCatalogRecommendations(topPlayedTags)
+  const recommendedGames = useMemo(
+    () => buildUserRecommendations(allUserGames, userCategoriesByApp, catalogCandidates ?? []),
+    [allUserGames, userCategoriesByApp, catalogCandidates],
+  )
   const categoryFilteredGames = useMemo(
     () => filterGamesByCategories(filteredGames, categoriesByApp, selectedCategories, categoryFilterMode),
     [filteredGames, categoriesByApp, selectedCategories, categoryFilterMode],
   )
+
+  const { activeIndex, goTo } = useCarousel(recommendedGames.length, 5000)
 
   const requirementsParticipants = useMemo<RequirementsParticipant[]>(
     () => [
@@ -108,6 +128,24 @@ export function MatchingPage() {
       return next
     })
   }, [requirementsParticipants, setPlayerSpecsById])
+
+  useEffect(() => {
+    if (!mergeNotice) return
+    const timer = setTimeout(() => setMergeNotice(null), 3500)
+    return () => clearTimeout(timer)
+  }, [mergeNotice])
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsCategoryPanelOpen(false)
+        setIsFriendsPanelOpen(false)
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [])
 
   const toggleFriendSelection = (profileId: string) => {
     setFriendProfiles((prev) => prev.map((profile) => (profile.profileId === profileId ? { ...profile, selected: !profile.selected } : profile)))
@@ -262,18 +300,11 @@ export function MatchingPage() {
     return evaluateParticipantCompatibility(specs, requirements)
   }
 
-  const scrollRecommendations = (direction: -1 | 1) => {
-    const container = recommendationsRef.current
-    if (!container) return
-
-    container.scrollBy({ left: direction * container.clientWidth, behavior: "smooth" })
-  }
-
   if (loading) {
     return (
-      <main className="min-h-screen bg-background px-6 py-16 lg:px-12">
-        <div className="mx-auto max-w-7xl">
-          <p className="text-muted-foreground">Loading matching preparation...</p>
+      <main className="min-h-screen bg-background px-6 py-16 lg:px-12 flex">
+        <div className="mx-auto max-w-7xl flex-1 flex justify-center items-center">
+          <Spinner className="w-[10%] h-[10%] text-quaternary" />
         </div>
       </main>
     )
@@ -296,79 +327,135 @@ export function MatchingPage() {
   }
 
   return (
-    <main className="min-h-screen bg-background px-6 py-10 lg:px-12">
-      <div className="mx-auto max-w-7xl space-y-8">
-        <MatchingHeader currentUser={currentUser} steamId={steamId} onOpenSpecs={() => setIsSpecsModalOpen(true)} />
+    <main className="relative h-screen bg-background overflow-x-hidden">
+      <div className="h-full grid grid-cols-[7%_86%_7%] grid-rows-[10%_90%]">
+        <div className="col-1 row-1 relative">
+          <GameRecommendationsCarousel games={recommendedGames} activeIndex={activeIndex} onSelect={goTo} />
+        </div>
+        <div className="col-2 row-1">
+          <MatchingHeader currentUser={currentUser} onOpenSpecs={() => setIsSpecsModalOpen(true)} activeIndex={activeIndex} />
+        </div>
+        <div className="h-full col-2 row-2">
+          <section className="grid gap-6 max-h-full overflow-hidden overflow-x-hidden lg:grid-rows-1">
+            <MatchingLibraryPanel
+              allUserGames={allUserGames}
+              categoryFilteredGames={categoryFilteredGames}
+              selectedCount={selectedCount}
+              selectedProfiles={selectedProfiles}
+              identityLibraries={identityLibraries}
+              availableCategories={availableCategories}
+              selectedCategories={selectedCategories}
+              categoryFilterMode={categoryFilterMode}
+              isLoadingCategories={isLoadingCategories}
+              categoryFilterError={categoryFilterError}
+              categoriesByApp={categoriesByApp}
+              onOpenCategoryPanel={() => setIsCategoryPanelOpen(prev => !prev)}
+              onOpenRecommendationsModal={() => setIsRecommendationsModalOpen(prev => !prev)}
+              onOpenFriendsPanel={() => setIsFriendsPanelOpen(prev => !prev)}
+              isRecommendationsModalOpen={isRecommendationsModalOpen}
+              isCategoryPanelOpen={isCategoryPanelOpen}
+              isFriendsPanelOpen={isFriendsPanelOpen}
+              onToggleCategory={(category) =>
+                setSelectedCategories((prev) =>
+                  prev.includes(category) ? prev.filter((value) => value !== category) : [...prev, category],
+                )
+              }
+              onSetCategoryFilterMode={setCategoryFilterMode}
+              onClearFilters={() => setSelectedCategories([])}
+              onOpenRequirements={openRequirementsModal}
+              onToggleSelection={toggleFriendSelection}
+            />
 
-        <section className="grid gap-6 lg:grid-cols-[2.2fr_1fr] lg:h-[calc(100vh-10rem)] lg:grid-rows-1">
-          <MatchingLibraryPanel
-            allUserGames={allUserGames}
-            categoryFilteredGames={categoryFilteredGames}
-            selectedCount={selectedCount}
-            selectedProfiles={selectedProfiles}
-            identityLibraries={identityLibraries}
-            availableCategories={availableCategories}
-            selectedCategories={selectedCategories}
-            categoryFilterMode={categoryFilterMode}
-            isLoadingCategories={isLoadingCategories}
-            categoryFilterError={categoryFilterError}
-            categoriesByApp={categoriesByApp}
-            onToggleCategory={(category) =>
-              setSelectedCategories((prev) =>
-                prev.includes(category) ? prev.filter((value) => value !== category) : [...prev, category],
-              )
-            }
-            onSetCategoryFilterMode={setCategoryFilterMode}
-            onClearFilters={() => setSelectedCategories([])}
-            onOpenRequirements={openRequirementsModal}
-            onToggleSelection={toggleFriendSelection}
+            <aside className={`absolute top-0 left-0 h-full bg-background z-3 w-[20%]
+                              transition-transform duration-300 ease-in-out
+                              ${isCategoryPanelOpen ? "translate-x-0 shadow-lg shadow-tertiary" : "-translate-x-[100%]"}
+                            `}
+            >
+              <CategoryFiltersPanel 
+                availableCategories={availableCategories}
+                selectedCategories={selectedCategories}
+                categoryFilterMode={categoryFilterMode}
+                isLoadingCategories={isLoadingCategories}
+                categoryFilterError={categoryFilterError}
+                onToggleCategory={(category) =>
+                  setSelectedCategories((prev) =>
+                    prev.includes(category) ? prev.filter((value) => value !== category) : [...prev, category],
+                  )
+                }
+                onSetCategoryFilterMode={setCategoryFilterMode}
+                onClearFilters={() => setSelectedCategories([])}
+              />
+            </aside>
+
+            <aside className={`absolute top-0 right-0 flex flex-col gap-4 lg:h-screen lg:overflow-y-auto z-3 w-[30%] bg-background
+                              transition-transform duration-300 ease-in-out
+                              ${isFriendsPanelOpen ? "translate-x-0 shadow-lg shadow-tertiary" : "translate-x-[100%]"}
+                            `}
+            >
+              <MatchingFriendsPanel
+                allFriendProfiles={allFriendProfiles}
+                canDragMerge={canDragMerge}
+                draggingProfileId={draggingProfileId}
+                loadingIdentities={loadingIdentities}
+                identityErrors={identityErrors}
+                mergeNotice={mergeNotice}
+                selectedCount={selectedCount}
+                onToggleSelection={toggleFriendSelection}
+                onToggleExpanded={toggleProfileExpanded}
+                onDragStart={setDraggingProfileId}
+                onDragEnd={() => setDraggingProfileId(null)}
+                onDrop={(targetProfileId) => {
+                  if (draggingProfileId) {
+                    mergeProfiles(draggingProfileId, targetProfileId)
+                  }
+                  setDraggingProfileId(null)
+                }}
+                onUnmerge={unmergeProfile}
+              />
+            </aside>
+          </section>
+
+          <MatchingRequirementsDialog
+            open={isRequirementsModalOpen}
+            onOpenChange={setIsRequirementsModalOpen}
+            selectedGame={selectedGameForRequirements}
+            requirementsByApp={requirementsByApp}
+            requirementsLoadingByApp={requirementsLoadingByApp}
+            requirementsErrorByApp={requirementsErrorByApp}
+            requirementsParticipants={requirementsParticipants}
+            playerSpecsById={playerSpecsById}
+            onUpdatePlayerSpecs={updatePlayerSpecs}
+            getParticipantCompatibility={getParticipantCompatibility}
           />
 
-          <aside className="flex flex-col gap-4 lg:h-full lg:overflow-y-auto">
-            <MatchingRecommendationsPanel recommendationsRef={recommendationsRef} recommendedGames={RECOMMENDED_GAMES} onScroll={scrollRecommendations} />
+          <MatchingSpecsDialog
+            open={isSpecsModalOpen}
+            onOpenChange={setIsSpecsModalOpen}
+            playerSpecsById={playerSpecsById}
+            onUpdatePlayerSpecs={updatePlayerSpecs}
+          />
 
-            <MatchingFriendsPanel
-              allFriendProfiles={allFriendProfiles}
-              canDragMerge={canDragMerge}
-              draggingProfileId={draggingProfileId}
-              loadingIdentities={loadingIdentities}
-              identityErrors={identityErrors}
-              mergeNotice={mergeNotice}
-              selectedCount={selectedCount}
-              onToggleSelection={toggleFriendSelection}
-              onToggleExpanded={toggleProfileExpanded}
-              onDragStart={setDraggingProfileId}
-              onDragEnd={() => setDraggingProfileId(null)}
-              onDrop={(targetProfileId) => {
-                if (draggingProfileId) {
-                  mergeProfiles(draggingProfileId, targetProfileId)
-                }
-                setDraggingProfileId(null)
-              }}
-              onUnmerge={unmergeProfile}
-            />
-          </aside>
-        </section>
+          <RecommendationsModal
+            open={isRecommendationsModalOpen}
+            onOpenChange={setIsRecommendationsModalOpen}
+            games={recommendedGames}
+          />
 
-        <MatchingRequirementsDialog
-          open={isRequirementsModalOpen}
-          onOpenChange={setIsRequirementsModalOpen}
-          selectedGame={selectedGameForRequirements}
-          requirementsByApp={requirementsByApp}
-          requirementsLoadingByApp={requirementsLoadingByApp}
-          requirementsErrorByApp={requirementsErrorByApp}
-          requirementsParticipants={requirementsParticipants}
-          playerSpecsById={playerSpecsById}
-          onUpdatePlayerSpecs={updatePlayerSpecs}
-          getParticipantCompatibility={getParticipantCompatibility}
-        />
-
-        <MatchingSpecsDialog
-          open={isSpecsModalOpen}
-          onOpenChange={setIsSpecsModalOpen}
-          playerSpecsById={playerSpecsById}
-          onUpdatePlayerSpecs={updatePlayerSpecs}
-        />
+          <div 
+            onClick={() => {
+              setIsCategoryPanelOpen(false);
+              setIsFriendsPanelOpen(false);
+            }}
+            className={`absolute w-full h-full top-0 left-0 bg-tertiary/20 z-2
+                      ${isCategoryPanelOpen || isFriendsPanelOpen
+                        ? ""
+                        : "hidden"
+                      }
+            `}
+          >
+            <div className="h-full w-full bg-background/30"></div>
+          </div>
+        </div>
       </div>
     </main>
   )

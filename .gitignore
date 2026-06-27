@@ -16,3 +16,8 @@ node_modules
 .next/
 .DS_Store
 scripts/
+
+# services/epic-offers-bridge (Python) — keep its source tracked, ignore its venv
+services/epic-offers-bridge/.venv/
+services/epic-offers-bridge/__pycache__/
+services/epic-offers-bridge/*.pyc

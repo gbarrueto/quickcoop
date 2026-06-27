@@ -1,12 +1,14 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
 import { searchSteamGame } from "@/lib/api"
 import { loadMatchingData } from "@/lib/matching/load-matching-data"
-import { getCurrentMockUser, type MockUser } from "@/lib/mock-auth"
 import { ensureStoredUserProfile } from "@/lib/user-profile"
+import { createClient } from "@/utils/supabase/client"
+import { useUserProfile } from "@/hooks/use-user-profile"
+import type { User } from "@supabase/supabase-js"
 import type {
+  AuthUser,
   FriendLibrarySnapshot,
   FriendProfile,
   GameCard,
@@ -15,8 +17,7 @@ import type {
 } from "@/types"
 
 export function useMatchingInit() {
-  const router = useRouter()
-  const [currentUser, setCurrentUser] = useState<MockUser | null>(null)
+  const [authUser, setAuthUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [pageError, setPageError] = useState<string | null>(null)
 
@@ -35,13 +36,13 @@ export function useMatchingInit() {
 
   useEffect(() => {
     const initialize = async () => {
-      const loggedInUser = getCurrentMockUser()
-      if (!loggedInUser) {
-        router.push("/")
-        return
-      }
+      // Matching never requires a qcoop account (see
+      // docs/anonymous-first-flow-plan.md) — anonymous visitors load it from
+      // their locally stored connections/imports same as registered users.
+      const supabase = createClient()
+      const { data } = await supabase.auth.getUser()
+      setAuthUser(data.user)
 
-      setCurrentUser(loggedInUser)
       const profile = ensureStoredUserProfile()
 
       setLoading(true)
@@ -65,14 +66,14 @@ export function useMatchingInit() {
           setPlayerSpecsById((prev) => ({ ...prev, self: data.playerSpecs! }))
         }
 
-        profile.importedGames.forEach(async (name) => {
+        profile.importedGames.forEach(async ({ title }) => {
           try {
-            const searchResult = await searchSteamGame(name)
+            const searchResult = await searchSteamGame(title)
             if (!searchResult?.imageUrl) return
 
             setUserGames((prev) =>
               prev.map((game) =>
-                game.platform === "import" && game.name === name
+                game.platform === "import" && game.name === title
                   ? { ...game, imageUrl: searchResult.imageUrl!, tags: searchResult.tags ?? [] }
                   : game,
               ),
@@ -106,7 +107,17 @@ export function useMatchingInit() {
     }
 
     void initialize()
-  }, [router])
+  }, [])
+
+  const { data: profile } = useUserProfile(authUser?.id)
+
+  const currentUser: AuthUser | null = authUser
+    ? {
+        id: authUser.id,
+        name: profile?.username ?? authUser.email?.split("@")[0] ?? "Player",
+        email: authUser.email ?? "",
+      }
+    : null
 
   return {
     currentUser,
