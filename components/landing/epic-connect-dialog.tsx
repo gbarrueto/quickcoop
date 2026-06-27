@@ -81,10 +81,10 @@ export function EpicConnectDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg overflow-hidden border-border bg-card/95 p-0 shadow-2xl backdrop-blur-xl">
-        <div className="bg-gradient-to-br from-primary/15 via-transparent to-accent/10 px-6 pt-8 pb-6 text-center">
+        <div className="pt-6 pb-6 text-center bg-primary/20">
           <DialogHeader className="items-center text-center">
-            <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#313131] text-white shadow-lg shadow-primary/15">
-              <span className="text-xl font-bold">E</span>
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl">
+              <img className="w-10 h-10 shadow-lg shadow-primary/15 bg-primary/10" src="/epic-games-svgrepo-com.svg" alt="epic login" />
             </div>
             <DialogTitle>Connect Epic Games</DialogTitle>
             <DialogDescription className="max-w-sm text-sm">
@@ -132,7 +132,7 @@ export function EpicConnectDialog({
                 </div>
               ) : (
                 <div className="rounded-lg border border-blue-400/20 bg-blue-400/5 px-4 py-3 text-xs text-blue-300 space-y-2">
-                  <p className="font-medium">📋 How it works:</p>
+                  <p className="font-bold">How it works:</p>
                   <ol className="text-left space-y-1 list-decimal list-inside">
                     <li>Click "Connect with Epic" below</li>
                     <li>Log in to your Epic account in the popup</li>
@@ -140,9 +140,6 @@ export function EpicConnectDialog({
                     <li>Copy the code and close the popup</li>
                     <li>Paste it here to finish</li>
                   </ol>
-                  <p className="text-[10px] text-blue-300/70 pt-1">
-                    💡 Install the QuickCoop extension to skip the copy/paste step.
-                  </p>
                 </div>
               )}
 

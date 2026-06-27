@@ -95,6 +95,10 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
     setInfoMessage(null)
   }
 
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+  if (event.key === "Enter") handleSubmit()
+}
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md overflow-hidden border-border bg-card/95 p-0 shadow-2xl backdrop-blur-xl">
@@ -118,6 +122,7 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
                 type="text"
                 value={authName}
                 onChange={(event) => setAuthName(event.target.value)}
+                onKeyDown={handleKeyDown}
                 placeholder="Your name"
               />
             </div>
@@ -131,6 +136,7 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
               type="email"
               value={authEmail}
               onChange={(event) => setAuthEmail(event.target.value)}
+              onKeyDown={handleKeyDown}
               placeholder="you@example.com"
             />
           </div>
@@ -143,6 +149,7 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
               type="password"
               value={authPassword}
               onChange={(event) => setAuthPassword(event.target.value)}
+              onKeyDown={handleKeyDown}
               placeholder="••••••••"
             />
           </div>

@@ -104,7 +104,7 @@ export function ImportGamesDialog({
       <DialogContent
         className="w-full lg:max-w-[60vw] h-full max-h-[90vh] overflow-hidden border-border bg-card/95 p-0 shadow-2xl backdrop-blur-xl flex flex-col gap-0"
         onPointerDownOutside={(event) => event.preventDefault()}
-        onEscapeKeyDown={(event) => event.preventDefault()}
+        onEscapeKeyDown={(event) => {event.preventDefault(); onDone()}}
         showCloseButton={false}
       >
         <div className="shrink-0 p-4">
@@ -141,7 +141,7 @@ export function ImportGamesDialog({
                   >
                     <div className="flex aspect-video w-20 min-h-10 items-center justify-center bg-background/40">
                       {game.imageUrl ? (
-                        <img src={game.imageUrl} alt={game.title} className="h-full w-full object-cover" />
+                        <img src={game.imageUrl} alt="" className="h-full w-full object-cover" />
                       ) : (
                         <Image className="h-5 w-5" />
                       )}
@@ -194,7 +194,7 @@ export function ImportGamesDialog({
                     >
                       <div className="flex aspect-video w-20 min-h-10 max-h-15 items-center justify-center bg-background/40">
                         {game.imageUrl ? (
-                          <img src={game.imageUrl} alt={game.title} className="h-full w-full object-cover" />
+                          <img src={game.imageUrl} alt="" className="h-full w-full object-cover" />
                         ) : (
                           <Image className="h-5 w-5" />
                         )}

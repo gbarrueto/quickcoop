@@ -48,7 +48,7 @@ export function GameRecommendationsCarousel({ games, activeIndex, onSelect }: Ga
                     {game.imageUrl ? (
                       <img
                         src={game.imageUrl}
-                        alt={`${game.name} cover`}
+                        alt=""
                         className="h-full w-full object-cover"
                         loading="lazy"
                       />
