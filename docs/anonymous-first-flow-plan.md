@@ -305,6 +305,13 @@ completos genre+feature, imagen del offer):
   está pero no resuelve el problema** — se deja documentado por si Cloudflare cambia
   de criterio o aparece un host con mejor reputación; `fetchOffersBulk` ya degrada a
   `{}` con gracia si no responde, así que no hace daño dejarlo.
+- **Backlog (no curación ahora):** revisando la BDD quedan juegos no-DLC con
+  `description`/`requirements` vacíos (casos donde `get_product` no encontró
+  `productHome` o vino sin `about.shortDescription`/`requirements.systems` — degrada
+  con gracia, no rompe nada, pero el dato falta). Se deja para una curación futura,
+  no bloquea el cierre de Fase D.
+
+**Fase D — cerrada (2026-06-26).**
 
 **Fase E — Disclosure de UX (solo frontend, sin vistas nuevas)**
 14. Copys/badges contextuales en quick-start-panel/hero-section según sección 2.
