@@ -129,6 +129,18 @@ export function MatchingPage() {
     return () => clearTimeout(timer)
   }, [mergeNotice])
 
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsCategoryPanelOpen(false)
+        setIsFriendsPanelOpen(false)
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [])
+
   const toggleFriendSelection = (profileId: string) => {
     setFriendProfiles((prev) => prev.map((profile) => (profile.profileId === profileId ? { ...profile, selected: !profile.selected } : profile)))
     setEpicFriends((prev) => prev.map((profile) => (profile.profileId === profileId ? { ...profile, selected: !profile.selected } : profile)))
