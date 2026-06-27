@@ -124,7 +124,7 @@ export function EpicConnectDialog({
                 </div>
               ) : (
                 <div className="rounded-lg border border-blue-400/20 bg-blue-400/5 px-4 py-3 text-xs text-blue-300 space-y-2">
-                  <p className="font-medium">📋 How it works:</p>
+                  <p className="font-bold">How it works:</p>
                   <ol className="text-left space-y-1 list-decimal list-inside">
                     <li>Click "Connect with Epic" below</li>
                     <li>Log in to your Epic account in the popup</li>
@@ -132,9 +132,6 @@ export function EpicConnectDialog({
                     <li>Copy the code and close the popup</li>
                     <li>Paste it here to finish</li>
                   </ol>
-                  <p className="text-[10px] text-blue-300/70 pt-1">
-                    💡 Install the QuickCoop extension to skip the copy/paste step.
-                  </p>
                 </div>
               )}
 
