@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    const sessionId = createEphemeralEpicSession({
+    const sessionId = await createEphemeralEpicSession({
       accessToken: tokenResponse.access_token,
       refreshToken: tokenResponse.refresh_token,
       accountId,

@@ -25,7 +25,7 @@ export async function resolveEpicAccount(): Promise<ResolvedEpicAccount | null> 
   }
 
   const cookieStore = await cookies()
-  const session = getEphemeralEpicSession(cookieStore.get(EPIC_EPHEMERAL_SESSION_COOKIE)?.value)
+  const session = await getEphemeralEpicSession(cookieStore.get(EPIC_EPHEMERAL_SESSION_COOKIE)?.value)
   if (session) {
     return { accessToken: session.accessToken, accountId: session.accountId, displayName: session.displayName }
   }

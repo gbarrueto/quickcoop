@@ -143,6 +143,12 @@ export function EpicConnectDialog({
                 </div>
               )}
 
+              <p className="text-xs text-muted-foreground">
+                New to Epic Games? Open the Epic Games Launcher and log in there
+                at least once first — accepting Epic's terms on the website
+                alone isn't enough to connect here.
+              </p>
+
               {!popupClosed && !isWaiting && (
                 <Button
                   onClick={handleConnect}
