@@ -13,7 +13,7 @@ import {
 export async function migrateEphemeralEpicSession(userId: string): Promise<void> {
   const cookieStore = await cookies()
   const sessionId = cookieStore.get(EPIC_EPHEMERAL_SESSION_COOKIE)?.value
-  const session = getEphemeralEpicSession(sessionId)
+  const session = await getEphemeralEpicSession(sessionId)
 
   if (!session) {
     return
@@ -28,7 +28,7 @@ export async function migrateEphemeralEpicSession(userId: string): Promise<void>
       expiresAt: session.expiresAt,
     })
 
-    deleteEphemeralEpicSession(sessionId)
+    await deleteEphemeralEpicSession(sessionId)
     cookieStore.delete(EPIC_EPHEMERAL_SESSION_COOKIE)
   } catch (error) {
     // Most likely this Epic account is already linked to a different qcoop

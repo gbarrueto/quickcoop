@@ -8,7 +8,7 @@ import { EPIC_EPHEMERAL_SESSION_COOKIE, deleteEphemeralEpicSession } from "@/lib
 // caller is logged into qcoop. See docs/anonymous-first-flow-plan.md section 5.
 export async function POST() {
   const cookieStore = await cookies()
-  deleteEphemeralEpicSession(cookieStore.get(EPIC_EPHEMERAL_SESSION_COOKIE)?.value)
+  await deleteEphemeralEpicSession(cookieStore.get(EPIC_EPHEMERAL_SESSION_COOKIE)?.value)
   cookieStore.delete(EPIC_EPHEMERAL_SESSION_COOKIE)
 
   const supabase = await createClient()
