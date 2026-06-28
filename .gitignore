@@ -17,6 +17,12 @@ node_modules
 .DS_Store
 scripts/
 
+# agents
+
+.agents/
+.claude/
+.github/
+
 # services/epic-offers-bridge (Python) — keep its source tracked, ignore its venv
 services/epic-offers-bridge/.venv/
 services/epic-offers-bridge/__pycache__/
