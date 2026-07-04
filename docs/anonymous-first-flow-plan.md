@@ -123,7 +123,14 @@ es que el error que llega es un violation crudo de Postgres, no un mensaje claro
 conectada a otro usuario de QuickCoop." Sin soporte de "transferir" el link — fuera de
 alcance, se puede agregar después si hace falta.
 
-## 7. Alcance mínimo de backend (foco del proyecto es frontend/UIUX)
+## 7. Alcance mínimo de backend
+
+> Nota (29-06-26): el encabezado original decía "foco del proyecto es
+> frontend/UIUX" — eso era cierto mientras esto era un proyecto de curso. El curso
+> terminó y el proyecto sigue de forma independiente, sin ese sesgo (ver
+> [status-28-06-26-revision.md](status-28-06-26-revision.md)). El resto de esta
+> sección queda como registro histórico de la decisión de scope tomada en su
+> momento, no como restricción vigente.
 
 No se busca un backend robusto. Lo mínimo necesario:
 
@@ -310,6 +317,10 @@ completos genre+feature, imagen del offer):
   `productHome` o vino sin `about.shortDescription`/`requirements.systems` — degrada
   con gracia, no rompe nada, pero el dato falta). Se deja para una curación futura,
   no bloquea el cierre de Fase D.
+  **Parcialmente resuelto el 29-06-26**: el sub-caso "vino sin `shortDescription`"
+  ya no aplica — `description` ahora cae a `offer.description`/`about.description`
+  (ver [epic-game-details-pipeline.md](epic-game-details-pipeline.md)). El sub-caso
+  "no encontró `productHome`" sigue sin resolver (no hay desde dónde sacar el dato).
 
 **Fase D — cerrada (2026-06-26).**
 
@@ -337,6 +348,33 @@ completos genre+feature, imagen del offer):
     no tiene suficientes — nunca antes. El scoring (most-played, tag-matching) no
     cambió, solo la fuente de candidatos. Verificado contra la BDD real (juegos de
     Epic ya curados aparecen con precio/descripción reales).
+
+**Fase F — Curación de catálogo (29-06-26)**
+
+Detalle completo en [status-28-06-26-revision.md](status-28-06-26-revision.md)
+(puntos 5 y 9) y en el reporte de sesión
+[avances-29-06-26.md](avances-29-06-26.md). Resumen:
+
+17. **Descripciones de Epic**: fallback `shortDescription` → `offer.description` →
+    `about.description` cuando falta el primero (`lib/epic/game-details-pipeline.ts`).
+18. **Requirements de Steam**: nunca se guardaban (`requirements: []` hardcodeado).
+    Ahora se piden, se parsean (mismo parser que ya usaba
+    `/api/steam/game-requirements`, extraído a `lib/steam/requirements.ts`) y se
+    persisten en `game_listings.requirements`.
+19. **Tabla `tags`** (catálogo plano, ver sección 3 de
+    [database-design.md](database-design.md)) + script de población — 47 tags
+    únicos detectados sobre ~300 juegos.
+20. **`/api/steam/game-categories` deja de llamar a Storefront** — lee
+    `game_listings.tags` directo (sin fallback en vivo).
+21. **Descripciones de Steam**: se usaba `detailed_description` (HTML de marketing,
+    sin punto de corte limpio). Se cambió a `short_description` (texto plano
+    confirmado en ~15 juegos de prueba) + decode de entities HTML. Backfill de los
+    ~100 `game_listings` de Steam ya existentes.
+22. **Pendiente, no bloqueante**: filtrar ingestión de Steam por `data.type`
+    (`game`/`dlc` vs `advertising`/`demo`/etc. — hoy todo entra como `kind: 'game'`)
+    y el motor de matching por título normalizado de la sección 3 de
+    `database-design.md` (resolvería duplicados del mismo juego con distinto appid,
+    ej. Call of Duty SP/MP). Decidido explícitamente dejar para otra sesión.
 
 ## 9. Fuera de alcance
 

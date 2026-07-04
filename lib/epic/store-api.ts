@@ -23,7 +23,7 @@ export type EpicProductPage = {
   type?: string
   offer?: { id?: string; hasOffer?: boolean }
   data?: {
-    about?: { shortDescription?: string }
+    about?: { shortDescription?: string; description?: string }
     requirements?: { systems?: Record<string, unknown>[] }
     meta?: { tags?: string[] }
   }

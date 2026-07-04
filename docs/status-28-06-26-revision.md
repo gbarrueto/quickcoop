@@ -1,5 +1,7 @@
 # Revisión priorizada de [status-28-06-26.md](status-28-06-26.md)
 
+*Última actualización: 2026-07-03*
+
 Mismos temas que el documento original, reordenados por urgencia, con solución
 propuesta + dificultad estimada por punto. Para cruzar los puntos contra el estado
 real revisé el código (`lib/`, `app/api/`, `components/`) y los otros docs
@@ -269,6 +271,34 @@ migración.
 **Solución propuesta:** migrar `use-trending-games.ts` primero (más chico, buen
 piloto); `load-matching-data.ts` conviene abordarlo junto con el punto 5 y el 15, ya
 que las tres tocan el mismo flujo de datos hacia la card.
+
+**Evaluación del hook `use()` de React 19 como alternativa (2026-07-03):**
+
+React 19 (`"react": "^19"` — confirmado en `package.json`) tiene `use()` estable.
+Puede reemplazar `useState + useEffect` para fetch: se llama directamente en el
+cuerpo del componente, desenvuelve el Promise, y usa `<Suspense>` para el estado de
+carga — sin boilerplate de `isLoading`/`setData`. Tiene una restricción clave: el
+Promise debe ser estable entre renders (creado fuera del componente, con `useMemo`,
+o venido como prop), de lo contrario refetchea en cada render.
+
+Inventario de los 5 hooks con `useEffect` restantes:
+
+| Hook | Patrón actual | ¿`use()` aplica? | Mejor destino |
+|---|---|---|---|
+| `use-trending-games` | `fetch` crudo + caché `localStorage` + fallback estático + flag `isLive` | No — la lógica de caché/fallback es imperativa y previa al fetch | `useQuery` con `initialData` |
+| `use-game-categories` | Acumulación incremental — solo pide los `appIds` ausentes del state, merge | No — `use()` desenvuelve un Promise, no acumula sobre múltiples renders | `useQueries` (uno por appId) |
+| `use-landing-profile` | Lee `localStorage` síncronamente — sin fetch real | No aplica — no es async, el `useEffect` evita el mismatch de hidratación SSR | Mantener `useEffect` |
+| `use-matching-init` | Orquestación multi-paso: auth → perfil → datos de matching + enriquecimiento background fire-and-forget | No — es side-effect por diseño; `use()` no orquesta secuencias ni maneja efectos colaterales | Parcialmente: sub-fetches cacheables a `useQuery`; orquestación se queda en `useEffect` |
+| `use-identity-library` | Carga librería de N amigos seleccionados dinámicamente + estado de loading/error por identity | No — N queries dinámicas controladas por selección | `useQueries` con `enabled: friend.selected` |
+
+**Conclusión:** `use()` no tiene candidatos viables en este codebase. Todos los hooks
+restantes con `useEffect` tienen patrones que `use()` no puede expresar (caché
+previa, acumulación incremental, orquestación multi-paso, fire-and-forget). El camino
+correcto para todos ellos es TanStack Query, que es la convención ya establecida en
+el proyecto. `use()` sería útil si en algún momento se adopta un modelo de "fetch en
+el server component y pasar el Promise como prop al cliente" — en ese contexto
+`use()` en el cliente desenvuelve el Promise con Suspense, sin duplicar la llamada.
+Hoy la app no usa ese patrón.
 
 ### 13. Steam: grupo familiar
 

@@ -145,6 +145,25 @@ Constraint: `UNIQUE(user_id, listing_id)`.
   stores todavía (se puede re-procesar más adelante).
 - DLC vs juego base (`kind` + `parent_listing_id`) es independiente del matching
   cross-store — ya se resuelve por store (Epic: `mainGameItem`; Steam: `type`).
+  **Gap conocido (29-06-26)**: el pipeline de Steam todavía no chequea `data.type`
+  al insertar — todo entra como `kind: 'game'`, incluyendo DLC y entradas que Steam
+  clasifica como `advertising`/`demo`/etc. (ver
+  [status-28-06-26-revision.md](status-28-06-26-revision.md)). Pendiente, no
+  bloqueante.
+
+### `tags` — catálogo de tags únicos (curación, 29-06-26)
+| campo | tipo | notas |
+|---|---|---|
+| `id` | uuid (PK) | |
+| `name` | text, unique | tag individual, extraído de `games.tags` |
+| `created_at` | timestamptz | |
+
+No es una relación many-to-many con `games` todavía (sin tabla `game_tags`) — es
+solo un catálogo plano para revisar qué tags existen y detectar variantes a
+normalizar (ej. `Multi-player` vs `Multiplayer` vs `Online Multiplayer`). Poblado por
+[scripts/populate_tags.py](../scripts/populate_tags.py), re-corrible (upsert con
+`on_conflict=name`, ignora duplicados). RLS: `SELECT` público, escritura solo
+`service_role` — mismo patrón que `games`/`game_listings`.
 
 ---
 
@@ -243,6 +262,7 @@ Epic).
 |---|---|---|
 | `providers` | público | `service_role` |
 | `games`, `game_listings` | público | `service_role` |
+| `tags` | público | `service_role` |
 | `epic_namespace_slug` | público (o `service_role` only) | `service_role` |
 | `sync_state` | `service_role` | `service_role` |
 | `users` | propio (`auth.uid() = id`) | propio / `service_role` |

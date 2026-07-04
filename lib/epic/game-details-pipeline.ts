@@ -64,6 +64,20 @@ function offerTags(offer: EpicCatalogOffer | undefined): string[] {
   return (offer?.tags ?? []).filter((tag) => tag.groupName === "genre" || tag.groupName === "feature").map((tag) => tag.name)
 }
 
+// Not every game has `data.about.shortDescription` (confirmed empirically —
+// see scripts/control.json). Fall back to the offer's own description (from
+// the offers bulk call, usually equivalent) and then `data.about.description`
+// (the longer "About" copy from the same productHome page) — any valid one
+// is fine, there's no meaningful quality difference for our use.
+function firstNonEmptyString(...candidates: (string | null | undefined)[]): string | null {
+  for (const candidate of candidates) {
+    if (candidate && candidate.trim().length > 0) {
+      return candidate
+    }
+  }
+  return null
+}
+
 function cachedToDetails(namespace: string, base: CachedListing, dlcs: CachedListing[]): EpicGameDetails {
   return {
     namespace,
@@ -137,7 +151,8 @@ export async function buildEpicGameDetails(
     productName?: string
     offerId: string | null
     requirements: Record<string, unknown>[]
-    description: string | null
+    shortDescription: string | null
+    aboutDescription: string | null
     metaTags: string[]
     catalogItemIds: string[]
   }
@@ -177,7 +192,8 @@ export async function buildEpicGameDetails(
       productName: product.productName,
       offerId,
       requirements: mainPage.data?.requirements?.systems ?? [],
-      description: mainPage.data?.about?.shortDescription ?? null,
+      shortDescription: mainPage.data?.about?.shortDescription ?? null,
+      aboutDescription: mainPage.data?.about?.description ?? null,
       metaTags: mainPage.data?.meta?.tags ?? [],
       catalogItemIds: recs.map((rec) => rec.catalogItemId),
     })
@@ -212,12 +228,14 @@ export async function buildEpicGameDetails(
     const images = offerImages(offer)
     const price = extractPrice(offer)
     const tags = offerTags(offer)
+    const offerDescription = offer?.description ?? null
+    const description = firstNonEmptyString(game.shortDescription, offerDescription, game.aboutDescription)
 
     if (baseCatalogItemId) {
       newListings.push({
         storeGameId: baseCatalogItemId,
         title: finalTitle,
-        description: game.description,
+        description,
         images,
         requirements: game.requirements,
         tags,
@@ -227,7 +245,7 @@ export async function buildEpicGameDetails(
           epicNamespace: game.namespace,
           epicSlug: game.slug,
           offerId: game.offerId,
-          offerDescription: offer?.description ?? null,
+          offerDescription,
           metaTags: game.metaTags,
         },
       })
@@ -254,8 +272,8 @@ export async function buildEpicGameDetails(
           slug: game.slug,
           catalogItemId: baseCatalogItemId,
           title: finalTitle,
-          description: game.description,
-          offerDescription: offer?.description ?? null,
+          description,
+          offerDescription,
           imageUrl: primaryImageUrl(images),
           requirements: game.requirements,
           tags,

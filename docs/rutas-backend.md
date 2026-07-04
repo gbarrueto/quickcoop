@@ -33,7 +33,7 @@ Credenciales: `EPIC_CLIENT_ID`, `EPIC_CLIENT_SECRET` (env).
 | `/api/steam/owned-games` | GET | `steamId` | Juegos que posee el usuario | Steam Web API `IPlayerService/GetOwnedGames` |
 | `/api/steam/friends` | GET | `steamId` | Amigos + nombres/avatares (resuelve summaries en lotes de 100) | Steam Web API `GetFriendList` + `GetPlayerSummaries` |
 | `/api/steam/search` | GET | `term` | Busca un juego: appId, imagen y tags (géneros + categorías multiplayer) | Steam Storefront `storesearch` + `appdetails` |
-| `/api/steam/game-categories` | GET | `appIds` (CSV, máx 80) | Géneros por appId (con caché en memoria 24h) | Steam Storefront `appdetails` |
+| `/api/steam/game-categories` | GET | `appIds` (CSV, máx 80) | Tags por appId — lee `game_listings.tags` (catálogo propio), sin caché en memoria ni llamada externa. Un appId no enriquecido todavía devuelve `[]`, sin fallback a Storefront (ver `docs/status-28-06-26-revision.md` punto 5) | — (BDD propia) |
 | `/api/steam/game-requirements` | GET | `appId` o `searchName` | Requisitos mínimos de PC, parseados (OS/CPU/GPU/RAM/almacenamiento). Cachea 24h | Steam Storefront `storesearch` + `appdetails` |
 
 Requieren `STEAM_API_KEY` (env): login, callback, owned-games, friends y trending. Las de
@@ -125,5 +125,6 @@ Hosting de imágenes de Steam usado para portadas:
   eliminar antes de producción.
 - Varias rutas de Steam/Trending/Game Pass usan **caché en memoria** (Map / variable de
   módulo) con TTL ~24h; se reinicia al reiniciar el server. Migrable a caché persistente.
+  `game-categories` ya no aplica — pasó a leer directo de `game_listings` (29-06-26).
 - Las APIs no documentadas (Storefront, Game Pass, Epic interno) pueden cambiar sin aviso;
   conviene aislarlas en el backend (como ya está) para parchear en un solo lugar.

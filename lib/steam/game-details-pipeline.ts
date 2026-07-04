@@ -1,9 +1,14 @@
 // On-demand BDD population for Steam (docs/database-design.md section 4):
 // reads the catalog cache before re-fetching appdetails, and upserts genuinely
-// new games. Real price (price_overview) + description (detailed_description)
-// come straight from Steam's own appdetails — no separate pipeline needed.
+// new games. Real price (price_overview) comes straight from Steam's own
+// appdetails — no separate pipeline needed. Description uses
+// `short_description`, not `detailed_description`: the latter is marketing
+// HTML meant for the store page (embedded images/video, changelogs before the
+// actual "about" text) with no clean extraction point, while short_description
+// is consistently plain text across every game checked.
 
 import { fetchAppDetails, type SteamAppDetailsData } from "@/lib/steam/store-api"
+import { parseMinimumRequirements } from "@/lib/steam/requirements"
 import { getCachedListings, upsertListings, type CachedListing } from "@/lib/catalog/store"
 import type { SteamGameDetails, SteamGamePrice } from "@/types"
 
@@ -42,6 +47,35 @@ function extractPrice(data: SteamAppDetailsData): SteamGamePrice | null {
   }
 }
 
+// short_description is plain text but still HTML-entity-encoded (e.g. Portal
+// 2's "&quot;Perpetual Testing Initiative&quot;") — decode the common ones.
+const HTML_ENTITIES: Record<string, string> = {
+  "&quot;": '"',
+  "&amp;": "&",
+  "&#39;": "'",
+  "&apos;": "'",
+  "&lt;": "<",
+  "&gt;": ">",
+  "&nbsp;": " ",
+}
+
+function decodeHtmlEntities(text: string): string {
+  return text.replace(/&quot;|&amp;|&#39;|&apos;|&lt;|&gt;|&nbsp;/g, (entity) => HTML_ENTITIES[entity])
+}
+
+// Same `[{ systemType, minimumText, parsed }]` shape used by
+// app/api/steam/game-requirements/route.ts, wrapped in an array so the column
+// stays "array of per-OS requirement entries" across both providers (Epic's
+// `requirements` is Windows/Mac/Linux `systems[]`).
+function extractRequirements(data: SteamAppDetailsData): Record<string, unknown>[] {
+  const minimumRaw = data.pc_requirements?.minimum
+  if (!minimumRaw) {
+    return []
+  }
+
+  return [{ systemType: "Windows", ...parseMinimumRequirements(minimumRaw) }]
+}
+
 function extractTags(data: SteamAppDetailsData): string[] {
   const genres = (data.genres ?? []).map((genre) => genre.description).filter((value): value is string => Boolean(value))
   const categories = (data.categories ?? [])
@@ -59,6 +93,7 @@ function cachedToDetails(appId: number, listing: CachedListing): SteamGameDetail
     description: listing.description,
     imageUrl: listing.images[0]?.url ?? null,
     tags: listing.tags,
+    requirements: listing.requirements,
     price: listing.price as SteamGamePrice | null,
   }
 }
@@ -100,21 +135,31 @@ export async function buildSteamGameDetails(appIds: number[]): Promise<SteamGame
     const images = data.header_image ? [{ type: "header", url: data.header_image }] : []
     const price = extractPrice(data)
     const tags = extractTags(data)
+    const requirements = extractRequirements(data)
     const title = data.name ?? `Steam App ${appId}`
+    const description = data.short_description ? decodeHtmlEntities(data.short_description) : null
 
     newListings.push({
       storeGameId: String(appId),
       title,
-      description: data.detailed_description ?? null,
+      description,
       images,
-      requirements: [],
+      requirements,
       tags,
       price,
       kind: "game" as const,
       providerMeta: {},
     })
 
-    newDetails.push({ appId, title, description: data.detailed_description ?? null, imageUrl: data.header_image ?? null, tags, price })
+    newDetails.push({
+      appId,
+      title,
+      description,
+      imageUrl: data.header_image ?? null,
+      tags,
+      requirements,
+      price,
+    })
   }
 
   const listingIdByStoreGameId = await upsertListings(PROVIDER, newListings)

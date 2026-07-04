@@ -48,6 +48,12 @@ las duplicadas dentro de un mismo namespace suelen ser **base + DLC**.
   géneros). El set completo (géneros **y** funciones) está en `offer.tags`, cada uno con `groupName`.
   Se filtran `groupName in ("genre", "feature")` y se toma `name` directamente (ya viene el nombre,
   no hace falta resolver id→nombre).
+- **Descripción (29-06-26):** `data.about.shortDescription` no siempre existe (confirmado
+  empíricamente — ver `scripts/control.json` en el repo del usuario). El campo `description` final
+  usa una cadena de fallback: `shortDescription` → `offer.description` (de la offer bulk, paso 6,
+  suele coincidir con shortDescription) → `data.about.description` (la copia "About" más larga de la
+  misma productHome). Cualquiera que sea válida sirve, no hay diferencia de calidad relevante entre
+  ellas. Implementado en `lib/epic/game-details-pipeline.ts` (`firstNonEmptyString`).
 
 ---
 

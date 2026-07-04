@@ -7,11 +7,12 @@ const APPDETAILS_URL = "https://store.steampowered.com/api/appdetails"
 
 export type SteamAppDetailsData = {
   name?: string
-  detailed_description?: string
+  short_description?: string
   header_image?: string
   is_free?: boolean
   genres?: { description?: string }[]
   categories?: { id?: number; description?: string }[]
+  pc_requirements?: { minimum?: string }
   price_overview?: {
     currency?: string
     initial?: number

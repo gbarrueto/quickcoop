@@ -104,5 +104,6 @@ export type SteamGameDetails = {
   description: string | null
   imageUrl: string | null
   tags: string[]
+  requirements: Record<string, unknown>[]
   price: SteamGamePrice | null
 }

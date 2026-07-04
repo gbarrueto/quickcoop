@@ -1,49 +1,11 @@
 import { NextRequest, NextResponse } from "next/server"
+import { getCachedListings } from "@/lib/catalog/store"
 
-type SteamAppDetailsResponse = Record<
-  string,
-  {
-    success?: boolean
-    data?: {
-      genres?: Array<{ description?: string }>
-    }
-  }
->
-
-const CACHE_TTL_MS = 1000 * 60 * 60 * 24
-
-const categoriesCache = new Map<number, { expiresAt: number; categories: string[] }>()
-
-async function fetchGameGenres(appId: number): Promise<string[]> {
-  const detailsUrl = new URL("https://store.steampowered.com/api/appdetails")
-  detailsUrl.searchParams.set("appids", String(appId))
-  detailsUrl.searchParams.set("l", "english")
-
-  const response = await fetch(detailsUrl.toString(), {
-    headers: {
-      Accept: "application/json",
-    },
-    cache: "no-store",
-  })
-
-  if (!response.ok) {
-    return []
-  }
-
-  const payload = (await response.json()) as SteamAppDetailsResponse
-  const details = payload[String(appId)]
-
-  if (!details?.success || !details.data) {
-    return []
-  }
-
-  const categories = (details.data.genres ?? [])
-    .map((genre) => (genre.description || "").trim())
-    .filter(Boolean)
-
-  return [...new Set(categories)]
-}
-
+// Categories now come from game_listings.tags (populated by the catalog
+// enrichment pipeline, lib/steam/game-details-pipeline.ts) instead of calling
+// Steam's appdetails again per appId — see docs/status-28-06-26-revision.md
+// punto 5. No live fallback: an appId not yet in the catalog just returns no
+// tags (it'll show up once it's been imported/enriched once).
 export async function GET(request: NextRequest) {
   const appIdsParam = request.nextUrl.searchParams.get("appIds")
 
@@ -61,36 +23,12 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "No valid appIds provided" }, { status: 400 })
   }
 
-  const now = Date.now()
+  const cached = await getCachedListings("steam", parsedAppIds.map(String))
+
   const categoriesByApp: Record<number, string[]> = {}
-  const missingAppIds: number[] = []
-
   parsedAppIds.forEach((appId) => {
-    const cached = categoriesCache.get(appId)
-    if (cached && now < cached.expiresAt) {
-      categoriesByApp[appId] = cached.categories
-      return
-    }
-
-    missingAppIds.push(appId)
+    categoriesByApp[appId] = cached.get(String(appId))?.tags ?? []
   })
 
-  const fetched = await Promise.all(
-    missingAppIds.map(async (appId) => {
-      const categories = await fetchGameGenres(appId)
-      categoriesCache.set(appId, {
-        expiresAt: now + CACHE_TTL_MS,
-        categories,
-      })
-      return { appId, categories }
-    }),
-  )
-
-  fetched.forEach(({ appId, categories }) => {
-    categoriesByApp[appId] = categories
-  })
-
-  return NextResponse.json({
-    categoriesByApp,
-  })
+  return NextResponse.json({ categoriesByApp })
 }
